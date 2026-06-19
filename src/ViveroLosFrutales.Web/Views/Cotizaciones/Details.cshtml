@@ -1,0 +1,75 @@
+@model CotizacionDetalleViewDto
+@{
+    ViewData["Title"] = "Detalle Cotizacion";
+    var puedeConvertir = Model.EstadoCotizacion == CotizacionEstado.ACTIVA
+        && !Model.TieneDocumentosRelacionados;
+}
+
+@functions {
+    private static bool EsCotizacionConvertida(CotizacionEstado estado) =>
+        (int)estado is 3 or 4 or 5;
+
+    private static string EstadoCotizacionTexto(CotizacionEstado estado) =>
+        EsCotizacionConvertida(estado) ? "CONVERTIDA" : estado.ToString();
+}
+
+<div class="nota-detail">
+<div class="nota-detail-header">
+    <h1>@Model.Numero</h1>
+    <div class="nota-detail-actions">
+        <form asp-action="Imprimir" method="post" class="icon-form" target="_blank">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.CotizacionId" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Imprimir PDF</button>
+        </form>
+        <a class="nota-back-link" asp-action="Index">Volver</a>
+    </div>
+</div>
+
+<div class="nota-summary-grid">
+    <div class="nota-summary-card"><span>Subtotal</span><strong>S/ @Model.Subtotal.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>IGV</span><strong>S/ @Model.Igv.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Total</span><strong>S/ @Model.Total.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Estado</span><strong>@EstadoCotizacionTexto(Model.EstadoCotizacion)</strong></div>
+    <div class="nota-summary-card"><span>Forma pago</span><strong>@Model.FormaPago</strong></div>
+
+    @if (puedeConvertir)
+    {
+        <div class="nota-convert-card">
+            <span>Convertir documento</span>
+            <div class="cotizacion-convert-actions">
+                <form asp-action="Convertir" method="post" class="cotizacion-convert-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.CotizacionId" />
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Convertir a Nota de pedido</button>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="nota-info-card">
+    <div><span>Cliente</span><strong>@Model.Cliente</strong></div>
+    <div><span>Documento</span><strong>@Model.Documento</strong></div>
+    <div><span>Fecha</span><strong>@Model.FechaEmision.ToString("dd/MM/yyyy")</strong></div>
+    <div><span>Direccion</span><strong>@Model.Direccion</strong></div>
+</div>
+
+<div class="section-title">Productos</div>
+<table class="table table-sm table-striped data-grid nota-products-grid">
+    <thead><tr><th>Producto</th><th class="text-end">Cantidad</th><th class="text-end">Precio</th><th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Detalles)
+    {
+        <tr>
+            <td>@item.Producto</td>
+            <td class="text-end">@item.Cantidad.ToString("N2")</td>
+            <td class="text-end">S/ @item.PrecioUnitario.ToString("N2")</td>
+            <td class="text-end">S/ @item.Subtotal.ToString("N2")</td>
+            <td class="text-end">S/ @item.Igv.ToString("N2")</td>
+            <td class="text-end">S/ @item.Total.ToString("N2")</td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

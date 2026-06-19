@@ -1,0 +1,45 @@
+@model UsuarioEditDto
+@{
+    ViewData["Title"] = Model.UsuarioId == string.Empty ? "Crear usuario" : "Editar usuario";
+    var roles = ViewBag.Roles as IReadOnlyList<RolListDto> ?? Array.Empty<RolListDto>();
+    var empresas = ViewBag.Empresas as IReadOnlyList<EmpresaListDto> ?? Array.Empty<EmpresaListDto>();
+}
+
+<form method="post" class="dense-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="UsuarioId" type="hidden" />
+    <div class="form-grid cols-4">
+        <label>Nombres<input asp-for="Nombres" class="form-control form-control-sm" /></label>
+        <label>Apellidos<input asp-for="Apellidos" class="form-control form-control-sm" /></label>
+        <label>Correo<input asp-for="Correo" class="form-control form-control-sm" /></label>
+        <label>Usuario<input asp-for="Usuario" class="form-control form-control-sm" /></label>
+        <label>Rol
+            <select asp-for="RolId" class="form-select form-select-sm">
+                <option value="">Seleccione un rol</option>
+                @foreach (var rol in roles)
+                {
+                    <option value="@rol.RolId">@rol.Nombre</option>
+                }
+            </select>
+        </label>
+        @if (string.IsNullOrEmpty(Model.UsuarioId))
+        {
+            <label>Contrasena<input asp-for="Password" class="form-control form-control-sm" type="password" /></label>
+        }
+        <label class="checkline"><input asp-for="Activo" /> Activo</label>
+    </div>
+    <div class="section-title">Empresas</div>
+    <div class="permission-grid">
+        @foreach (var empresa in empresas)
+        {
+            <label class="checkline compact">
+                <input type="checkbox" name="EmpresaIds" value="@empresa.EmpresaId" checked="@Model.EmpresaIds.Contains(empresa.EmpresaId)" />
+                @empresa.RazonSocial
+            </label>
+        }
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

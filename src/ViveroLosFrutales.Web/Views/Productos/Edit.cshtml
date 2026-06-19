@@ -1,0 +1,43 @@
+@model ProductoEditDto
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? == true;
+    ViewData["Title"] = readOnly ? "Visualizar producto" : Model.ProductoId == 0 ? "Crear producto" : "Editar producto";
+    var categorias = ViewBag.Categorias as IReadOnlyList<CategoriaListDto> ?? Array.Empty<CategoriaListDto>();
+}
+
+<form method="post" class="dense-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="ProductoId" type="hidden" />
+    <fieldset disabled="@readOnly" class="form-grid cols-4">
+        <label>Categoria
+            <select asp-for="Categoria" class="form-control form-control-sm">
+                <option value="">Seleccione una categoria</option>
+                @foreach (var categoria in categorias)
+                {
+                    <option value="@categoria.Nombre">@categoria.Nombre</option>
+                }
+            </select>
+        </label>
+        <label>Nombre<input asp-for="Nombre" class="form-control form-control-sm" /></label>
+        <label>Unidad
+            <select asp-for="UnidadMedida" class="form-select form-select-sm">
+                <option value="NIU">Unidad</option>
+                <option value="KGM">Kilogramo</option>
+                <option value="MTR">Metro</option>
+                <option value="LTR">Litro</option>
+            </select>
+        </label>
+        <label>Stock<input asp-for="Stock" class="form-control form-control-sm" type="number" step="0.01" /></label>
+        <label>Precio sin IGV<input asp-for="PrecioVentaSinIgv" class="form-control form-control-sm" type="number" step="0.01" /></label>
+        <label class="checkline"><input asp-for="AfectoIgv" /> Afecto IGV</label>
+        <label class="checkline"><input asp-for="TieneDetraccion" /> Detraccion</label>
+        <label>% Detraccion<input asp-for="PorcentajeDetraccion" class="form-control form-control-sm" type="number" step="0.01" /></label>
+    </fieldset>
+    <div class="form-actions">
+        @if (!readOnly)
+        {
+            <button class="btn btn-sm btn-primary">Guardar</button>
+        }
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

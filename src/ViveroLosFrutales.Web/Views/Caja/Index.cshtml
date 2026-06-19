@@ -1,0 +1,71 @@
+@model CajaIndexDto
+@{
+    ViewData["Title"] = "Caja";
+    var today = DateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+    var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
+    var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
+    var medioPago = Context.Request.Query["medioPago"].FirstOrDefault();
+    var tipoMovimiento = Context.Request.Query["tipoMovimiento"].FirstOrDefault();
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
+        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
+        <select name="medioPago" class="form-select form-select-sm">
+            <option value="">Todos los medios</option>
+            <option value="EFECTIVO" selected="@(medioPago == "EFECTIVO")">Efectivo</option>
+            <option value="TRANSFERENCIA" selected="@(medioPago == "TRANSFERENCIA")">Transferencia</option>
+            <option value="YAPE" selected="@(medioPago == "YAPE")">Yape</option>
+            <option value="TARJETA DEBITO" selected="@(medioPago == "TARJETA DEBITO")">Tarjeta debito</option>
+            <option value="TARJETA CREDITO" selected="@(medioPago == "TARJETA CREDITO")">Tarjeta Credito</option>
+        </select>
+        <select name="tipoMovimiento" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="@TipoMovimientoCaja.INGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.INGRESO.ToString())">Ingresos</option>
+            <option value="@TipoMovimientoCaja.EGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.EGRESO.ToString())">Egresos</option>
+        </select>
+        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Buscar por cliente, proveedor o documento" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+</div>
+
+<div class="finance-summary">
+    <div><span>Ingresos</span><strong>S/ @Model.Resumen.Ingresos.ToString("N2")</strong></div>
+    <div><span>Egresos</span><strong>S/ @Model.Resumen.Egresos.ToString("N2")</strong></div>
+    <div><span>Saldo</span><strong>S/ @Model.Resumen.Saldo.ToString("N2")</strong></div>
+    <div><span>Movimientos</span><strong>@Model.Resumen.Movimientos</strong></div>
+</div>
+
+<table class="table table-sm table-striped data-grid">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Cliente / Proveedor</th>
+            <th>Origen</th>
+            <th>Documento</th>
+            <th>Medio</th>
+            <th class="text-end">Monto</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Movimientos)
+    {
+        <tr>
+            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+            <td>@item.TipoMovimiento</td>
+            <td>@item.ClienteProveedor</td>
+            <td>@item.OrigenDescripcion</td>
+            <td>@item.Documento</td>
+            <td>@item.MedioPago</td>
+            <td class="text-end">S/ @item.Monto.ToString("N2")</td>
+            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@item.Estado</span></td>
+        </tr>
+    }
+    </tbody>
+</table>

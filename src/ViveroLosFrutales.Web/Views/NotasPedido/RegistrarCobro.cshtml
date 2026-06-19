@@ -1,0 +1,42 @@
+@model RegistrarCobroDto
+@{
+    ViewData["Title"] = "Registrar Cobro";
+    var saldo = ViewData["SaldoPendiente"] as decimal? ?? 0;
+    var referencia = ViewData["Referencia"] as string ?? string.Empty;
+}
+
+<form asp-action="RegistrarCobro" method="post" class="dense-form cobro-form" data-saldo="@saldo">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="NotaPedidoId" type="hidden" />
+
+    <div class="finance-summary">
+        <div><span>Referencia</span><strong>@referencia</strong></div>
+        <div><span>Saldo pendiente</span><strong>S/ @saldo.ToString("N2")</strong></div>
+    </div>
+
+    <div class="form-grid cols-4">
+        <label>Fecha cobro<input asp-for="FechaCobro" class="form-control form-control-sm" type="date" /></label>
+        <label>Monto<input asp-for="Monto" class="form-control form-control-sm text-end cobro-monto" type="number" step="0.01" min="0.01" max="@saldo" /></label>
+        <label>
+            Medio pago
+            <select asp-for="MedioPago" class="form-select form-select-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="YAPE">Yape</option>
+                <option value="TARJETA DEBITO">Tarjeta debito</option>
+                <option value="TARJETA CREDITO">Tarjeta Credito</option>
+            </select>
+        </label>
+        <label class="span-2">Observacion<input asp-for="Observacion" class="form-control form-control-sm" /></label>
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar cobro</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@Model.NotaPedidoId">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>window.viveroCobroForm?.();</script>
+}

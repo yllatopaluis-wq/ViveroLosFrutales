@@ -1,0 +1,95 @@
+@model CompraFormDataDto
+@{
+    ViewData["Title"] = "Registrar Compra";
+    var detalles = Model.Compra.Detalles.Count == 0 ? new List<CompraDetalleEditDto> { new() } : Model.Compra.Detalles;
+}
+
+<form asp-action="Create" method="post" class="dense-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="form-grid cols-4">
+        <label class="span-2">Proveedor
+            <select asp-for="Compra.ProveedorId" name="ProveedorId" class="form-select form-select-sm">
+                <option value="">Seleccione proveedor</option>
+                @foreach (var proveedor in Model.Proveedores)
+                {
+                    <option value="@proveedor.ProveedorId" selected="@(Model.Compra.ProveedorId == proveedor.ProveedorId)">@proveedor.RazonSocial - @proveedor.NumeroDocumento</option>
+                }
+            </select>
+        </label>
+        <label>Tipo Documento<select asp-for="Compra.TipoDocumento" name="TipoDocumento" asp-items="Html.GetEnumSelectList<TipoDocumentoCompra>()" class="form-select form-select-sm"></select></label>
+        <label>Fecha<input asp-for="Compra.Fecha" name="Fecha" class="form-control form-control-sm" type="date" /></label>
+        <label>Serie<input asp-for="Compra.Serie" name="Serie" class="form-control form-control-sm" /></label>
+        <label>Numero<input asp-for="Compra.Numero" name="Numero" class="form-control form-control-sm" /></label>
+        <label>Forma de Pago<select asp-for="Compra.FormaPago" name="FormaPago" asp-items="Html.GetEnumSelectList<FormaPagoCompra>()" class="form-select form-select-sm"></select></label>
+        <label>Medio Pago<input asp-for="Compra.MedioPago" name="MedioPago" class="form-control form-control-sm" /></label>
+        <label class="span-4">Observacion<input asp-for="Compra.Observacion" name="Observacion" class="form-control form-control-sm" /></label>
+    </div>
+
+    <div class="section-title">Detalle</div>
+    <table class="table table-sm data-grid detalle-grid" id="compraDetalle">
+        <colgroup>
+            <col class="detalle-producto" />
+            <col class="detalle-cantidad" />
+            <col class="detalle-precio" />
+            <col class="detalle-total" />
+            <col class="detalle-accion" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th class="text-end">Cantidad</th>
+                <th class="text-end">Costo unitario</th>
+                <th class="text-end">Importe</th>
+                <th class="text-center"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (var i = 0; i < detalles.Count; i++)
+        {
+            var detalle = detalles[i];
+            <tr>
+                <td>
+                    <select name="Detalles[@i].ProductoId" class="form-select form-select-sm producto-select">
+                        <option value="">Seleccione producto</option>
+                        @foreach (var producto in Model.Productos)
+                        {
+                            <option value="@producto.ProductoId" selected="@(detalle.ProductoId == producto.ProductoId)">
+                                @producto.Nombre (@producto.Categoria)
+                            </option>
+                        }
+                    </select>
+                    <input name="Detalles[@i].UnidadMedida" value="@detalle.UnidadMedida" type="hidden" />
+                </td>
+                <td><input name="Detalles[@i].Cantidad" value="@detalle.Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+                <td><input name="Detalles[@i].CostoUnitario" value="@detalle.CostoUnitario" class="form-control form-control-sm text-end costo-input" type="number" step="0.01" min="0" /></td>
+                <td><input value="@((detalle.Cantidad * detalle.CostoUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
+                <td class="text-center">
+                    <button type="button" class="icon-btn primary add-row" title="Agregar fila" aria-label="Agregar fila">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <div class="form-totals" aria-label="Totales de compra">
+        <div><span>Subtotal</span><strong id="compraSubtotal">S/ 0.00</strong></div>
+        <div><span>IGV</span><strong id="compraIgv">S/ 0.00</strong></div>
+        <div><span>Total</span><strong id="compraTotal">S/ 0.00</strong></div>
+        <div><span>Total pagado</span><strong id="compraPagado">S/ 0.00</strong></div>
+        <div><span>Saldo pendiente</span><strong id="compraSaldo">S/ 0.00</strong></div>
+        <div><span>Estado pago</span><strong id="compraEstadoPago">PENDIENTE</strong></div>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        window.viveroCompraForm();
+    </script>
+}

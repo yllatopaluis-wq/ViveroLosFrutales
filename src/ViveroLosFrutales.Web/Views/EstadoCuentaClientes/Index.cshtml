@@ -1,0 +1,83 @@
+@model EstadoCuentaClienteDto?
+@{
+    ViewData["Title"] = "Estado de Cuenta Cliente";
+    var clientes = ViewData["Clientes"] as IReadOnlyList<ClienteListDto> ?? Array.Empty<ClienteListDto>();
+    var search = ViewData["Search"] as string;
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="search" class="form-control form-control-sm" value="@search" placeholder="Buscar cliente" />
+        <select name="clienteId" class="form-select form-select-sm">
+            <option value="">Seleccione cliente</option>
+            @foreach (var cliente in clientes)
+            {
+                <option value="@cliente.ClienteId" selected="@(Model?.ClienteId == cliente.ClienteId)">@cliente.NombreCompleto - @cliente.NumeroDocumento</option>
+            }
+        </select>
+        <button class="btn btn-sm btn-primary">Consultar</button>
+    </form>
+</div>
+
+@if (Model is not null)
+{
+    <div class="finance-summary">
+        <div><span>Cliente</span><strong>@Model.Cliente</strong></div>
+        <div><span>Total pedido</span><strong>S/ @Model.TotalPedidos.ToString("N2")</strong></div>
+        <div><span>Total cobrado</span><strong>S/ @Model.TotalCobrado.ToString("N2")</strong></div>
+        <div><span>Saldo pendiente</span><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></div>
+    </div>
+
+    <div class="section-title">Pedidos</div>
+    <table class="table table-sm table-striped data-grid">
+        <thead><tr><th>Numero</th><th>Fecha</th><th class="text-end">Total</th><th class="text-end">Cobrado</th><th class="text-end">Saldo</th><th>Estado Documento</th><th>Estado Pago</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Pedidos)
+        {
+            <tr>
+                <td>@item.Numero</td>
+                <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                <td class="text-end">S/ @item.Total.ToString("N2")</td>
+                <td class="text-end">S/ @item.TotalCobrado.ToString("N2")</td>
+                <td class="text-end">S/ @item.SaldoPendiente.ToString("N2")</td>
+                <td>@item.EstadoDocumento</td>
+                <td>@item.EstadoPago</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <div class="section-title">Cobros</div>
+    <table class="table table-sm table-striped data-grid">
+        <thead><tr><th>Fecha</th><th>Referencia</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Cobros)
+        {
+            <tr>
+                <td>@item.FechaCobro.ToString("dd/MM/yyyy")</td>
+                <td>@item.Referencia</td>
+                <td>@item.MedioPago</td>
+                <td class="text-end">S/ @item.Monto.ToString("N2")</td>
+                <td>@item.Estado</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+
+    <div class="section-title">Comprobantes</div>
+    <table class="table table-sm table-striped data-grid">
+        <thead><tr><th>Numero</th><th>Fecha</th><th class="text-end">Total</th><th>SUNAT</th><th>Estado</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Comprobantes)
+        {
+            <tr>
+                <td>@($"{item.TipoComprobante}-{item.Serie}-{item.Correlativo:000000}")</td>
+                <td>@item.FechaEmision.ToString("dd/MM/yyyy")</td>
+                <td class="text-end">S/ @item.Total.ToString("N2")</td>
+                <td>@item.EstadoSunat</td>
+                <td>@item.Estado</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

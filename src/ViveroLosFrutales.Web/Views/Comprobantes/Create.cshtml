@@ -1,0 +1,209 @@
+@model ComprobanteFormDataDto
+@using System.Text.Json
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? == true;
+    var isEditing = Model.Comprobante.ComprobanteId > 0;
+    ViewData["Title"] = readOnly ? "Visualizar comprobante" : isEditing ? "Editar comprobante" : "Registro comprobante";
+    var clienteSeleccionado = Model.Clientes.FirstOrDefault(x => x.ClienteId == Model.Comprobante.ClienteId);
+    var clienteTexto = clienteSeleccionado is null ? string.Empty : $"{clienteSeleccionado.NombreCompleto} - {clienteSeleccionado.NumeroDocumento}";
+    var clienteDireccion = clienteSeleccionado?.Direccion ?? string.Empty;
+    var clientesJson = JsonSerializer.Serialize(Model.Clientes.Select(x => new
+    {
+        id = x.ClienteId,
+        nombre = x.NombreCompleto,
+        documento = x.NumeroDocumento,
+        direccion = x.Direccion,
+        texto = $"{x.NombreCompleto} - {x.NumeroDocumento}"
+    }));
+    var productosJson = JsonSerializer.Serialize(Model.Productos.Select(x => new
+    {
+        id = x.ProductoId,
+        nombre = x.Nombre,
+        categoria = x.Categoria,
+        precio = x.PrecioVentaConIgv,
+        stock = x.Stock,
+        afectoIgv = x.AfectoIgv,
+        texto = string.IsNullOrWhiteSpace(x.Categoria) ? x.Nombre : $"{x.Nombre} ({x.Categoria})"
+    }));
+    var detalles = Model.Comprobante.Detalles.Count == 0
+        ? new List<ComprobanteDetalleDto> { new() }
+        : Model.Comprobante.Detalles;
+    var subtotalExonerado = 0m;
+    var subtotalGravado = 0m;
+    foreach (var detalle in detalles)
+    {
+        var importe = decimal.Round(detalle.Cantidad * detalle.PrecioUnitario, 2);
+        var producto = Model.Productos.FirstOrDefault(x => x.ProductoId == detalle.ProductoId);
+        if (producto?.AfectoIgv == true)
+        {
+            subtotalGravado += decimal.Round(importe / 1.18m, 2);
+        }
+        else
+        {
+            subtotalExonerado += importe;
+        }
+    }
+
+    static string EstadoPagoTexto(EstadoPagoComprobante estado) => estado switch
+    {
+        EstadoPagoComprobante.PENDIENTE => "PENDIENTE",
+        EstadoPagoComprobante.PAGO_PARCIAL => "PARCIAL",
+        EstadoPagoComprobante.PAGADO => "PAGADO",
+        _ => estado.ToString()
+    };
+}
+
+<form asp-action="Create" method="post" class="dense-form comprobante-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <input asp-for="Comprobante.ComprobanteId" name="ComprobanteId" type="hidden" />
+    @if (isEditing)
+    {
+        <input asp-for="Comprobante.TipoComprobante" name="TipoComprobante" type="hidden" />
+    }
+
+    <fieldset disabled="@readOnly" class="form-grid cols-4">
+        <label>
+            Tipo
+            <select asp-for="Comprobante.TipoComprobante" name="TipoComprobante" class="form-select form-select-sm" id="tipoComprobante" disabled="@isEditing">
+                <option value="@TipoComprobante.BOL">Boleta</option>
+                <option value="@TipoComprobante.FAC">Factura</option>
+            </select>
+        </label>
+        <label>
+            Serie
+            <input asp-for="Comprobante.Serie" name="Serie" class="form-control form-control-sm" id="serieComprobante" value="@Model.Numeracion.Serie" readonly />
+        </label>
+        <label>
+            Correlativo
+            <input asp-for="Comprobante.Correlativo" name="Correlativo" class="form-control form-control-sm text-end" id="correlativoComprobante" value="@Model.Numeracion.Correlativo" readonly />
+        </label>
+        <label>
+            Fecha
+            <input asp-for="Comprobante.FechaEmision" name="FechaEmision" class="form-control form-control-sm" type="date" />
+        </label>
+        <label class="span-2">
+            Cliente
+            <input class="form-control form-control-sm" id="clienteSearch" list="clientesOptions" value="@clienteTexto" placeholder="Buscar por nombre o numero de documento" autocomplete="off" />
+            <input asp-for="Comprobante.ClienteId" name="ClienteId" type="hidden" id="clienteId" />
+        </label>
+        <label class="span-2">
+            Direccion
+            <input asp-for="Comprobante.Direccion" name="Direccion" class="form-control form-control-sm" id="clienteDireccion" value="@clienteDireccion" readonly />
+        </label>
+        <label>
+            Condicion de pago
+            <select asp-for="Comprobante.FormaPago" name="FormaPago" asp-items="Html.GetEnumSelectList<FormaPago>()" class="form-select form-select-sm" id="formaPagoComprobante"></select>
+        </label>
+        <label id="medioPagoComprobanteWrap">
+            Medio Pago
+            <select asp-for="Comprobante.MedioPago" name="MedioPago" class="form-select form-select-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="YAPE">Yape</option>
+                <option value="PLIN">Plin</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="TARJETA">Tarjeta</option>
+                <option value="OTRO">Otro</option>
+            </select>
+        </label>
+    </fieldset>
+
+    <div class="section-title">Detalle</div>
+    <fieldset disabled="@readOnly" class="form-fieldset">
+    <table class="table table-sm data-grid detalle-grid" id="detalle" data-show-totals="true">
+        <colgroup>
+            <col class="detalle-producto" />
+            <col class="detalle-unidad" />
+            <col class="detalle-cantidad" />
+            <col class="detalle-precio" />
+            <col class="detalle-total" />
+            <col class="detalle-accion" />
+        </colgroup>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Unidad</th>
+                <th class="text-end">Cantidad</th>
+                <th class="text-end">Precio</th>
+                <th class="text-end">Total</th>
+                <th class="text-center"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (var i = 0; i < detalles.Count; i++)
+            {
+                <tr>
+                    <td>
+                        <select name="Detalles[@i].ProductoId" class="form-select form-select-sm producto-select">
+                            <option value="">Seleccione producto</option>
+                            @foreach (var producto in Model.Productos)
+                            {
+                                var selected = detalles[i].ProductoId == producto.ProductoId;
+                                <option value="@producto.ProductoId" data-precio="@producto.PrecioVentaConIgv" data-afecto-igv="@producto.AfectoIgv" selected="@selected">
+                                    @(string.IsNullOrWhiteSpace(producto.Categoria) ? producto.Nombre : $"{producto.Nombre} ({producto.Categoria})")
+                                </option>
+                            }
+                        </select>
+                    </td>
+                    <td><input value="UNIDAD" class="form-control form-control-sm" readonly /></td>
+                    <td><input name="Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+                    <td><input name="Detalles[@i].PrecioUnitario" value="@detalles[i].PrecioUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
+                    <td><input value="@((detalles[i].Cantidad * detalles[i].PrecioUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
+                    <td class="text-center">
+                        <button type="button" class="icon-btn primary add-row" title="Agregar fila" aria-label="Agregar fila">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    </fieldset>
+
+    <div class="form-totals" aria-label="Totales del comprobante">
+        <div><span>Subtotal Exonerado</span><strong id="comprobanteSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div>
+        <div><span>Subtotal Gravado</span><strong id="comprobanteSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div>
+        <div><span>IGV</span><strong id="comprobanteIgv">S/ @Model.Comprobante.Igv.ToString("N2")</strong></div>
+        <div><span>Total</span><strong id="comprobanteTotal">S/ @Model.Comprobante.Total.ToString("N2")</strong></div>
+        @if (readOnly)
+        {
+            <div><span>Cobrado</span><strong>S/ @Model.Comprobante.TotalPagado.ToString("N2")</strong></div>
+            <div><span>Saldo</span><strong>S/ @Model.Comprobante.SaldoPendiente.ToString("N2")</strong></div>
+            <div><span>Estado Pago</span><strong>@EstadoPagoTexto(Model.Comprobante.EstadoPago)</strong></div>
+        }
+    </div>
+
+    <div class="form-actions">
+        @if (!readOnly)
+        {
+            <button type="submit" name="submit" value="guardar" class="btn btn-sm btn-primary">Guardar</button>
+        }
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    @if (!readOnly)
+    {
+    <script>
+        window.viveroComprobanteForm({
+            numeracionUrl: '@Url.Action("Numeracion", "Comprobantes")',
+            clientes: @Html.Raw(clientesJson),
+            productos: @Html.Raw(productosJson),
+            clientesUrl: '@Url.Action("BuscarClientes", "Comprobantes")',
+            productosUrl: '@Url.Action("BuscarProductos", "Comprobantes")'
+        });
+        const formaPago = document.getElementById('formaPagoComprobante');
+        const medioPagoWrap = document.getElementById('medioPagoComprobanteWrap');
+        const medioPago = medioPagoWrap?.querySelector('select');
+        const syncMedioPago = () => {
+            const esCredito = formaPago?.value === '@((int)FormaPago.Credito)';
+            medioPagoWrap?.classList.toggle('d-none', esCredito);
+            if (medioPago) medioPago.disabled = !!esCredito;
+        };
+        formaPago?.addEventListener('change', syncMedioPago);
+        syncMedioPago();
+    </script>
+    }
+}

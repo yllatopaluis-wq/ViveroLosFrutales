@@ -1,0 +1,18 @@
+@model ConfiguracionEmpresaEditDto
+@{
+    ViewData["Title"] = Model.ConfiguracionEmpresaId == 0 ? "Crear configuracion" : "Editar configuracion";
+}
+
+<form method="post" class="dense-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="ConfiguracionEmpresaId" type="hidden" />
+    <div class="form-grid cols-3">
+        <label>Clave<input asp-for="Clave" class="form-control form-control-sm" /></label>
+        <label>Valor<input asp-for="Valor" class="form-control form-control-sm" /></label>
+        <label>Descripcion<input asp-for="Descripcion" class="form-control form-control-sm" /></label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

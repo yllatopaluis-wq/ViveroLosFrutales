@@ -1,0 +1,42 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Web", "src\ViveroLosFrutales.Web\ViveroLosFrutales.Web.csproj", "{D9E369B1-94C2-47E4-9D94-64A4A6158B01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Application", "src\ViveroLosFrutales.Application\ViveroLosFrutales.Application.csproj", "{3E76B635-8B34-4F4D-83D3-4F65F7A41DA8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Domain", "src\ViveroLosFrutales.Domain\ViveroLosFrutales.Domain.csproj", "{8BEE4FA8-9D39-4427-A234-D94F30E433F6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Infrastructure", "src\ViveroLosFrutales.Infrastructure\ViveroLosFrutales.Infrastructure.csproj", "{94F8DD16-C71B-451D-AB7C-B62A455243B0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Tests", "tests\ViveroLosFrutales.Tests\ViveroLosFrutales.Tests.csproj", "{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D9E369B1-94C2-47E4-9D94-64A4A6158B01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9E369B1-94C2-47E4-9D94-64A4A6158B01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9E369B1-94C2-47E4-9D94-64A4A6158B01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9E369B1-94C2-47E4-9D94-64A4A6158B01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E76B635-8B34-4F4D-83D3-4F65F7A41DA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E76B635-8B34-4F4D-83D3-4F65F7A41DA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E76B635-8B34-4F4D-83D3-4F65F7A41DA8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E76B635-8B34-4F4D-83D3-4F65F7A41DA8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BEE4FA8-9D39-4427-A234-D94F30E433F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BEE4FA8-9D39-4427-A234-D94F30E433F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BEE4FA8-9D39-4427-A234-D94F30E433F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BEE4FA8-9D39-4427-A234-D94F30E433F6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{94F8DD16-C71B-451D-AB7C-B62A455243B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{94F8DD16-C71B-451D-AB7C-B62A455243B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{94F8DD16-C71B-451D-AB7C-B62A455243B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{94F8DD16-C71B-451D-AB7C-B62A455243B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

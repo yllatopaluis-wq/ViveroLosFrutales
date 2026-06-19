@@ -1,0 +1,22 @@
+@model SeleccionarEmpresaDto
+@{
+    ViewData["Title"] = "Seleccionar empresa";
+}
+
+<form method="post" class="dense-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="form-grid cols-2">
+        <label>
+            Empresa
+            <select asp-for="EmpresaId" class="form-select form-select-sm">
+                @foreach (var empresa in Model.Empresas)
+                {
+                    <option value="@empresa.EmpresaId">@empresa.RazonSocial</option>
+                }
+            </select>
+        </label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Continuar</button>
+    </div>
+</form>

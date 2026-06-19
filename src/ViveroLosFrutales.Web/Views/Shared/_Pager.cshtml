@@ -1,0 +1,33 @@
+@model dynamic
+@{
+    var currentPage = (int)Model.Page;
+    var pageSize = (int)Model.PageSize;
+    var total = (int)Model.Total;
+    var totalPages = pageSize <= 0 ? 1 : (int)Math.Ceiling(total / (decimal)pageSize);
+    var from = total == 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+    var to = Math.Min(currentPage * pageSize, total);
+    var hasNext = total > currentPage * pageSize;
+    var totalText = hasNext ? $"mas de {to}" : total.ToString();
+
+    string PageUrl(int targetPage)
+    {
+        var request = ViewContext.HttpContext.Request;
+        var query = request.Query
+            .Where(x => !string.Equals(x.Key, "Page", StringComparison.OrdinalIgnoreCase))
+            .ToDictionary(item => item.Key, item => (string?)item.Value.ToString());
+        query["Page"] = targetPage.ToString();
+        query["PageSize"] = pageSize.ToString();
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(request.Path, query);
+    }
+}
+
+<nav class="pager" aria-label="Paginacion">
+    <span>Mostrando @from-@to de @totalText registros. Pagina @currentPage de @Math.Max(totalPages, 1).</span>
+    @if (currentPage > 1 || hasNext)
+    {
+        <div class="pager-actions">
+            <a class="btn btn-sm btn-outline-secondary @(currentPage <= 1 ? "disabled" : "")" href="@(currentPage <= 1 ? "#" : PageUrl(currentPage - 1))">Anterior</a>
+            <a class="btn btn-sm btn-outline-secondary @(!hasNext ? "disabled" : "")" href="@(!hasNext ? "#" : PageUrl(currentPage + 1))">Siguiente</a>
+        </div>
+    }
+</nav>

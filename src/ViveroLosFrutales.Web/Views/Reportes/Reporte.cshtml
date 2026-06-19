@@ -1,0 +1,23 @@
+@{
+    var today = DateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+}
+
+<form method="get" class="dense-form">
+    <div class="form-grid cols-4">
+        <label>Fecha Desde<input name="FechaDesde" class="form-control form-control-sm" type="date" value="@firstDay" /></label>
+        <label>Fecha Hasta<input name="FechaHasta" class="form-control form-control-sm" type="date" value="@currentDay" /></label>
+        <label>Filtro<input name="Filtro" class="form-control form-control-sm" placeholder="Cliente, producto o categoria" /></label>
+        <label>Formato<select name="Formato" class="form-select form-select-sm"><option>Vista</option><option>Excel</option><option>PDF</option></select></label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Consultar</button>
+        <button type="button" class="btn btn-sm btn-success">Exportar</button>
+    </div>
+</form>
+
+<div class="data-grid empty-state mt-3">
+    <strong>@ViewData["Title"]</strong>
+    <span>Reporte preparado para consultar siempre con rango de fechas y sin cargar historico completo automaticamente.</span>
+</div>

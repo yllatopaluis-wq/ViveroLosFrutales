@@ -1,0 +1,79 @@
+@model LoginDto
+@{
+    ViewData["Title"] = "Iniciar sesion";
+    ViewData["AuthPage"] = true;
+    Layout = "_Layout";
+    var empresas = ViewBag.Empresas as IReadOnlyList<EmpresaListDto> ?? Array.Empty<EmpresaListDto>();
+}
+
+<main class="login-page">
+    <section class="login-visual" aria-hidden="true">
+        <div class="login-visual-copy">
+            <span>Vivero Los Frutales</span>
+            <h1>Cultiva tu gestion con claridad.</h1>
+            <p>Ventas, cotizaciones y comprobantes en un solo entorno de trabajo.</p>
+        </div>
+    </section>
+
+    <section class="login-panel">
+        <form method="post" class="login-card">
+            @Html.AntiForgeryToken()
+            <div class="login-brand">
+                <span class="login-brand-mark">VF</span>
+                <div>
+                    <strong>Vivero Los Frutales</strong>
+                    <small>Gestion comercial</small>
+                </div>
+            </div>
+
+            <div class="login-heading">
+                <h2>Iniciar sesion</h2>
+                <p>Ingrese sus credenciales para continuar.</p>
+            </div>
+
+            <div asp-validation-summary="ModelOnly" class="login-error"></div>
+
+            <label class="login-field">
+                <span>Usuario</span>
+                <span class="login-input-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg>
+                    <input asp-for="Usuario" autocomplete="username" placeholder="Ingrese su usuario" autofocus />
+                </span>
+            </label>
+
+            <label class="login-field">
+                <span>Contrasena</span>
+                <span class="login-input-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3" /><path d="M5 11h14v10H5Z" /></svg>
+                    <input asp-for="Password" type="password" autocomplete="current-password" placeholder="Ingrese su contrasena" />
+                </span>
+            </label>
+
+            <label class="login-field">
+                <span>Empresa</span>
+                <span class="login-input-wrap">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18" /><path d="M5 21V5a2 2 0 0 1 2-2h7v18" /><path d="M14 8h3a2 2 0 0 1 2 2v11" /><path d="M9 7h1" /><path d="M9 11h1" /><path d="M9 15h1" /></svg>
+                    <select asp-for="EmpresaId">
+                        <option value="">Seleccione una empresa</option>
+                        @foreach (var empresa in empresas)
+                        {
+                            <option value="@empresa.EmpresaId">@empresa.RazonSocial</option>
+                        }
+                    </select>
+                </span>
+            </label>
+
+            <label class="login-remember">
+                <input asp-for="Recordarme" />
+                <span>Recordarme</span>
+            </label>
+
+            <button class="login-submit" type="submit">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="m10 17 5-5-5-5" /><path d="M15 12H3" /></svg>
+                Ingresar
+            </button>
+
+            <p class="login-footer">Web Los Frutales &copy; 2026</p>
+        </form>
+    </section>
+</main>

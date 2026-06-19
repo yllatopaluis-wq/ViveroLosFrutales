@@ -1,0 +1,112 @@
+@model NotaPedidoDetalleViewDto
+@{
+    ViewData["Title"] = "Detalle Nota de Pedido";
+    var puedeCobrar = Model.EstadoDocumento == NotaPedidoEstado.ACTIVO
+        && Model.EstadoPago != EstadoPagoNotaPedido.PAGADO
+        && Model.ComprobanteId is null;
+    var puedeConvertir = Model.EstadoDocumento == NotaPedidoEstado.ACTIVO
+        && Model.EstadoPago == EstadoPagoNotaPedido.PAGADO
+        && Model.SaldoPendiente <= 0
+        && Model.ComprobanteId is null;
+}
+
+@functions {
+    private static string EstadoPagoTexto(EstadoPagoNotaPedido estado) => estado switch
+    {
+        EstadoPagoNotaPedido.PENDIENTE => "PENDIENTE",
+        EstadoPagoNotaPedido.PAGO_PARCIAL => "PARCIAL",
+        EstadoPagoNotaPedido.PAGADO => "PAGADO",
+        _ => estado.ToString()
+    };
+
+    private static string EstadoDocumentoTexto(NotaPedidoEstado estado) =>
+        estado == NotaPedidoEstado.ACTIVO ? "ACTIVO" : "ANULADO";
+
+    private static string EstadoCobroTexto(CobroClienteEstado estado) =>
+        estado == CobroClienteEstado.ACTIVO ? "ACTIVO" : "ANULADO";
+}
+
+<div class="nota-detail">
+<div class="nota-detail-header">
+    <h1>@Model.Numero</h1>
+    <div class="nota-detail-actions">
+        @if (puedeCobrar)
+        {
+            <a class="btn btn-sm btn-primary" asp-action="RegistrarCobro" asp-route-id="@Model.NotaPedidoId">Registrar cobro</a>
+        }
+        <form asp-action="Imprimir" method="post" class="icon-form" target="_blank">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.NotaPedidoId" />
+            <button type="submit" class="btn btn-sm btn-outline-secondary">Imprimir PDF</button>
+        </form>
+        <a class="nota-back-link" asp-action="Index">Volver</a>
+    </div>
+</div>
+
+<div class="nota-summary-grid">
+    <div class="nota-summary-card"><span>Total pedido</span><strong>S/ @Model.Total.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Total cobrado</span><strong>S/ @Model.TotalCobrado.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Saldo pendiente</span><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Estado documento</span><strong>@EstadoDocumentoTexto(Model.EstadoDocumento)</strong></div>
+    <div class="nota-summary-card"><span>Estado pago</span><strong>@EstadoPagoTexto(Model.EstadoPago)</strong></div>
+
+    @if (puedeConvertir)
+    {
+        <div class="nota-convert-card">
+            <span>Convertir a comprobante</span>
+            <form asp-action="ConvertirAComprobante" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.NotaPedidoId" />
+                <button class="btn btn-sm btn-outline-secondary">Convertir a Comprobante</button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="nota-info-card">
+    <div><span>Cliente</span><strong>@Model.Cliente</strong></div>
+    <div><span>Fecha</span><strong>@Model.Fecha.ToString("dd/MM/yyyy")</strong></div>
+    <div><span>Numero</span><strong>@Model.Numero</strong></div>
+</div>
+
+<div class="nota-detail-columns">
+    <section>
+        <div class="section-title">Productos</div>
+        <table class="table table-sm table-striped data-grid nota-products-grid">
+            <thead><tr><th>Producto</th><th class="text-end">Cantidad</th><th class="text-end">Precio</th><th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead>
+            <tbody>
+            @foreach (var item in Model.Detalles)
+            {
+                <tr>
+                    <td>@item.Producto</td>
+                    <td class="text-end">@item.Cantidad.ToString("N2")</td>
+                    <td class="text-end">S/ @item.PrecioUnitario.ToString("N2")</td>
+                    <td class="text-end">S/ @item.Subtotal.ToString("N2")</td>
+                    <td class="text-end">S/ @item.Igv.ToString("N2")</td>
+                    <td class="text-end">S/ @item.Total.ToString("N2")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <div class="section-title">Historial de cobros</div>
+        <table class="table table-sm table-striped data-grid nota-cobros-grid">
+            <thead><tr><th>Fecha</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th><th>Observacion</th></tr></thead>
+            <tbody>
+            @foreach (var cobro in Model.Cobros)
+            {
+                <tr>
+                    <td>@cobro.FechaCobro.ToString("dd/MM/yyyy")</td>
+                    <td>@cobro.MedioPago</td>
+                    <td class="text-end">S/ @cobro.Monto.ToString("N2")</td>
+                    <td>@EstadoCobroTexto(cobro.Estado)</td>
+                    <td>@cobro.Observacion</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </section>
+</div>
+</div>

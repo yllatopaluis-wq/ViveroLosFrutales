@@ -1,0 +1,22 @@
+@model PagedResult<DevolucionListDto>
+@{
+    var devoluciones = Model.Items.Where(x => x.TipoTercero == TipoTerceroDevolucion.PROVEEDOR).ToList();
+}
+
+<table class="table table-sm data-grid">
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Compra</th><th class="text-end">Monto original</th><th class="text-end">Monto devuelto</th><th class="text-end">Monto pendiente</th><th>Estado</th></tr></thead>
+    <tbody>
+    @foreach (var item in devoluciones)
+    {
+        <tr>
+            <td>@item.FechaGeneracion.ToString("dd/MM/yyyy")</td>
+            <td>@item.Tercero</td>
+            <td>@item.DocumentoOrigen</td>
+            <td class="text-end">S/ @item.MontoOriginal.ToString("N2")</td>
+            <td class="text-end">S/ @item.MontoDevuelto.ToString("N2")</td>
+            <td class="text-end">S/ @item.MontoPendiente.ToString("N2")</td>
+            <td><span class="status-badge @(item.Estado == EstadoDevolucion.DEVUELTO ? "active" : item.Estado == EstadoDevolucion.ANULADO ? "danger" : item.Estado == EstadoDevolucion.PARCIAL ? "warning" : string.Empty)">@item.Estado</span></td>
+        </tr>
+    }
+    </tbody>
+</table>

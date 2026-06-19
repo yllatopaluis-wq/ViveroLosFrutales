@@ -1,0 +1,36 @@
+@model IReadOnlyList<CompraListDto>
+@{
+    var today = DateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+    var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
+    var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
+        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
+        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Proveedor o documento" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+</div>
+
+<table class="table table-sm data-grid">
+    <thead><tr><th>Fecha</th><th>Proveedor</th><th>Documento</th><th class="text-end">Total</th><th class="text-end">Pagado</th><th class="text-end">Saldo</th><th>Estado</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+            <td>@item.Proveedor</td>
+            <td>@item.Documento</td>
+            <td class="text-end">S/ @item.Total.ToString("N2")</td>
+            <td class="text-end">S/ @item.TotalPagado.ToString("N2")</td>
+            <td class="text-end">S/ @item.SaldoPendiente.ToString("N2")</td>
+            <td><span class="status-badge @(item.EstadoPago == EstadoPagoCompra.PARCIAL ? "warning" : string.Empty)">@item.EstadoPago</span></td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -1,0 +1,51 @@
+@model PagedResult<ClienteListDto>
+@{
+    ViewData["Title"] = "Clientes";
+
+    static string EstadoRegistroTexto(EstadoRegistro estado) =>
+        estado == EstadoRegistro.Activo ? "ACTIVO" : "ANULADO";
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="Search" class="form-control form-control-sm" placeholder="Buscar nombre o documento" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+    <a class="btn btn-sm btn-success" asp-action="Edit">Crear</a>
+</div>
+
+<table class="table table-sm table-striped data-grid">
+    <thead><tr><th>Nombre</th><th>Tipo</th><th>Documento</th><th>Direccion</th><th>Telefono</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.NombreCompleto</td>
+            <td>@item.TipoDocumento</td>
+            <td>@item.NumeroDocumento</td>
+            <td>@item.Direccion</td>
+            <td>@item.Telefono</td>
+            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@EstadoRegistroTexto(item.Estado)</span></td>
+            <td class="actions-cell">
+                <div class="quote-actions">
+                    <a class="icon-btn" asp-action="Visualizar" asp-route-id="@item.ClienteId" title="Visualizar" aria-label="Visualizar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg>
+                    </a>
+                    <a class="icon-btn" asp-action="Edit" asp-route-id="@item.ClienteId" title="Editar" aria-label="Editar">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                    </a>
+                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return confirm('Anular este cliente?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@item.ClienteId" />
+                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                        </button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pager", Model)

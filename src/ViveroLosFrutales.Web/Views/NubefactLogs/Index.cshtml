@@ -1,0 +1,49 @@
+@model PagedResult<NubefactOperacionDto>
+@{
+    ViewData["Title"] = "Log Nubefact";
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="Search" class="form-control form-control-sm" placeholder="Buscar operacion, serie o error" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+</div>
+
+<table class="table table-sm data-grid">
+    <thead>
+        <tr>
+            <th>Fecha</th>
+            <th>Comprobante</th>
+            <th>Operacion</th>
+            <th>Estado</th>
+            <th>Detalle</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</td>
+            <td>@item.NumeroComprobante</td>
+            <td>@item.TipoOperacion</td>
+            <td>@item.EstadoSunat</td>
+            <td>
+                <details>
+                    <summary>Ver solicitud y respuesta</summary>
+                    <div class="log-grid">
+                        <section>
+                            <strong>Solicitud enviada</strong>
+                            <pre class="json-log">@item.SolicitudJson</pre>
+                        </section>
+                        <section>
+                            <strong>Respuesta Nubefact</strong>
+                            <pre class="json-log">@item.RespuestaCompleta</pre>
+                        </section>
+                    </div>
+                </details>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

@@ -1,0 +1,32 @@
+@model DevolucionDetalleDto
+@{
+    ViewData["Title"] = "Detalle Devolucion";
+    var puedeRegistrar = Model.Estado is EstadoDevolucion.PENDIENTE or EstadoDevolucion.PARCIAL;
+}
+
+<div class="toolbar">
+    <a class="btn btn-sm btn-secondary" asp-action="Index">Volver</a>
+    @if (puedeRegistrar)
+    {
+        <a class="btn btn-sm btn-primary" asp-action="Registrar" asp-route-id="@Model.DevolucionId">Registrar devolucion</a>
+    }
+</div>
+
+<section class="nota-summary-grid">
+    <div class="nota-summary-card"><span>Fecha</span><strong>@Model.FechaGeneracion.ToString("dd/MM/yyyy")</strong></div>
+    <div class="nota-summary-card"><span>Tipo tercero</span><strong>@Model.TipoTercero</strong></div>
+    <div class="nota-summary-card"><span>Cliente / Proveedor</span><strong>@Model.Tercero</strong></div>
+    <div class="nota-summary-card"><span>Origen</span><strong>@Model.OrigenDescripcion</strong></div>
+    <div class="nota-summary-card"><span>Documento origen</span><strong>@Model.DocumentoOrigen</strong></div>
+    <div class="nota-summary-card"><span>Estado</span><strong>@Model.Estado</strong></div>
+    <div class="nota-summary-card"><span>Monto original</span><strong>S/ @Model.MontoOriginal.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Monto devuelto</span><strong>S/ @Model.MontoDevuelto.ToString("N2")</strong></div>
+    <div class="nota-summary-card"><span>Monto pendiente</span><strong>S/ @Model.MontoPendiente.ToString("N2")</strong></div>
+</section>
+
+<div class="form-card">
+    <h3>Motivo</h3>
+    <p>@Model.MotivoGeneracion</p>
+    <h3>Observacion</h3>
+    <p>@Model.Observacion</p>
+</div>

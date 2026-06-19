@@ -1,0 +1,55 @@
+@model EmpresaEditDto
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? == true;
+    ViewData["Title"] = readOnly ? "Visualizar empresa" : Model.EmpresaId == 0 ? "Crear empresa" : "Editar empresa";
+    var logoSrc = Model.LogoContenido is { Length: > 0 } && !string.IsNullOrWhiteSpace(Model.LogoContentType)
+        ? $"data:{Model.LogoContentType};base64,{Convert.ToBase64String(Model.LogoContenido)}"
+        : null;
+}
+
+<form asp-action="Edit" method="post" enctype="multipart/form-data" class="dense-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="EmpresaId" type="hidden" />
+    <input asp-for="Estado" type="hidden" />
+    <input asp-for="SerieNotaCredito" type="hidden" />
+    <fieldset disabled="@readOnly" class="form-grid cols-3">
+        <label>RUC<input asp-for="RUC" class="form-control form-control-sm" /></label>
+        <label>Razon Social<input asp-for="RazonSocial" class="form-control form-control-sm" /></label>
+        <label>Nombre Comercial<input asp-for="NombreComercial" class="form-control form-control-sm" /></label>
+        <label>Direccion<input asp-for="Direccion" class="form-control form-control-sm" /></label>
+        <label>Telefono<input asp-for="Telefono" class="form-control form-control-sm" /></label>
+        <label>Email<input asp-for="Email" class="form-control form-control-sm" /></label>
+        <label>URL Nubefact<input asp-for="UrlNubefact" class="form-control form-control-sm" /></label>
+        <label>Token Nubefact<input asp-for="TokenNubefact" class="form-control form-control-sm" /></label>
+        <label>
+            Logo empresa
+            <input name="logoArchivo" class="form-control form-control-sm" type="file" accept="image/*" />
+        </label>
+        <div class="logo-preview">
+            @if (logoSrc is not null)
+            {
+                <img src="@logoSrc" alt="Logo de la empresa" />
+                <span>@(string.IsNullOrWhiteSpace(Model.LogoNombre) ? "Logo guardado" : Model.LogoNombre)</span>
+            }
+            else
+            {
+                <span>Sin logo cargado</span>
+            }
+        </div>
+        <label>Moneda<input asp-for="MonedaPredeterminada" class="form-control form-control-sm" /></label>
+        <label>Serie Boleta<input asp-for="SerieBoleta" class="form-control form-control-sm" /></label>
+        <label>Serie Factura<input asp-for="SerieFactura" class="form-control form-control-sm" /></label>
+        <label>Serie NC Factura<input asp-for="SerieNotaCreditoFactura" class="form-control form-control-sm" /></label>
+        <label>Serie NC Boleta<input asp-for="SerieNotaCreditoBoleta" class="form-control form-control-sm" /></label>
+        <label>Serie Nota Pedido<input asp-for="SerieNotaPedido" class="form-control form-control-sm" /></label>
+        <label>Serie Cotizacion<input asp-for="SerieCotizacion" class="form-control form-control-sm" /></label>
+    </fieldset>
+    <div class="form-actions">
+        @if (!readOnly)
+        {
+            <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+        }
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

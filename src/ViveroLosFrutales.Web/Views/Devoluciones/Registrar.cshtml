@@ -1,0 +1,33 @@
+@model RegistrarDevolucionDto
+@{
+    ViewData["Title"] = "Registrar Devolucion";
+    var mensajeCaja = Model.TipoTercero == TipoTerceroDevolucion.CLIENTE
+        ? "Al confirmar se creara un MovimientoCaja de tipo EGRESO. Los ingresos historicos permanecen registrados."
+        : "Al confirmar se creara un MovimientoCaja de tipo INGRESO. Los egresos historicos permanecen registrados.";
+}
+
+<form asp-action="Registrar" method="post" class="form-card">
+    @Html.AntiForgeryToken()
+    <input asp-for="DevolucionId" type="hidden" />
+    <input asp-for="TipoTercero" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <section class="nota-summary-grid">
+        <div class="nota-summary-card"><span>Tipo tercero</span><strong>@Model.TipoTercero</strong></div>
+        <div class="nota-summary-card"><span>Cliente / Proveedor</span><strong>@Model.Tercero</strong></div>
+        <div class="nota-summary-card"><span>Documento origen</span><strong>@Model.DocumentoOrigen</strong></div>
+        <div class="nota-summary-card"><span>Monto pendiente</span><strong>S/ @Model.MontoPendiente.ToString("N2")</strong></div>
+    </section>
+
+    <div class="form-grid">
+        <label>Monto devolver<input asp-for="MontoDevolver" class="form-control form-control-sm" /></label>
+        <label>Medio devolucion<input asp-for="MedioDevolucion" class="form-control form-control-sm" /></label>
+        <label>Fecha<input asp-for="Fecha" type="date" class="form-control form-control-sm" /></label>
+    </div>
+    <label>Observacion<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
+    <p class="text-muted">@mensajeCaja</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-sm btn-primary">Registrar devolucion</button>
+        <a class="btn btn-sm btn-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

@@ -1,0 +1,18 @@
+@model CategoriaEditDto
+@{
+    ViewData["Title"] = Model.CategoriaId == 0 ? "Crear categoria" : "Editar categoria";
+}
+
+<form method="post" class="dense-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="CategoriaId" type="hidden" />
+    <div class="form-grid cols-2">
+        <label>Categoria<input asp-for="Nombre" class="form-control form-control-sm" /></label>
+        <label>Estado<select asp-for="Estado" asp-items="Html.GetEnumSelectList<EstadoRegistro>()" class="form-select form-select-sm"></select></label>
+        <label class="span-2">Descripcion<input asp-for="Descripcion" class="form-control form-control-sm" /></label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

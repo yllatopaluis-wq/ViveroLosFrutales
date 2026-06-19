@@ -1,0 +1,51 @@
+@model IngresoEditDto
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? == true;
+    ViewData["Title"] = readOnly ? "Visualizar Ingreso" : Model.IngresoId == 0 ? "Registrar Ingreso" : "Editar Ingreso";
+    var tiposIngreso = ViewBag.CategoriasIngreso as IReadOnlyList<CategoriaIngresoOptionDto> ?? Array.Empty<CategoriaIngresoOptionDto>();
+    var tipoActual = (Model.TipoIngreso ?? string.Empty).Trim().ToUpperInvariant();
+}
+
+<form asp-action="Create" method="post" class="dense-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="IngresoId" type="hidden" />
+    <input asp-for="TipoIngreso" type="hidden" />
+    <fieldset disabled="@readOnly" class="form-grid cols-4">
+        <label>Fecha<input asp-for="Fecha" class="form-control form-control-sm" type="date" /></label>
+        <label>
+            Tipo Ingreso
+            <select asp-for="CategoriaIngresoId" class="form-select form-select-sm">
+                <option value="">Seleccione tipo</option>
+                @if (!string.IsNullOrWhiteSpace(tipoActual) && tiposIngreso.All(x => x.Nombre != tipoActual))
+                {
+                    <option value="" selected>@tipoActual</option>
+                }
+                @foreach (var tipo in tiposIngreso)
+                {
+                    <option value="@tipo.CategoriaIngresoId" selected="@(Model.CategoriaIngresoId == tipo.CategoriaIngresoId || tipoActual == tipo.Nombre)">@tipo.Nombre</option>
+                }
+            </select>
+        </label>
+        <label>Importe<input asp-for="Importe" class="form-control form-control-sm" type="number" step="0.01" /></label>
+        <label>
+            Medio Pago
+            <select asp-for="MedioPago" class="form-select form-select-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="YAPE">Yape</option>
+                <option value="TARJETA DEBITO">Tarjeta debito</option>
+                <option value="TARJETA CREDITO">Tarjeta Credito</option>
+            </select>
+        </label>
+        <label class="span-2">Descripcion<input asp-for="Descripcion" class="form-control form-control-sm" /></label>
+        <label class="span-2">Observacion<input asp-for="Observacion" class="form-control form-control-sm" /></label>
+    </fieldset>
+    <div class="form-actions">
+        @if (!readOnly)
+        {
+            <button class="btn btn-sm btn-primary">Guardar</button>
+        }
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

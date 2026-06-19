@@ -1,0 +1,28 @@
+@model ProveedorEditDto
+@{
+    var readOnly = ViewData["ReadOnly"] as bool? == true;
+    ViewData["Title"] = readOnly ? "Visualizar Proveedor" : Model.ProveedorId == 0 ? "Crear Proveedor" : "Editar Proveedor";
+}
+
+<form asp-action="Create" method="post" class="dense-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="ProveedorId" type="hidden" />
+    <fieldset disabled="@readOnly" class="form-grid cols-4">
+        <label>Tipo Documento<select asp-for="TipoDocumento" asp-items="Html.GetEnumSelectList<TipoDocumentoCliente>()" class="form-select form-select-sm"></select></label>
+        <label>Numero Documento<input asp-for="NumeroDocumento" class="form-control form-control-sm" maxlength="11" /></label>
+        <label class="span-2">Razon Social<input asp-for="RazonSocial" class="form-control form-control-sm" /></label>
+        <label class="span-2">Nombre Comercial<input asp-for="NombreComercial" class="form-control form-control-sm" /></label>
+        <label class="span-2">Direccion<input asp-for="Direccion" class="form-control form-control-sm" /></label>
+        <label>Telefono<input asp-for="Telefono" class="form-control form-control-sm" /></label>
+        <label>Email<input asp-for="Email" class="form-control form-control-sm" type="email" /></label>
+        <label>Estado<select asp-for="Estado" asp-items="Html.GetEnumSelectList<EstadoRegistro>()" class="form-select form-select-sm"></select></label>
+    </fieldset>
+    <div class="form-actions">
+        @if (!readOnly)
+        {
+            <button class="btn btn-sm btn-primary">Guardar</button>
+        }
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>

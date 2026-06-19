@@ -1,0 +1,152 @@
+@inject Microsoft.AspNetCore.Identity.UserManager<ViveroLosFrutales.Infrastructure.Identity.ApplicationUser> UserManager
+@{
+    var title = ViewData["Title"] as string ?? "Vivero Los Frutales";
+    var empresaNombre = Context.Session.GetString("EmpresaNombre");
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var currentUser = isAuthenticated ? await UserManager.GetUserAsync(User) : null;
+    var usuarioNombreCompleto = currentUser is null
+        ? User.Identity?.Name
+        : string.Join(" ", new[] { currentUser.Nombres, currentUser.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+    var usuarioDisplay = string.IsNullOrWhiteSpace(usuarioNombreCompleto) ? User.Identity?.Name : usuarioNombreCompleto;
+    var isAuthPage = ViewData["AuthPage"] as bool? == true;
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var ventasOpen = controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito" or "CobrosClientes";
+    var catalogosOpen = controller is "Categorias" or "Productos" or "Clientes" or "Proveedores";
+    var operacionOpen = controller is "Compras" or "Gastos" or "Ingresos" or "Caja" or "Devoluciones";
+    var administracionOpen = controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "NubefactLogs";
+    var reportesOpen = controller is "Reportes" or "EstadoCuentaClientes";
+}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@title - Vivero Los Frutales</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @if (isAuthPage)
+    {
+        @RenderBody()
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        @await RenderSectionAsync("Scripts", required: false)
+        return;
+    }
+
+    <div class="app-shell">
+        <header class="app-header">
+            <div class="header-left">
+                <button type="button" class="menu-toggle" id="menuToggle" title="Ocultar menu" aria-label="Ocultar menu" aria-controls="sidebar">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>
+                </button>
+                <a class="header-brand" asp-controller="Home" asp-action="Index">
+                    <span class="brand-leaf" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M20 4c-7.2.3-11.7 3.4-13.6 9.3 4.9.8 9.5-1.6 13.6-9.3Z" /><path d="M4 20c2.9-5.5 7-9 12.4-10.5" /><path d="M4 11c3.6-1.7 6.7-1.2 9.2 1.4" /></svg>
+                    </span>
+                    <strong>Vivero Los Frutales</strong>
+                </a>
+            </div>
+
+            <div class="header-actions">
+                @if (isAuthenticated)
+                {
+                    <span class="header-icon" title="Notificaciones" aria-label="Notificaciones">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
+                    </span>
+                    <span class="user-menu">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg>
+                        <span>@usuarioDisplay</span>
+                    </span>
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button type="submit" class="header-logout">Salir</button>
+                    </form>
+                }
+            </div>
+        </header>
+
+        <aside class="sidebar" id="sidebar">
+            @if (isAuthenticated)
+            {
+                <nav class="side-nav" aria-label="Menu principal">
+                    <a asp-controller="Home" asp-action="Index" class="dashboard-link">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 6-6 4 4 7-8" /><path d="M14 7h6v6" /></svg>
+                        <span>Tablero de Control</span>
+                    </a>
+                    <details class="nav-group" open="@ventasOpen">
+                        <summary><span>Ventas</span></summary>
+                        <a asp-controller="Cotizaciones" asp-action="Create">Crear cotizacion</a>
+                        <a asp-controller="Cotizaciones" asp-action="Index">Lista cotizaciones</a>
+                        <a asp-controller="NotasPedido" asp-action="Nuevo">Crear nota de pedido</a>
+                        <a asp-controller="NotasPedido" asp-action="Index">Lista notas de pedido</a>
+                        <a asp-controller="Comprobantes" asp-action="Create">Crear comprobante</a>
+                        <a asp-controller="Comprobantes" asp-action="Index">Lista comprobantes</a>
+                        <a asp-controller="NotasCredito" asp-action="Create">Crear nota de credito</a>
+                        <a asp-controller="NotasCredito" asp-action="Index">Lista notas de credito</a>
+                        <a asp-controller="CobrosClientes" asp-action="Index">Cobros clientes</a>
+                    </details>
+                    <details class="nav-group" open="@catalogosOpen">
+                        <summary><span>Maestros</span></summary>
+                        <a asp-controller="Categorias" asp-action="Index">Categorias</a>
+                        <a asp-controller="Productos" asp-action="Index">Productos</a>
+                        <a asp-controller="Clientes" asp-action="Index">Clientes</a>
+                        <a asp-controller="Proveedores" asp-action="Index">Proveedores</a>
+                    </details>
+                    <details class="nav-group" open="@operacionOpen">
+                        <summary><span>Operacion</span></summary>
+                        <a asp-controller="Compras" asp-action="Index">Compras</a>
+                        <a asp-controller="Gastos" asp-action="Index">Gastos</a>
+                        <a asp-controller="Ingresos" asp-action="Index">Ingresos</a>
+                        <a asp-controller="Devoluciones" asp-action="Index">Devoluciones</a>
+                        <a asp-controller="Caja" asp-action="Index">Caja</a>
+                    </details>
+                    <details class="nav-group" open="@administracionOpen">
+                        <summary><span>Administracion</span></summary>
+                        <a asp-controller="Empresas" asp-action="Index">Empresas</a>
+                        <a asp-controller="Usuarios" asp-action="Index">Usuarios</a>
+                        <a asp-controller="Roles" asp-action="Index">Roles</a>
+                        <a asp-controller="Configuracion" asp-action="Index">Configuracion</a>
+                        <a asp-controller="NubefactLogs" asp-action="Index">Log Nubefact</a>
+                    </details>
+                    <details class="nav-group" open="@reportesOpen">
+                        <summary><span>Reportes</span></summary>
+                        <a asp-controller="Reportes" asp-action="Reporte">Reporte general</a>
+                        <a asp-controller="Reportes" asp-action="Cotizaciones">Propuestas comerciales</a>
+                        <a asp-controller="Reportes" asp-action="CuentasPorPagar">Cuentas por pagar</a>
+                        <a asp-controller="Reportes" asp-action="DevolucionesProveedor">Devoluciones proveedor</a>
+                        <a asp-controller="Caja" asp-action="Index">Reporte caja</a>
+                        <a asp-controller="EstadoCuentaClientes" asp-action="Index">Estado cuenta clientes</a>
+                    </details>
+                </nav>
+            }
+        </aside>
+
+        <main class="content">
+            <header class="topbar">
+                <span class="page-title">@title</span>
+                <div class="top-actions">
+                    @if (isAuthenticated)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(empresaNombre))
+                        {
+                            <span class="context-pill">@empresaNombre</span>
+                        }
+                    }
+                </div>
+            </header>
+
+            <section class="page">
+                @RenderBody()
+            </section>
+        </main>
+    </div>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (isAuthenticated && Context.Session.GetInt32("EmpresaId") is int empresaId)
+    {
+        <script>
+            window.viveroStartSunatSync?.('@Url.Action("SincronizarPendientes", "Comprobantes")', '@empresaId');
+        </script>
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

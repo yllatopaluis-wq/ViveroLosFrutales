@@ -1,0 +1,227 @@
+@model ViveroLosFrutales.Application.DTOs.DashboardDto
+@using System.Globalization
+@{
+    ViewData["Title"] = "Tablero de Control";
+    var cultura = CultureInfo.GetCultureInfo("es-PE");
+    var resumen = Model.Resumen;
+    var maxVentaDia = Model.VentasPorDia.Count == 0 ? 0 : Model.VentasPorDia.Max(x => x.Importe);
+    var maxGasto = Model.GastosPorCategoria.Count == 0 ? 0 : Model.GastosPorCategoria.Max(x => x.Importe);
+    var maxProducto = Model.ProductosMasVendidos.Count == 0 ? 0 : Model.ProductosMasVendidos.Max(x => x.Importe);
+    var saldoClass = resumen.EstadoCuenta >= 0 ? "positive" : "negative";
+}
+
+<div class="dashboard-header">
+    <div>
+        <span class="dashboard-periodo">@Model.FechaDesde.ToString("dd MMM", cultura) - @Model.FechaHasta.ToString("dd MMM yyyy", cultura)</span>
+        <h1>Resumen ejecutivo del mes</h1>
+    </div>
+    <div class="dashboard-actions">
+        <a class="btn btn-outline-secondary btn-sm" asp-controller="Reportes" asp-action="Reporte">Reporte general</a>
+        <a class="btn btn-primary btn-sm" asp-controller="Comprobantes" asp-action="Create">Nueva venta</a>
+    </div>
+</div>
+
+<section class="dashboard-kpis" aria-label="Indicadores principales">
+    <a class="metric-card primary" asp-controller="Comprobantes" asp-action="Index">
+        <span>Total ventas</span>
+        <strong>@resumen.TotalVentas.ToString("C", cultura)</strong>
+        <small>@resumen.ComprobantesEmitidos comprobante(s) emitidos</small>
+    </a>
+    <a class="metric-card" asp-controller="Compras" asp-action="Index">
+        <span>Total compras</span>
+        <strong>@resumen.TotalCompras.ToString("C", cultura)</strong>
+        <small>Reposicion e insumos del mes</small>
+    </a>
+    <a class="metric-card" asp-controller="Gastos" asp-action="Index">
+        <span>Total gastos</span>
+        <strong>@resumen.TotalGastos.ToString("C", cultura)</strong>
+        <small>Gastos operativos registrados</small>
+    </a>
+    <a class="metric-card" asp-controller="Ingresos" asp-action="Index">
+        <span>Total ingresos</span>
+        <strong>@resumen.TotalIngresos.ToString("C", cultura)</strong>
+        <small>Ingresos no facturados</small>
+    </a>
+</section>
+
+<section class="dashboard-balance">
+    <div class="balance-main @saldoClass">
+        <span>Estado de cuenta del mes</span>
+        <strong>@resumen.EstadoCuenta.ToString("C", cultura)</strong>
+        <small>Ventas + ingresos - compras - gastos</small>
+    </div>
+    <div class="balance-strip">
+        <div>
+            <span>Clientes atendidos</span>
+            <strong>@resumen.ClientesAtendidos</strong>
+        </div>
+        <div>
+            <span>Cotizaciones</span>
+            <strong>@resumen.Cotizaciones</strong>
+        </div>
+        <div>
+            <span>SUNAT pendientes</span>
+            <strong>@resumen.ComprobantesPendientesSunat</strong>
+        </div>
+        <div>
+            <span>Stock bajo</span>
+            <strong>@resumen.ProductosBajoStock</strong>
+        </div>
+    </div>
+</section>
+
+<div class="dashboard-layout">
+    <section class="dashboard-panel sales-panel">
+        <div class="panel-heading">
+            <h2>Ventas por dia</h2>
+            <span>@Model.VentasPorDia.Count dia(s) con movimiento</span>
+        </div>
+        @if (Model.VentasPorDia.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Sin ventas registradas</strong>
+                <span>Cuando emitas comprobantes, aparecera aqui la tendencia diaria.</span>
+            </div>
+        }
+        else
+        {
+            <div class="bar-list">
+                @foreach (var item in Model.VentasPorDia)
+                {
+                    var width = maxVentaDia == 0 ? 0 : decimal.Round(item.Importe / maxVentaDia * 100, 0);
+                    <div class="bar-row">
+                        <span>@item.Fecha.ToString("dd MMM", cultura)</span>
+                        <div><i style="width:@width%"></i></div>
+                        <strong>@item.Importe.ToString("C", cultura)</strong>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-heading">
+            <h2>Alertas de gestion</h2>
+            <span>Prioridades operativas</span>
+        </div>
+        <div class="alert-list">
+            @foreach (var alerta in Model.Alertas)
+            {
+                <a class="alert-item @alerta.Nivel" href="@alerta.Url">
+                    <strong>@alerta.Titulo</strong>
+                    <span>@alerta.Detalle</span>
+                </a>
+            }
+        </div>
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-heading">
+            <h2>Productos mas vendidos</h2>
+            <span>Por importe facturado</span>
+        </div>
+        @if (Model.ProductosMasVendidos.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Sin productos vendidos</strong>
+                <span>El ranking se actualizara con las ventas del mes.</span>
+            </div>
+        }
+        else
+        {
+            <div class="ranking-list">
+                @foreach (var item in Model.ProductosMasVendidos)
+                {
+                    var width = maxProducto == 0 ? 0 : decimal.Round(item.Importe / maxProducto * 100, 0);
+                    <div class="ranking-row">
+                        <div>
+                            <strong>@item.Producto</strong>
+                            <span>@item.Cantidad.ToString("N2", cultura) unidades</span>
+                        </div>
+                        <em>@item.Importe.ToString("C", cultura)</em>
+                        <i style="width:@width%"></i>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section class="dashboard-panel">
+        <div class="panel-heading">
+            <h2>Gastos por categoria</h2>
+            <span>Top 5 del mes</span>
+        </div>
+        @if (Model.GastosPorCategoria.Count == 0)
+        {
+            <div class="empty-state">
+                <strong>Sin gastos registrados</strong>
+                <span>Los gastos categorizados ayudaran a controlar la operacion.</span>
+            </div>
+        }
+        else
+        {
+            <div class="category-list">
+                @foreach (var item in Model.GastosPorCategoria)
+                {
+                    var width = maxGasto == 0 ? 0 : decimal.Round(item.Importe / maxGasto * 100, 0);
+                    <div class="category-row">
+                        <span>@item.Categoria</span>
+                        <strong>@item.Importe.ToString("C", cultura)</strong>
+                        <div><i style="width:@width%"></i></div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<section class="dashboard-panel">
+    <div class="panel-heading">
+        <h2>Ultimos comprobantes</h2>
+        <a asp-controller="Comprobantes" asp-action="Index">Ver todos</a>
+    </div>
+    @if (Model.UltimosComprobantes.Count == 0)
+    {
+        <div class="empty-state">
+            <strong>No hay comprobantes del mes</strong>
+            <span>Registra una venta para iniciar el seguimiento comercial.</span>
+        </div>
+    }
+    else
+    {
+        <div class="data-grid dashboard-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Numero</th>
+                        <th>Cliente</th>
+                        <th class="text-end">Total</th>
+                        <th>Estado SUNAT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var comprobante in Model.UltimosComprobantes)
+                    {
+                        <tr>
+                            <td>@comprobante.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@comprobante.Numero</td>
+                            <td>@comprobante.Cliente</td>
+                            <td class="text-end">@comprobante.Total.ToString("C", cultura)</td>
+                            <td><span class="status-badge">@comprobante.EstadoSunat</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="quick-actions" aria-label="Accesos rapidos">
+    <a class="quick-action" asp-controller="Productos" asp-action="Index">Productos</a>
+    <a class="quick-action" asp-controller="Clientes" asp-action="Index">Clientes</a>
+    <a class="quick-action" asp-controller="Cotizaciones" asp-action="Create">Nueva cotizacion</a>
+    <a class="quick-action" asp-controller="Compras" asp-action="Create">Registrar compra</a>
+    <a class="quick-action" asp-controller="Gastos" asp-action="Create">Registrar gasto</a>
+    <a class="quick-action" asp-controller="Ingresos" asp-action="Create">Registrar ingreso</a>
+</section>

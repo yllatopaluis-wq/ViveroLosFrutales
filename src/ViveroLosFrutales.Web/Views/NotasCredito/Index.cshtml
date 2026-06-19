@@ -1,0 +1,120 @@
+@model PagedResult<ComprobanteListDto>
+@{
+    ViewData["Title"] = "Notas de Credito";
+    var today = DateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+    var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
+    var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
+        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
+        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Buscar serie, cliente o documento" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+    <a class="btn btn-sm btn-success" asp-action="Create">Crear nota de credito</a>
+</div>
+
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger py-2">@error</div>
+}
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success py-2">@success</div>
+}
+
+<table class="table table-sm table-striped data-grid">
+    <thead>
+        <tr>
+            <th class="text-end actions-heading">Acciones</th>
+            <th>Numero</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Documento</th>
+            <th class="text-end">Total</th>
+            <th>Doc. Impreso</th>
+            <th>Doc. Aceptado SUNAT</th>
+            <th>Estado</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td class="actions-cell">
+                <div class="quote-actions">
+                    <form asp-action="Imprimir" method="post" class="icon-form" target="_blank" onsubmit="return registrarImpresionNotaCredito();">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@item.ComprobanteId" />
+                        <button type="submit" class="icon-btn" title="Imprimir / descargar" aria-label="Imprimir / descargar">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6Z" /></svg>
+                        </button>
+                    </form>
+                    @if (item.PuedeAnular)
+                    {
+                        <form asp-action="Anular" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionNotaCredito(this);">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.ComprobanteId" />
+                            <input type="hidden" name="motivo" value="" />
+                            <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </td>
+            <td>@($"{item.Serie}-{item.Correlativo:000000}")</td>
+            <td>@item.FechaEmision.ToString("dd/MM/yyyy")</td>
+            <td>@item.Cliente</td>
+            <td>@item.Documento</td>
+            <td class="text-end">S/ @item.Total.ToString("N2")</td>
+            <td>@(item.DocumentoImpreso ? "SI" : "NO")</td>
+            <td>@(item.DocumentoAceptadoSunat ? "SI" : "NO")</td>
+            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@item.Estado</span></td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pager", Model)
+
+<script>
+    let recargarListadoPorImpresionNc = false;
+
+    function registrarImpresionNotaCredito() {
+        recargarListadoPorImpresionNc = true;
+        setTimeout(() => {
+            if (recargarListadoPorImpresionNc) {
+                recargarListadoPorImpresionNc = false;
+                window.location.reload();
+            }
+        }, 3500);
+        return true;
+    }
+
+    window.addEventListener('focus', () => {
+        if (recargarListadoPorImpresionNc) {
+            recargarListadoPorImpresionNc = false;
+            window.location.reload();
+        }
+    });
+
+    function solicitarMotivoAnulacionNotaCredito(form) {
+        const motivo = prompt("Ingrese el motivo de anulacion de la nota de credito:");
+        if (motivo === null) return false;
+
+        const motivoLimpio = motivo.trim();
+        if (!motivoLimpio) {
+            alert("Debe ingresar el motivo de anulacion.");
+            return false;
+        }
+
+        form.querySelector("input[name='motivo']").value = motivoLimpio;
+        return confirm("Confirmar anulacion de la nota de credito?");
+    }
+</script>

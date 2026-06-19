@@ -1,0 +1,73 @@
+@model PagedResult<CobroClienteListDto>
+@{
+    ViewData["Title"] = "Cobros de Clientes";
+    var today = DateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+    var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
+    var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+}
+
+@functions {
+    private static string EstadoCobroTexto(CobroClienteEstado estado) =>
+        estado == CobroClienteEstado.ACTIVO ? "ACTIVO" : "ANULADO";
+}
+
+<div class="toolbar">
+    <form method="get" class="search-form">
+        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
+        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
+        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Cliente, referencia, medio u observacion" />
+        <button class="btn btn-sm btn-primary">Buscar</button>
+    </form>
+</div>
+
+<table class="table table-sm table-striped data-grid">
+    <thead><tr><th>Fecha</th><th>Cliente</th><th>Referencia</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr></thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.FechaCobro.ToString("dd/MM/yyyy")</td>
+            <td>@item.Cliente</td>
+            <td>@item.Referencia</td>
+            <td>@item.MedioPago</td>
+            <td class="text-end">S/ @item.Monto.ToString("N2")</td>
+            <td><span class="status-badge @(item.Estado == CobroClienteEstado.ACTIVO ? "active" : "danger")">@EstadoCobroTexto(item.Estado)</span></td>
+            <td class="actions-cell">
+                @if (item.Estado == CobroClienteEstado.ACTIVO)
+                {
+                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionCobro(this);">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@item.CobroClienteId" />
+                        <input type="hidden" name="motivo" value="" />
+                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M18 6 6 18" />
+                                <path d="m6 6 12 12" />
+                            </svg>
+                        </button>
+                    </form>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+<script>
+    function solicitarMotivoAnulacionCobro(form) {
+        const motivo = prompt("Ingrese el motivo de anulacion del cobro:");
+        if (motivo === null) return false;
+
+        const motivoLimpio = motivo.trim();
+        if (!motivoLimpio) {
+            alert("Debe ingresar el motivo de anulacion.");
+            return false;
+        }
+
+        form.querySelector("input[name='motivo']").value = motivoLimpio;
+        return confirm("Confirmar anulacion del cobro?");
+    }
+</script>
