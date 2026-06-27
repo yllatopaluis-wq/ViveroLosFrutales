@@ -8,4 +8,7 @@ public class NubefactLogService(INubefactOperacionRepository repository, IEmpres
 {
     public Task<PagedResult<NubefactOperacionDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
+
+    public Task<NubefactOperacionDto?> ObtenerAsync(int id, CancellationToken cancellationToken) =>
+        repository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken);
 }

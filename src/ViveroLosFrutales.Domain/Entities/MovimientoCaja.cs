@@ -11,7 +11,7 @@ public class MovimientoCaja : EmpresaEntity
     public TipoMovimientoCaja TipoMovimiento { get; set; } = TipoMovimientoCaja.INGRESO;
     public OrigenMovimientoCaja Origen { get; set; } = OrigenMovimientoCaja.COBRO_CLIENTE;
     public int OrigenId { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;

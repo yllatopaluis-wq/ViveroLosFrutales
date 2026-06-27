@@ -1,20 +1,110 @@
+@using Microsoft.Extensions.Caching.Memory
 @inject Microsoft.AspNetCore.Identity.UserManager<ViveroLosFrutales.Infrastructure.Identity.ApplicationUser> UserManager
+@inject ViveroLosFrutales.Application.Services.RolService RolService
+@inject Microsoft.Extensions.Caching.Memory.IMemoryCache LayoutCache
 @{
     var title = ViewData["Title"] as string ?? "Vivero Los Frutales";
     var empresaNombre = Context.Session.GetString("EmpresaNombre");
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
-    var currentUser = isAuthenticated ? await UserManager.GetUserAsync(User) : null;
-    var usuarioNombreCompleto = currentUser is null
-        ? User.Identity?.Name
-        : string.Join(" ", new[] { currentUser.Nombres, currentUser.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
-    var usuarioDisplay = string.IsNullOrWhiteSpace(usuarioNombreCompleto) ? User.Identity?.Name : usuarioNombreCompleto;
+
+    var authenticatedUserId = isAuthenticated ? UserManager.GetUserId(User) : null;
+    var sessionUsuarioId = Context.Session.GetString("UsuarioId");
+    var sessionUsuarioNombre = Context.Session.GetString("UsuarioNombre");
+    var sessionUserInitials = Context.Session.GetString("UsuarioIniciales");
+    var sessionRolId = Context.Session.GetInt32("UsuarioRolId");
+    var currentUser = isAuthenticated && (string.IsNullOrWhiteSpace(sessionUsuarioNombre) || sessionRolId is null || !string.Equals(sessionUsuarioId, authenticatedUserId, StringComparison.Ordinal))
+        ? await UserManager.GetUserAsync(User)
+        : null;
+
+    if (currentUser is not null)
+    {
+        sessionUsuarioNombre = string.Join(" ", new[] { currentUser.Nombres, currentUser.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        sessionUsuarioNombre = string.IsNullOrWhiteSpace(sessionUsuarioNombre) ? User.Identity?.Name : sessionUsuarioNombre;
+        sessionUserInitials = $"{currentUser.Nombres.FirstOrDefault()}{currentUser.Apellidos.FirstOrDefault()}".Trim().ToUpperInvariant();
+        sessionUserInitials = string.IsNullOrWhiteSpace(sessionUserInitials) ? (User.Identity?.Name?.Substring(0, 1).ToUpperInvariant() ?? "U") : sessionUserInitials;
+        sessionRolId = currentUser.RolId;
+        sessionUsuarioId = currentUser.Id;
+        Context.Session.SetString("UsuarioId", currentUser.Id);
+        Context.Session.SetString("UsuarioNombre", sessionUsuarioNombre ?? string.Empty);
+        Context.Session.SetString("UsuarioIniciales", sessionUserInitials ?? "U");
+        Context.Session.SetInt32("UsuarioRolId", currentUser.RolId);
+    }
+
+    var usuarioDisplay = string.IsNullOrWhiteSpace(sessionUsuarioNombre) ? User.Identity?.Name : sessionUsuarioNombre;
+    var userInitials = string.IsNullOrWhiteSpace(sessionUserInitials) ? (User.Identity?.Name?.Substring(0, 1).ToUpperInvariant() ?? "U") : sessionUserInitials;
+    var rolId = sessionRolId ?? 0;
+    var rolActual = rolId > 0
+        ? await LayoutCache.GetOrCreateAsync($"layout-role:{rolId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
+            entry.Size = 1;
+            return await RolService.ObtenerAsync(rolId, Context.RequestAborted);
+        })
+        : null;
+    var rolUsuario = rolActual?.Nombre ?? string.Empty;
+    var permisosCatalogo = rolActual is not null
+        ? await LayoutCache.GetOrCreateAsync("layout-permisos-catalogo", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
+            entry.Size = 1;
+            return await RolService.ObtenerPermisosAsync(Context.RequestAborted);
+        }) ?? Array.Empty<ViveroLosFrutales.Application.DTOs.PermisoDto>()
+        : Array.Empty<ViveroLosFrutales.Application.DTOs.PermisoDto>();
+    var permisosRolIds = (rolActual?.PermisoIds ?? new List<int>()).ToHashSet();
+    var permisosRol = permisosCatalogo
+        .Where(x => permisosRolIds.Contains(x.PermisoId))
+        .Select(x => $"{x.Modulo}|{x.Accion}")
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Func<string, string, bool> puede = (modulo, accion) => permisosRol.Contains($"{modulo}|{accion}");
+    Func<string, bool> puedeVer = modulo => puede(modulo, "Ver");
+    Func<string, bool> puedeCrear = modulo => puede(modulo, "Crear") || puede(modulo, "Registrar");
+    var usuarioSubtitulo = string.Join(" - ", new[] { rolUsuario, empresaNombre }.Where(x => !string.IsNullOrWhiteSpace(x)));
     var isAuthPage = ViewData["AuthPage"] as bool? == true;
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
-    var ventasOpen = controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito" or "CobrosClientes";
-    var catalogosOpen = controller is "Categorias" or "Productos" or "Clientes" or "Proveedores";
-    var operacionOpen = controller is "Compras" or "Gastos" or "Ingresos" or "Caja" or "Devoluciones";
-    var administracionOpen = controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "NubefactLogs";
-    var reportesOpen = controller is "Reportes" or "EstadoCuentaClientes";
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    var canHome = puedeVer("Home");
+    var canCotizaciones = puedeVer("Cotizaciones");
+    var canNotasPedido = puedeVer("NotasPedido");
+    var canComprobantes = puedeVer("Comprobantes");
+    var canNotasCredito = puedeVer("NotasCredito");
+    var canCobrosClientes = puedeVer("CobrosClientes");
+    var ventasVisible = canCotizaciones || canNotasPedido || canComprobantes || canNotasCredito || canCobrosClientes;
+
+    var canProductos = puedeVer("Productos");
+    var canClientes = puedeVer("Clientes");
+    var canProveedores = puedeVer("Proveedores");
+    var canCategorias = puedeVer("Categorias");
+    var maestrosVisible = canProductos || canClientes || canProveedores || canCategorias;
+
+    var canCompras = puedeVer("Compras");
+    var canGastos = puedeVer("Gastos");
+    var canIngresos = puedeVer("Ingresos");
+    var canDevoluciones = puedeVer("Devoluciones");
+    var canCaja = puedeVer("Caja");
+    var operacionesVisible = canCompras || canGastos || canIngresos || canDevoluciones || canCaja;
+
+    var canReporteGeneral = puedeVer("ReporteGeneral");
+    var canPropuestasComerciales = puedeVer("PropuestasComerciales");
+    var canCuentasPorPagar = puedeVer("CuentasPorPagar");
+    var canDevolucionesProveedor = puedeVer("DevolucionesProveedor");
+    var canReporteCaja = puedeVer("ReporteCaja");
+    var canEstadoCuentaClientes = puedeVer("EstadoCuentaClientes");
+    var reportesVisible = canReporteGeneral || canPropuestasComerciales || canCuentasPorPagar || canDevolucionesProveedor || canReporteCaja || canEstadoCuentaClientes;
+
+    var canEmpresas = puedeVer("Empresas");
+    var canUsuarios = puedeVer("Usuarios");
+    var canRoles = puedeVer("Roles");
+    var canConfiguracion = puedeVer("Configuracion");
+    var canNubefactLogs = puedeVer("NubefactLogs");
+    var canErroresAplicacion = puedeVer("ErroresAplicacion");
+    var administracionVisible = canEmpresas || canUsuarios || canRoles || canConfiguracion || canNubefactLogs || canErroresAplicacion;
+
+    var ventasOpen = ventasVisible && (controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito" or "CobrosClientes");
+    var maestrosOpen = maestrosVisible && (controller is "Categorias" or "Productos" or "Clientes" or "Proveedores");
+    var operacionesOpen = operacionesVisible && (controller is "Compras" or "Gastos" or "Ingresos" or "Caja" or "Devoluciones");
+    var reportesOpen = reportesVisible && (controller is "Reportes" or "EstadoCuentaClientes");
+    var administracionOpen = administracionVisible && (controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "NubefactLogs" or "ErroresAplicacion");
+    var mostrarAccionPrincipal = action is "Index";
 }
 <!DOCTYPE html>
 <html lang="es">
@@ -23,6 +113,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@title - Vivero Los Frutales</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/erp-shell.css" asp-append-version="true" />
 </head>
 <body>
     @if (isAuthPage)
@@ -34,119 +125,254 @@
     }
 
     <div class="app-shell">
-        <header class="app-header">
-            <div class="header-left">
-                <button type="button" class="menu-toggle" id="menuToggle" title="Ocultar menu" aria-label="Ocultar menu" aria-controls="sidebar">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16" /><path d="M4 12h16" /><path d="M4 18h16" /></svg>
-                </button>
-                <a class="header-brand" asp-controller="Home" asp-action="Index">
-                    <span class="brand-leaf" aria-hidden="true">
-                        <svg viewBox="0 0 24 24"><path d="M20 4c-7.2.3-11.7 3.4-13.6 9.3 4.9.8 9.5-1.6 13.6-9.3Z" /><path d="M4 20c2.9-5.5 7-9 12.4-10.5" /><path d="M4 11c3.6-1.7 6.7-1.2 9.2 1.4" /></svg>
-                    </span>
-                    <strong>Vivero Los Frutales</strong>
+        <aside class="app-sidebar" id="appSidebar" aria-label="Navegaci&oacute;n principal">
+            <div class="sidebar-header">
+                <a class="sidebar-logo" asp-controller="Home" asp-action="Index" title="Vivero Los Frutales">
+                    <img src="~/images/logo-erp.png" asp-append-version="true" alt="Logo Vivero Los Frutales" />
                 </a>
+                <a class="sidebar-brand-copy" asp-controller="Home" asp-action="Index">
+                    <strong>Vivero Los Frutales</strong>
+                    <small>Gesti&oacute;n comercial</small>
+                </a>
+                <button type="button" class="sidebar-close" id="mobileSidebarClose" aria-label="Cerrar men&uacute;">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+                </button>
             </div>
 
-            <div class="header-actions">
-                @if (isAuthenticated)
-                {
-                    <span class="header-icon" title="Notificaciones" aria-label="Notificaciones">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
-                    </span>
-                    <span class="user-menu">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg>
-                        <span>@usuarioDisplay</span>
-                    </span>
-                    <form asp-controller="Account" asp-action="Logout" method="post">
-                        <button type="submit" class="header-logout">Salir</button>
-                    </form>
-                }
-            </div>
-        </header>
-
-        <aside class="sidebar" id="sidebar">
             @if (isAuthenticated)
             {
-                <nav class="side-nav" aria-label="Menu principal">
-                    <a asp-controller="Home" asp-action="Index" class="dashboard-link">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 6-6 4 4 7-8" /><path d="M14 7h6v6" /></svg>
-                        <span>Tablero de Control</span>
-                    </a>
-                    <details class="nav-group" open="@ventasOpen">
-                        <summary><span>Ventas</span></summary>
-                        <a asp-controller="Cotizaciones" asp-action="Create">Crear cotizacion</a>
-                        <a asp-controller="Cotizaciones" asp-action="Index">Lista cotizaciones</a>
-                        <a asp-controller="NotasPedido" asp-action="Nuevo">Crear nota de pedido</a>
-                        <a asp-controller="NotasPedido" asp-action="Index">Lista notas de pedido</a>
-                        <a asp-controller="Comprobantes" asp-action="Create">Crear comprobante</a>
-                        <a asp-controller="Comprobantes" asp-action="Index">Lista comprobantes</a>
-                        <a asp-controller="NotasCredito" asp-action="Create">Crear nota de credito</a>
-                        <a asp-controller="NotasCredito" asp-action="Index">Lista notas de credito</a>
-                        <a asp-controller="CobrosClientes" asp-action="Index">Cobros clientes</a>
-                    </details>
-                    <details class="nav-group" open="@catalogosOpen">
-                        <summary><span>Maestros</span></summary>
-                        <a asp-controller="Categorias" asp-action="Index">Categorias</a>
-                        <a asp-controller="Productos" asp-action="Index">Productos</a>
-                        <a asp-controller="Clientes" asp-action="Index">Clientes</a>
-                        <a asp-controller="Proveedores" asp-action="Index">Proveedores</a>
-                    </details>
-                    <details class="nav-group" open="@operacionOpen">
-                        <summary><span>Operacion</span></summary>
-                        <a asp-controller="Compras" asp-action="Index">Compras</a>
-                        <a asp-controller="Gastos" asp-action="Index">Gastos</a>
-                        <a asp-controller="Ingresos" asp-action="Index">Ingresos</a>
-                        <a asp-controller="Devoluciones" asp-action="Index">Devoluciones</a>
-                        <a asp-controller="Caja" asp-action="Index">Caja</a>
-                    </details>
-                    <details class="nav-group" open="@administracionOpen">
-                        <summary><span>Administracion</span></summary>
-                        <a asp-controller="Empresas" asp-action="Index">Empresas</a>
-                        <a asp-controller="Usuarios" asp-action="Index">Usuarios</a>
-                        <a asp-controller="Roles" asp-action="Index">Roles</a>
-                        <a asp-controller="Configuracion" asp-action="Index">Configuracion</a>
-                        <a asp-controller="NubefactLogs" asp-action="Index">Log Nubefact</a>
-                    </details>
-                    <details class="nav-group" open="@reportesOpen">
-                        <summary><span>Reportes</span></summary>
-                        <a asp-controller="Reportes" asp-action="Reporte">Reporte general</a>
-                        <a asp-controller="Reportes" asp-action="Cotizaciones">Propuestas comerciales</a>
-                        <a asp-controller="Reportes" asp-action="CuentasPorPagar">Cuentas por pagar</a>
-                        <a asp-controller="Reportes" asp-action="DevolucionesProveedor">Devoluciones proveedor</a>
-                        <a asp-controller="Caja" asp-action="Index">Reporte caja</a>
-                        <a asp-controller="EstadoCuentaClientes" asp-action="Index">Estado cuenta clientes</a>
-                    </details>
+                <nav class="sidebar-nav">
+                    <span class="sidebar-nav-label">Men&uacute; principal</span>
+                    @if (canHome)
+                    {
+                        <a asp-controller="Home" asp-action="Index" class="sidebar-item @(controller == "Home" ? "active" : null)" title="Inicio">
+                            <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 3l9 8" /><path d="M5 10v10h14V10M9 20v-6h6v6" /></svg></span>
+                            <span class="sidebar-item-label">Inicio</span>
+                        </a>
+                    }
+
+                    @if (ventasVisible)
+                    {
+                        <details class="sidebar-section" open="@ventasOpen">
+                            <summary title="Ventas">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M6 3v6M18 3v6M5 10h14v10H5z" /><path d="M8 14h3M8 17h6" /></svg></span>
+                                <span class="sidebar-item-label">Ventas</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canCotizaciones) { <a asp-controller="Cotizaciones" asp-action="Index" class="sidebar-item @(controller == "Cotizaciones" ? "active" : null)"><span class="sidebar-item-label">Cotizaciones</span></a> }
+                                @if (canNotasPedido) { <a asp-controller="NotasPedido" asp-action="Index" class="sidebar-item @(controller == "NotasPedido" ? "active" : null)"><span class="sidebar-item-label">Notas de pedido</span></a> }
+                                @if (canComprobantes) { <a asp-controller="Comprobantes" asp-action="Index" class="sidebar-item @(controller == "Comprobantes" ? "active" : null)"><span class="sidebar-item-label">Comprobantes</span></a> }
+                                @if (canNotasCredito) { <a asp-controller="NotasCredito" asp-action="Index" class="sidebar-item @(controller == "NotasCredito" ? "active" : null)"><span class="sidebar-item-label">Notas de cr&eacute;dito</span></a> }
+                                @if (canCobrosClientes) { <a asp-controller="CobrosClientes" asp-action="Index" class="sidebar-item @(controller == "CobrosClientes" ? "active" : null)"><span class="sidebar-item-label">Cobros clientes</span></a> }
+                            </div>
+                        </details>
+                    }
+
+                    @if (maestrosVisible)
+                    {
+                        <details class="sidebar-section" open="@maestrosOpen">
+                            <summary title="Maestros">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5" /><path d="M8 19v2M16 19v2" /></svg></span>
+                                <span class="sidebar-item-label">Maestros</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canProductos) { <a asp-controller="Productos" asp-action="Index" class="sidebar-item @(controller == "Productos" ? "active" : null)"><span class="sidebar-item-label">Productos</span></a> }
+                                @if (canClientes) { <a asp-controller="Clientes" asp-action="Index" class="sidebar-item @(controller == "Clientes" ? "active" : null)"><span class="sidebar-item-label">Clientes</span></a> }
+                                @if (canProveedores) { <a asp-controller="Proveedores" asp-action="Index" class="sidebar-item @(controller == "Proveedores" ? "active" : null)"><span class="sidebar-item-label">Proveedores</span></a> }
+                                @if (canCategorias) { <a asp-controller="Categorias" asp-action="Index" class="sidebar-item @(controller == "Categorias" ? "active" : null)"><span class="sidebar-item-label">Categor&iacute;as</span></a> }
+                            </div>
+                        </details>
+                    }
+
+                    @if (operacionesVisible)
+                    {
+                        <details class="sidebar-section" open="@operacionesOpen">
+                            <summary title="Operaciones">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M7 4v6M17 14v6" /><circle cx="7" cy="15" r="2" /><circle cx="17" cy="9" r="2" /></svg></span>
+                                <span class="sidebar-item-label">Operaciones</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canCompras) { <a asp-controller="Compras" asp-action="Index" class="sidebar-item @(controller == "Compras" ? "active" : null)"><span class="sidebar-item-label">Compras</span></a> }
+                                @if (canGastos) { <a asp-controller="Gastos" asp-action="Index" class="sidebar-item @(controller == "Gastos" ? "active" : null)"><span class="sidebar-item-label">Gastos</span></a> }
+                                @if (canIngresos) { <a asp-controller="Ingresos" asp-action="Index" class="sidebar-item @(controller == "Ingresos" ? "active" : null)"><span class="sidebar-item-label">Ingresos</span></a> }
+                                @if (canDevoluciones) { <a asp-controller="Devoluciones" asp-action="Index" class="sidebar-item @(controller == "Devoluciones" ? "active" : null)"><span class="sidebar-item-label">Devoluciones</span></a> }
+                                @if (canCaja) { <a asp-controller="Caja" asp-action="Index" class="sidebar-item @(controller == "Caja" ? "active" : null)"><span class="sidebar-item-label">Caja</span></a> }
+                            </div>
+                        </details>
+                    }
+
+                    @if (reportesVisible)
+                    {
+                        <details class="sidebar-section" open="@reportesOpen">
+                            <summary title="Reportes">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg></span>
+                                <span class="sidebar-item-label">Reportes</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canReporteGeneral) { <a asp-controller="Reportes" asp-action="Reporte" class="sidebar-item @(controller == "Reportes" && action == "Reporte" ? "active" : null)"><span class="sidebar-item-label">Reporte general</span></a> }
+                                @if (canPropuestasComerciales) { <a asp-controller="Reportes" asp-action="Cotizaciones" class="sidebar-item @(controller == "Reportes" && action == "Cotizaciones" ? "active" : null)"><span class="sidebar-item-label">Propuestas comerciales</span></a> }
+                                @if (canCuentasPorPagar) { <a asp-controller="Reportes" asp-action="CuentasPorPagar" class="sidebar-item @(controller == "Reportes" && action == "CuentasPorPagar" ? "active" : null)"><span class="sidebar-item-label">Cuentas por pagar</span></a> }
+                                @if (canDevolucionesProveedor) { <a asp-controller="Reportes" asp-action="DevolucionesProveedor" class="sidebar-item @(controller == "Reportes" && action == "DevolucionesProveedor" ? "active" : null)"><span class="sidebar-item-label">Devoluciones proveedor</span></a> }
+                                @if (canReporteCaja) { <a asp-controller="Reportes" asp-action="FlujoCaja" class="sidebar-item @(controller == "Reportes" && action == "FlujoCaja" ? "active" : null)"><span class="sidebar-item-label">Reporte caja</span></a> }
+                                @if (canEstadoCuentaClientes) { <a asp-controller="EstadoCuentaClientes" asp-action="Index" class="sidebar-item @(controller == "EstadoCuentaClientes" ? "active" : null)"><span class="sidebar-item-label">Estado cuenta clientes</span></a> }
+                            </div>
+                        </details>
+                    }
+
+                    @if (administracionVisible)
+                    {
+                        <details class="sidebar-section" open="@administracionOpen">
+                            <summary title="Administraci&oacute;n">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></svg></span>
+                                <span class="sidebar-item-label">Administraci&oacute;n</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canEmpresas) { <a asp-controller="Empresas" asp-action="Index" class="sidebar-item @(controller == "Empresas" ? "active" : null)"><span class="sidebar-item-label">Empresas</span></a> }
+                                @if (canUsuarios) { <a asp-controller="Usuarios" asp-action="Index" class="sidebar-item @(controller == "Usuarios" ? "active" : null)"><span class="sidebar-item-label">Usuarios</span></a> }
+                                @if (canRoles) { <a asp-controller="Roles" asp-action="Index" class="sidebar-item @(controller == "Roles" ? "active" : null)"><span class="sidebar-item-label">Roles</span></a> }
+                                @if (canConfiguracion) { <a asp-controller="Configuracion" asp-action="Index" class="sidebar-item @(controller == "Configuracion" ? "active" : null)"><span class="sidebar-item-label">Configuraci&oacute;n</span></a> }
+                                @if (canNubefactLogs) { <a asp-controller="NubefactLogs" asp-action="Index" class="sidebar-item @(controller == "NubefactLogs" ? "active" : null)"><span class="sidebar-item-label">Log Nubefact</span></a> }
+                                @if (canErroresAplicacion) { <a asp-controller="ErroresAplicacion" asp-action="Index" class="sidebar-item @(controller == "ErroresAplicacion" ? "active" : null)"><span class="sidebar-item-label">Errores de aplicaci&oacute;n</span></a> }
+                            </div>
+                        </details>
+                    }
                 </nav>
             }
         </aside>
 
-        <main class="content">
-            <header class="topbar">
-                <span class="page-title">@title</span>
-                <div class="top-actions">
+        <button type="button" class="sidebar-overlay" aria-label="Cerrar men&uacute;"></button>
+
+        <div class="app-main">
+            <header class="app-topbar">
+                <button type="button" class="topbar-icon mobile-menu-toggle" id="mobileSidebarToggle" aria-label="Abrir men&uacute;" aria-controls="appSidebar" aria-expanded="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+                <button type="button" class="topbar-icon desktop-sidebar-toggle" id="desktopSidebarToggle" aria-label="Contraer men&uacute;" aria-controls="appSidebar" aria-expanded="true">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+                </button>
+
+                <label class="topbar-search" for="systemMenuSearch">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+                    <input id="systemMenuSearch" type="search" placeholder="Buscar en el sistema&hellip;" autocomplete="off" />
+                </label>
+
+                <div class="topbar-actions">
                     @if (isAuthenticated)
                     {
-                        @if (!string.IsNullOrWhiteSpace(empresaNombre))
+                        @if (Context.Session.GetInt32("EmpresaId") is not null)
                         {
-                            <span class="context-pill">@empresaNombre</span>
+                            @await Component.InvokeAsync("DevolucionNotifications")
                         }
+                        else
+                        {
+                            <span class="header-icon" title="Notificaciones" aria-label="Notificaciones">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
+                            </span>
+                        }
+                        <div class="topbar-user">
+                            <span class="topbar-avatar">@userInitials</span>
+                            <span class="topbar-user-copy"><strong>@usuarioDisplay</strong><small>@(string.IsNullOrWhiteSpace(usuarioSubtitulo) ? "Usuario conectado" : usuarioSubtitulo)</small></span>
+                        </div>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="header-logout">Salir</button>
+                        </form>
                     }
                 </div>
             </header>
 
-            <section class="page">
-                @RenderBody()
-            </section>
-        </main>
+            <main class="app-content">
+                @if (controller != "Home")
+                {
+                    <header class="app-page-header">
+                        <h1 class="app-page-title">@title</h1>
+                        @if (mostrarAccionPrincipal && controller == "Comprobantes" && puedeCrear("Comprobantes"))
+                        {
+                            <a class="page-primary-action" asp-controller="Comprobantes" asp-action="Create">Nuevo comprobante</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Cotizaciones" && puedeCrear("Cotizaciones"))
+                        {
+                            <a class="page-primary-action" asp-controller="Cotizaciones" asp-action="Create">Nueva cotizaci&oacute;n</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "NotasPedido" && puedeCrear("NotasPedido"))
+                        {
+                            <a class="page-primary-action" asp-controller="NotasPedido" asp-action="Nuevo">Nueva nota de pedido</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "NotasCredito" && puedeCrear("NotasCredito"))
+                        {
+                            <a class="page-primary-action" asp-controller="NotasCredito" asp-action="Create">Nueva nota de cr&eacute;dito</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Productos" && puedeCrear("Productos"))
+                        {
+                            <a class="page-primary-action" asp-controller="Productos" asp-action="Edit">Nuevo producto</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Clientes" && puedeCrear("Clientes"))
+                        {
+                            <a class="page-primary-action" asp-controller="Clientes" asp-action="Edit">Nuevo cliente</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Proveedores" && puedeCrear("Proveedores"))
+                        {
+                            <a class="page-primary-action" asp-controller="Proveedores" asp-action="Create">Nuevo proveedor</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Categorias" && puedeCrear("Categorias"))
+                        {
+                            <a class="page-primary-action" asp-controller="Categorias" asp-action="Edit">Nueva categor&iacute;a</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Compras" && puedeCrear("Compras"))
+                        {
+                            <a class="page-primary-action" asp-controller="Compras" asp-action="Create">Nueva compra</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Gastos" && puedeCrear("Gastos"))
+                        {
+                            <a class="page-primary-action" asp-controller="Gastos" asp-action="Create">Nuevo gasto</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Ingresos" && puedeCrear("Ingresos"))
+                        {
+                            <a class="page-primary-action" asp-controller="Ingresos" asp-action="Create">Nuevo ingreso</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "CobrosClientes" && puedeCrear("CobrosClientes"))
+                        {
+                            <a class="page-primary-action" asp-controller="CobrosClientes" asp-action="Create">Nuevo cobro</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Empresas" && puedeCrear("Empresas"))
+                        {
+                            <a class="page-primary-action" asp-controller="Empresas" asp-action="Edit">Nueva empresa</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Usuarios" && puedeCrear("Usuarios"))
+                        {
+                            <a class="page-primary-action" asp-controller="Usuarios" asp-action="Edit">Nuevo usuario</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Roles" && puedeCrear("Roles"))
+                        {
+                            <a class="page-primary-action" asp-controller="Roles" asp-action="Edit">Nuevo rol</a>
+                        }
+                        else if (mostrarAccionPrincipal && controller == "Configuracion" && puedeCrear("Configuracion"))
+                        {
+                            <a class="page-primary-action" asp-controller="Configuracion" asp-action="Edit">Nueva configuraci&oacute;n</a>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(empresaNombre))
+                        {
+                            <span class="app-page-context">@empresaNombre</span>
+                        }
+                    </header>
+                }
+                <section class="page">@RenderBody()</section>
+            </main>
+        </div>
     </div>
 
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/erp-shell.js" asp-append-version="true"></script>
     @if (isAuthenticated && Context.Session.GetInt32("EmpresaId") is int empresaId)
     {
-        <script>
-            window.viveroStartSunatSync?.('@Url.Action("SincronizarPendientes", "Comprobantes")', '@empresaId');
-        </script>
+        <script>window.viveroStartSunatSync?.('@Url.Action("SincronizarPendientes", "Comprobantes")', '@empresaId');</script>
     }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

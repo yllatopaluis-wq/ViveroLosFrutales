@@ -1,6 +1,6 @@
 @model IReadOnlyList<CompraListDto>
 @{
-    var today = DateTime.Today;
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;

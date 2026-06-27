@@ -26,7 +26,7 @@ public class CotizacionService(
         {
             Serie = empresa.SerieCotizacion,
             Correlativo = await cotizacionRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, empresa.SerieCotizacion, cancellationToken),
-            FechaEmision = DateTime.Today,
+            FechaEmision = PeruDateTime.Today,
             CondicionesVenta = "Plazo de entrega: A los 10 dias de realizado el pago.\nLugar de entrega: En las instalaciones del vivero.\nForma de pago: Contado.\nGarantia: 1 meses\nMedios de Pago: En efectivo, deposito a cuenta corriente o pago con tarjeta de credito o debito (aceptamos todos los tipos de tarjetas debito y creditos).",
             CaracteristicasTecnicas = "Semillas seleccionadas de campos certificados con control fitosanitarios.\nEdad: Plantas de 4 meses.\nTamano de 40 - 50 cm\nBolsas medidas de 7 x 14\nPeso aprox. por planta 4 kilos"
         };
@@ -212,7 +212,7 @@ public class CotizacionService(
                 ClienteId = cotizacion.ClienteId,
                 Serie = empresa.SerieNotaPedido,
                 Correlativo = await notaPedidoRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, empresa.SerieNotaPedido, cancellationToken),
-                Fecha = DateTime.Today,
+                Fecha = PeruDateTime.Today,
                 UsuarioRegistro = empresaContext.UsuarioNombre
             };
             foreach (var d in cotizacion.Detalles)

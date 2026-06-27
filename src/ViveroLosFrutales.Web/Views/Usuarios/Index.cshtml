@@ -1,33 +1,15 @@
 @model PagedResult<UsuarioListDto>
-@{
-    ViewData["Title"] = "Usuarios";
-}
+@{ ViewData["Title"] = "Usuarios"; var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString(); }
+<section class="comprobantes-page admin-docs-page"><form method="get" class="comprobantes-toolbar admin-docs-toolbar compact">
+<label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar usuario, correo o nombre..." autocomplete="off" />@if (!string.IsNullOrWhiteSpace(search)) { <a class="search-clear" asp-action="Index" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a> }</label>
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="Search" class="form-control form-control-sm" placeholder="Buscar usuario, correo o nombre" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-    <a class="btn btn-sm btn-success" asp-action="Edit">Crear</a>
-</div>
-
-<table class="table table-sm table-striped data-grid">
-    <thead><tr><th>Nombres</th><th>Apellidos</th><th>Correo</th><th>Usuario</th><th>Rol</th><th>Activo</th><th></th></tr></thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.Nombres</td>
-            <td>@item.Apellidos</td>
-            <td>@item.Correo</td>
-            <td>@item.Usuario</td>
-            <td>@item.Rol</td>
-            <td>@(item.Activo ? "Si" : "No")</td>
-            <td class="text-end">
-                <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@item.UsuarioId">Editar</a>
-                <a class="btn btn-sm btn-outline-secondary" asp-action="RestablecerPassword" asp-route-id="@item.UsuarioId">Clave</a>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<input type="hidden" name="PageSize" value="@pageSize" />
+<button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+<button class="btn-export" type="button" id="exportUsuariosCsv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>Exportar</button>
+</form><div class="comprobantes-list admin-docs-list"><div class="comprobantes-head admin-docs-head"><span>Usuario</span><span>Correo</span><span>Rol</span><span>Acceso</span><span>Estado</span><span>Acciones</span></div>
+@if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay usuarios</strong><span>Ajusta la búsqueda o registra un nuevo usuario.</span></div> } else { @foreach (var item in Model.Items) { <article class="comprobante-row admin-docs-row" data-csv="@item.Nombres @item.Apellidos|@item.Usuario|@item.Correo|@item.Rol|@(item.Activo ? "Activo" : "Inactivo")"><div class="comprobante-main"><span class="comprobante-icon @(item.Activo ? "success" : "danger")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.Nombres @item.Apellidos</strong><small>@item.Usuario</small></span></div><div class="comprobante-client"><strong>@item.Correo</strong><small>Correo</small></div><div class="comprobante-client"><strong>@item.Rol</strong><small>Rol</small></div><div class="comprobante-status"><span class="sunat-line muted">@item.Usuario</span></div><div class="comprobante-sunat"><span class="pill @(item.Activo ? "success" : "danger")">@(item.Activo ? "Activo" : "Inactivo")</span></div><div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Edit" asp-route-id="@item.UsuarioId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg> Editar</a><a asp-action="RestablecerPassword" asp-route-id="@item.UsuarioId"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="14" r="4" /><path d="M10 11 21 2" /><path d="m16 7 2 2" /><path d="m19 4 2 2" /></svg> Restablecer clave</a></div></details></div></article> } }</div>@await Html.PartialAsync("_Pager", Model)</section><script>
+document.querySelectorAll('.row-actions-menu').forEach(menu => { menu.addEventListener('toggle', () => { if (!menu.open) return; document.querySelectorAll('.row-actions-menu[open]').forEach(other => { if (other !== menu) other.removeAttribute('open'); }); }); });
+document.addEventListener('click', event => { if (event.target.closest('.row-actions-menu')) return; document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open')); });
+document.getElementById('exportUsuariosCsv')?.addEventListener('click', () => { const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]')); const header = ["Nombre","Usuario","Correo","Rol","Estado"]; const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')); const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'usuarios.csv'; link.click(); URL.revokeObjectURL(url); });
+</script>

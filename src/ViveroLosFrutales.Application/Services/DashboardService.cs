@@ -7,7 +7,7 @@ public class DashboardService(IDashboardRepository dashboardRepository, IEmpresa
 {
     public Task<DashboardDto> ObtenerMesActualAsync(CancellationToken cancellationToken)
     {
-        var hoy = DateTime.Today;
+        var hoy = PeruDateTime.Today;
         var fechaDesde = new DateTime(hoy.Year, hoy.Month, 1);
         var fechaHasta = fechaDesde.AddMonths(1).AddDays(-1);
 

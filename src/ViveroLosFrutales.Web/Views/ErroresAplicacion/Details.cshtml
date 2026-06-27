@@ -1,0 +1,52 @@
+@model ErrorAplicacionDetalleDto
+@{
+    ViewData["Title"] = $"Error #{Model.ErrorAplicacionId}";
+}
+
+<div class="error-detail">
+    <header class="error-detail-header">
+        <div>
+            <span class="status-badge @(Model.Estado == EstadoErrorAplicacion.PENDIENTE ? "warning" : "active")">@Model.Estado</span>
+            <strong>@Model.TipoExcepcion</strong>
+        </div>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </header>
+
+    <section class="error-metadata">
+        <div><span>Fecha</span><strong>@Model.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</strong></div>
+        <div><span>Empresa</span><strong>@Model.Empresa</strong></div>
+        <div><span>Usuario</span><strong>@Model.Usuario</strong></div>
+        <div><span>Solicitud</span><strong>@Model.MetodoHttp @Model.Ruta</strong></div>
+        <div><span>Identificador</span><strong class="error-cell-code">@Model.Identificador</strong></div>
+    </section>
+
+    <section class="error-block">
+        <h2>Mensaje</h2>
+        <p>@Model.Mensaje</p>
+    </section>
+
+    <details class="error-technical">
+        <summary>Ver detalle tecnico</summary>
+        <pre>@Model.Detalle</pre>
+    </details>
+
+    @if (Model.Estado == EstadoErrorAplicacion.PENDIENTE)
+    {
+        <form method="post" asp-action="Revisar" class="dense-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.ErrorAplicacionId" />
+            <label>Observacion de revision
+                <textarea name="observacion" class="form-control" rows="3" maxlength="1000" placeholder="Indique la causa identificada o la accion realizada"></textarea>
+            </label>
+            <div class="form-actions"><button class="btn btn-sm btn-primary" type="submit">Marcar como revisado</button></div>
+        </form>
+    }
+    else
+    {
+        <section class="error-block reviewed">
+            <h2>Revision</h2>
+            <p>@(string.IsNullOrWhiteSpace(Model.ObservacionRevision) ? "Sin observacion." : Model.ObservacionRevision)</p>
+            <small>@Model.UsuarioRevision · @Model.FechaRevisionUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</small>
+        </section>
+    }
+</div>

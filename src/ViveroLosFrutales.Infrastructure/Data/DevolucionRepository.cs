@@ -74,6 +74,50 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
             .ToPagedAsync(request, cancellationToken);
     }
 
+    public async Task<DevolucionAlertasDto> ObtenerAlertasAsync(int empresaId, int cantidad, CancellationToken cancellationToken)
+    {
+        var pendientes = db.Devoluciones.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId
+                && (x.EstadoDevolucion == EstadoDevolucion.PENDIENTE
+                    || x.EstadoDevolucion == EstadoDevolucion.PARCIAL));
+
+        var total = await pendientes.CountAsync(cancellationToken);
+        var recientes = await pendientes
+            .OrderByDescending(x => x.FechaGeneracion)
+            .ThenByDescending(x => x.DevolucionId)
+            .Take(Math.Clamp(cantidad, 1, 10))
+            .Select(x => new DevolucionAlertaDto(
+                x.DevolucionId,
+                x.FechaGeneracion,
+                x.TipoTercero == TipoTerceroDevolucion.CLIENTE
+                    ? x.Cliente!.NombreCompleto
+                    : x.Proveedor!.RazonSocial,
+                x.NotaPedido != null
+                    ? x.NotaPedido.Serie + "-" + x.NotaPedido.Correlativo.ToString()
+                    : x.NotaCredito != null
+                        ? x.NotaCredito.Serie + "-" + x.NotaCredito.Correlativo.ToString()
+                        : x.Comprobante != null
+                            ? x.Comprobante.Serie + "-" + x.Comprobante.Correlativo.ToString()
+                            : x.Compra != null
+                                ? x.Compra.Documento
+                                : "-",
+                x.MontoPendiente,
+                x.Origen == OrigenDevolucion.ANULACION_NOTA_PEDIDO
+                    ? "Anulacion de nota de pedido"
+                    : x.Origen == OrigenDevolucion.NOTA_CREDITO
+                        ? "Nota de credito"
+                        : x.Origen == OrigenDevolucion.ANULACION_COMPRA
+                            ? "Anulacion de compra"
+                            : "Anulacion de comprobante"))
+            .ToListAsync(cancellationToken);
+
+        return new DevolucionAlertasDto
+        {
+            TotalPendientes = total,
+            Recientes = recientes
+        };
+    }
+
     public Task<Devolucion?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken) =>
         db.Devoluciones
             .Include(x => x.Cliente)

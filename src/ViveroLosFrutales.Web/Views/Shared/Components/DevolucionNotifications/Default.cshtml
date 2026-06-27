@@ -1,0 +1,47 @@
+@model DevolucionAlertasDto
+@{
+    var contador = Model.TotalPendientes > 99 ? "99+" : Model.TotalPendientes.ToString();
+}
+
+<details class="notification-center">
+    <summary class="header-icon notification-trigger" title="Alertas de devoluciones" aria-label="Alertas de devoluciones: @Model.TotalPendientes pendientes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></svg>
+        @if (Model.TotalPendientes > 0)
+        {
+            <span class="notification-badge">@contador</span>
+        }
+    </summary>
+    <div class="notification-panel">
+        <header>
+            <div>
+                <strong>Devoluciones pendientes</strong>
+                <span>@Model.TotalPendientes alerta@(Model.TotalPendientes == 1 ? "" : "s")</span>
+            </div>
+            <a asp-controller="Devoluciones" asp-action="Index">Ver todas</a>
+        </header>
+
+        @if (Model.Recientes.Count == 0)
+        {
+            <div class="notification-empty">
+                <strong>Sin alertas pendientes</strong>
+                <span>Las nuevas devoluciones apareceran aqui.</span>
+            </div>
+        }
+        else
+        {
+            <div class="notification-list">
+                @foreach (var alerta in Model.Recientes)
+                {
+                    <a class="notification-item" asp-controller="Devoluciones" asp-action="Details" asp-route-id="@alerta.DevolucionId">
+                        <span class="notification-dot" aria-hidden="true"></span>
+                        <span class="notification-copy">
+                            <strong>@alerta.Tercero</strong>
+                            <span>@alerta.Origen · @alerta.Documento</span>
+                            <small>@alerta.Fecha.ToString("dd/MM/yyyy") · Pendiente S/ @alerta.MontoPendiente.ToString("N2")</small>
+                        </span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</details>

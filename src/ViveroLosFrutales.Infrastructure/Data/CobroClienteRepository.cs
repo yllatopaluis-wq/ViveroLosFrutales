@@ -64,9 +64,13 @@ public class CobroClienteRepository(ApplicationDbContext db) : ICobroClienteRepo
             return;
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await operacion();
-        await transaction.CommitAsync(cancellationToken);
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await operacion();
+            await transaction.CommitAsync(cancellationToken);
+        });
     }
 
     public async Task GuardarAsync(CobroCliente cobro, CancellationToken cancellationToken)

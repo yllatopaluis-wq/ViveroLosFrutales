@@ -25,7 +25,7 @@ public class CompraEditDto
     public string Serie { get; set; } = string.Empty;
     public string Numero { get; set; } = string.Empty;
     public string Documento { get; set; } = string.Empty;
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CREDITO;
     public string MedioPago { get; set; } = "EFECTIVO";
     public string Observacion { get; set; } = string.Empty;
@@ -91,7 +91,7 @@ public class RegistrarPagoProveedorDto
     public decimal TotalCompra { get; set; }
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
-    public DateTime FechaPago { get; set; } = DateTime.Today;
+    public DateTime FechaPago { get; set; } = PeruDateTime.Today;
     public string MedioPago { get; set; } = "EFECTIVO";
     public decimal MontoPago { get; set; }
     public string Observacion { get; set; } = string.Empty;

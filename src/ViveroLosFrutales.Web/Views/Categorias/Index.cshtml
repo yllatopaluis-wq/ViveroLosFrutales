@@ -1,45 +1,77 @@
 @model PagedResult<CategoriaListDto>
 @{
-    ViewData["Title"] = "Categorias";
-
-    static string EstadoRegistroTexto(EstadoRegistro estado) =>
-        estado == EstadoRegistro.Activo ? "ACTIVO" : "ANULADO";
+    ViewData["Title"] = "Categorías";
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
+@functions {
+    private static string EstadoRegistroTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+    private static string EstadoRegistroClass(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "success" : "danger";
+}
+<section class="comprobantes-page master-docs-page">
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="Search" class="form-control form-control-sm" placeholder="Buscar categoria o descripcion" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
+    <form method="get" class="comprobantes-toolbar master-docs-toolbar compact">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Buscar por categoría o descripción..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a class="search-clear" asp-action="Index" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a>
+            }
+        </label>
+
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            Buscar
+        </button>
+        <button class="btn-export" type="button" id="exportCategoriasCsv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+            Exportar
+        </button>
     </form>
-    <a class="btn btn-sm btn-success" asp-action="Edit">Crear</a>
-</div>
+    <div class="comprobantes-list master-docs-list">
+        <div class="comprobantes-head master-docs-head"><span>Categoría</span><span>Descripción</span><span></span><span></span><span>Estado</span><span>Acciones</span></div>
+        @if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay categorías</strong><span>Ajusta la búsqueda o registra una nueva categoría.</span></div> } else {
+        @foreach (var item in Model.Items) {
+            <article class="comprobante-row master-docs-row" data-csv="@item.Nombre|@item.Descripcion|@EstadoRegistroTexto(item.Estado)">
+                <div class="comprobante-main"><span class="comprobante-icon @(item.Estado == EstadoRegistro.Activo ? "success" : "danger")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.Nombre</strong><small>Categoría</small></span></div>
+                <div class="comprobante-client"><strong>@item.Descripcion</strong><small>Descripción</small></div>
+                <div></div><div></div>
+                <div class="comprobante-sunat"><span class="pill @EstadoRegistroClass(item.Estado)">@EstadoRegistroTexto(item.Estado)</span></div>
+                <div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Edit" asp-route-id="@item.CategoriaId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg> Editar</a><form asp-action="Anular" method="post" onsubmit="return confirm('Anular esta categoría?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.CategoriaId" /><button type="submit" class="danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg> Anular categoría</button></form></div></details></div>
+            </article>
+        }}
+    </div>
+    @await Html.PartialAsync("_Pager", Model)
+</section>
 
-<table class="table table-sm table-striped data-grid">
-    <thead>
-        <tr><th>Categoria</th><th>Descripcion</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.Nombre</td>
-            <td>@item.Descripcion</td>
-            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@EstadoRegistroTexto(item.Estado)</span></td>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <a class="icon-btn" asp-action="Edit" asp-route-id="@item.CategoriaId" title="Editar" aria-label="Editar">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                    </a>
-                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return confirm('Anular esta categoria?');">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.CategoriaId" />
-                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<script>
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => {
+                if (other !== menu) other.removeAttribute('open');
+            });
+        });
+    });
+
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+
+    document.getElementById('exportCategoriasCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.master-docs-row[data-csv]'));
+        const header = ["Categoria","Descripcion","Estado"];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))]
+            .map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'categorias.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+</script>

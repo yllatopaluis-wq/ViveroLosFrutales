@@ -1,82 +1,62 @@
 @model PagedResult<DevolucionListDto>
 @{
     ViewData["Title"] = "Devoluciones";
-    var today = DateTime.Today;
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
     var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
     var search = Context.Request.Query["Search"].FirstOrDefault();
-
-    static string EstadoCss(EstadoDevolucion estado) => estado switch
-    {
-        EstadoDevolucion.DEVUELTO => "active",
-        EstadoDevolucion.ANULADO => "danger",
-        EstadoDevolucion.PARCIAL => "warning",
-        _ => string.Empty
-    };
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
-
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
-        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
-        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Buscar cliente, proveedor o documento" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-</div>
-
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger py-2">@error</div>
+@functions {
+    private static string EstadoClass(EstadoDevolucion estado) => estado switch { EstadoDevolucion.DEVUELTO => "success", EstadoDevolucion.ANULADO => "danger", EstadoDevolucion.PARCIAL => "warning", _ => "info" };
 }
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success py-2">@success</div>
-}
+<section class="comprobantes-page ops-docs-page">
+<form method="get" class="comprobantes-toolbar sales-docs-toolbar">
+    <label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar cliente, proveedor o documento..." autocomplete="off" />@if (!string.IsNullOrWhiteSpace(search)) { <a class="search-clear" asp-action="Index" asp-route-FechaDesde="@fechaDesde" asp-route-FechaHasta="@fechaHasta" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a> }</label>
+    <label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label>
+    <label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label>
+    <input type="hidden" name="PageSize" value="@pageSize" />
+    <button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+    <button class="btn-export" type="button" id="exportDevolucionesCsv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>Exportar</button>
+</form>
+@if (TempData["Error"] is string error) { <div class="alert alert-danger py-2">@error</div> }
+@if (TempData["Success"] is string success) { <div class="alert alert-success py-2">@success</div> }
+<div class="comprobantes-list ops-docs-list"><div class="comprobantes-head ops-docs-head"><span>Devolución</span><span>Tercero</span><span>Monto</span><span>Devuelto / Pendiente</span><span>Estado</span><span>Acciones</span></div>
+@if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay devoluciones</strong><span>Ajusta los filtros para encontrar devoluciones.</span></div> } else {
+@foreach (var item in Model.Items) {
+<article class="comprobante-row ops-docs-row" data-csv="@item.FechaGeneracion.ToString("dd/MM/yyyy")|@item.TipoTercero|@item.Tercero|@item.OrigenDescripcion|@item.DocumentoOrigen|@item.MontoOriginal.ToString("N2")|@item.MontoDevuelto.ToString("N2")|@item.MontoPendiente.ToString("N2")|@item.Estado">
+<div class="comprobante-main"><span class="comprobante-icon @(item.Estado == EstadoDevolucion.ANULADO ? "danger" : item.Estado == EstadoDevolucion.DEVUELTO ? "success" : "warning")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.DocumentoOrigen</strong><small>@item.FechaGeneracion.ToString("dd/MM/yyyy") · @item.OrigenDescripcion</small></span></div>
+<div class="comprobante-client"><strong>@item.Tercero</strong><small>@item.TipoTercero</small></div>
+<div class="comprobante-total">S/ @item.MontoOriginal.ToString("N2")</div>
+<div class="comprobante-status"><span class="sunat-line success">Devuelto: S/ @item.MontoDevuelto.ToString("N2")</span><span class="sunat-line muted">Pendiente: S/ @item.MontoPendiente.ToString("N2")</span></div>
+<div class="comprobante-sunat"><span class="pill @EstadoClass(item.Estado)">@item.Estado</span></div>
+<div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Details" asp-route-id="@item.DevolucionId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg> Ver devolución</a>@if (item.PuedeRegistrarDevolucion) { <a asp-action="Registrar" asp-route-id="@item.DevolucionId"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 7v10M9 10.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.3 2-3 2-3 .6-3 2 1.3 2 3 2 3-.6 3-2" /></svg> Registrar devolución</a> }</div></details></div>
+</article>}}
+</div>@await Html.PartialAsync("_Pager", Model)</section>
 
-<table class="table table-sm table-striped data-grid">
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>Tipo tercero</th>
-            <th>Cliente / Proveedor</th>
-            <th>Origen</th>
-            <th>Documento origen</th>
-            <th class="text-end">Monto original</th>
-            <th class="text-end">Monto devuelto</th>
-            <th class="text-end">Monto pendiente</th>
-            <th>Estado</th>
-            <th class="text-end actions-heading">Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.FechaGeneracion.ToString("dd/MM/yyyy")</td>
-            <td>@item.TipoTercero</td>
-            <td>@item.Tercero</td>
-            <td>@item.OrigenDescripcion</td>
-            <td>@item.DocumentoOrigen</td>
-            <td class="text-end">S/ @item.MontoOriginal.ToString("N2")</td>
-            <td class="text-end">S/ @item.MontoDevuelto.ToString("N2")</td>
-            <td class="text-end">S/ @item.MontoPendiente.ToString("N2")</td>
-            <td><span class="status-badge @EstadoCss(item.Estado)">@item.Estado</span></td>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <a class="icon-btn" asp-action="Details" asp-route-id="@item.DevolucionId" title="Ver" aria-label="Ver">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg>
-                    </a>
-                    @if (item.PuedeRegistrarDevolucion)
-                    {
-                        <a class="icon-btn primary" asp-action="Registrar" asp-route-id="@item.DevolucionId" title="Registrar devolucion" aria-label="Registrar devolucion">$</a>
-                    }
-                </div>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
-
-@await Html.PartialAsync("_Pager", Model)
+<script>
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => { if (other !== menu) other.removeAttribute('open'); });
+        });
+    });
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+    document.getElementById('exportDevolucionesCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.ops-docs-row[data-csv]'));
+        const header = ["Fecha","Tipo tercero","Tercero","Origen","Documento","Monto original","Monto devuelto","Monto pendiente","Estado"];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'devoluciones.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+</script>

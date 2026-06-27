@@ -101,7 +101,7 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
 
     private Task<PagedResult<ComprobanteListDto>> BuscarAsync(IQueryable<Comprobante> query, SearchRequest request, CancellationToken cancellationToken)
     {
-        var hoy = DateTime.Today;
+        var hoy = PeruDateTime.Today;
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim();
@@ -128,6 +128,11 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
         {
             var hasta = request.FechaHasta.Value.Date.AddDays(1);
             query = query.Where(x => x.FechaEmision < hasta);
+        }
+
+        if (request.Estado is int estado && Enum.IsDefined(typeof(EstadoRegistro), estado))
+        {
+            query = query.Where(x => x.Estado == (EstadoRegistro)estado);
         }
 
         return query.OrderByDescending(x => x.FechaEmision)
@@ -170,11 +175,11 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
                         ? EstadoPagoComprobante.PAGADO
                         : EstadoPagoComprobante.PAGO_PARCIAL,
                 x.Comprobante.EstadoSunat,
-                x.Comprobante.DocumentoImpreso,
+                x.Comprobante.DocumentoImpreso || !string.IsNullOrWhiteSpace(x.Comprobante.PdfUrl),
                 x.Comprobante.EstadoSunat == EstadoSunat.Aceptado,
                 x.Comprobante.Estado,
                 x.Comprobante.Estado == EstadoRegistro.Activo
-                    && !x.Comprobante.DocumentoImpreso
+                    && !(x.Comprobante.DocumentoImpreso || !string.IsNullOrWhiteSpace(x.Comprobante.PdfUrl))
                     && x.Comprobante.EstadoSunat != EstadoSunat.Aceptado,
                 x.Comprobante.Estado == EstadoRegistro.Activo
                     && x.Comprobante.TipoComprobante != TipoComprobante.COT
@@ -248,8 +253,14 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
             return;
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await operacion();
-        await transaction.CommitAsync(cancellationToken);
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await operacion();
+            await transaction.CommitAsync(cancellationToken);
+        });
     }
 }
+
+

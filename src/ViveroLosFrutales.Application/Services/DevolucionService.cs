@@ -14,6 +14,9 @@ public class DevolucionService(
     public Task<PagedResult<DevolucionListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         devolucionRepository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
 
+    public Task<DevolucionAlertasDto> ObtenerAlertasAsync(int cantidad, CancellationToken cancellationToken) =>
+        devolucionRepository.ObtenerAlertasAsync(empresaContext.EmpresaId, cantidad, cancellationToken);
+
     public async Task<DevolucionDetalleDto> ObtenerDetalleAsync(int id, CancellationToken cancellationToken)
     {
         var devolucion = await ObtenerEntidadAsync(id, cancellationToken);
@@ -36,7 +39,7 @@ public class DevolucionService(
             DocumentoOrigen = Documento(devolucion),
             MontoPendiente = devolucion.MontoPendiente,
             MontoDevolver = devolucion.MontoPendiente,
-            Fecha = DateTime.Today
+            Fecha = PeruDateTime.Today
         };
     }
 
@@ -119,7 +122,7 @@ public class DevolucionService(
             ClienteId = nota.ClienteId,
             Origen = OrigenDevolucion.ANULACION_NOTA_PEDIDO,
             NotaPedidoId = nota.NotaPedidoId,
-            FechaGeneracion = DateTime.Today,
+            FechaGeneracion = PeruDateTime.Today,
             MontoOriginal = decimal.Round(totalCobradoActivo, 2),
             MontoPendiente = decimal.Round(totalCobradoActivo, 2),
             MontoDevuelto = 0,
@@ -154,7 +157,7 @@ public class DevolucionService(
             Origen = OrigenDevolucion.NOTA_CREDITO,
             ComprobanteId = comprobanteOriginal.ComprobanteId,
             NotaCreditoId = notaCredito.ComprobanteId,
-            FechaGeneracion = DateTime.Today,
+            FechaGeneracion = PeruDateTime.Today,
             MontoOriginal = excesoCobrado,
             MontoPendiente = excesoCobrado,
             MontoDevuelto = 0,
@@ -184,7 +187,7 @@ public class DevolucionService(
             ClienteId = comprobante.ClienteId,
             Origen = OrigenDevolucion.ANULACION_COMPROBANTE,
             ComprobanteId = comprobante.ComprobanteId,
-            FechaGeneracion = DateTime.Today,
+            FechaGeneracion = PeruDateTime.Today,
             MontoOriginal = decimal.Round(totalCobradoActivo, 2),
             MontoPendiente = decimal.Round(totalCobradoActivo, 2),
             MontoDevuelto = 0,
@@ -214,7 +217,7 @@ public class DevolucionService(
             ProveedorId = compra.ProveedorId,
             Origen = OrigenDevolucion.ANULACION_COMPRA,
             CompraId = compra.CompraId,
-            FechaGeneracion = DateTime.Today,
+            FechaGeneracion = PeruDateTime.Today,
             MontoOriginal = decimal.Round(totalPagadoActivo, 2),
             MontoPendiente = decimal.Round(totalPagadoActivo, 2),
             MontoDevuelto = 0,

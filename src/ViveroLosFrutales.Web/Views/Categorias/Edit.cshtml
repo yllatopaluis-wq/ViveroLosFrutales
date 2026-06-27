@@ -3,7 +3,7 @@
     ViewData["Title"] = Model.CategoriaId == 0 ? "Crear categoria" : "Editar categoria";
 }
 
-<form method="post" class="dense-form">
+<form method="post" class="dense-form document-entry-form">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="CategoriaId" type="hidden" />
     <div class="form-grid cols-2">

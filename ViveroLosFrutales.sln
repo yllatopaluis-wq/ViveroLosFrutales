@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -11,6 +11,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Infrastructure", "src\ViveroLosFrutales.Infrastructure\ViveroLosFrutales.Infrastructure.csproj", "{94F8DD16-C71B-451D-AB7C-B62A455243B0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.Tests", "tests\ViveroLosFrutales.Tests\ViveroLosFrutales.Tests.csproj", "{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C8A5974F-18E2-48EF-B870-A769C2731610}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViveroLosFrutales.PublicWeb", "src\ViveroLosFrutales.PublicWeb\ViveroLosFrutales.PublicWeb.csproj", "{9DBB3B4F-3452-4C12-A38A-E0E11003FF15}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,5 +42,12 @@ Global
 		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F16E84E8-7C55-49FD-B95D-2427BA98D0BA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9DBB3B4F-3452-4C12-A38A-E0E11003FF15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9DBB3B4F-3452-4C12-A38A-E0E11003FF15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9DBB3B4F-3452-4C12-A38A-E0E11003FF15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9DBB3B4F-3452-4C12-A38A-E0E11003FF15}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9DBB3B4F-3452-4C12-A38A-E0E11003FF15} = {C8A5974F-18E2-48EF-B870-A769C2731610}
 	EndGlobalSection
 EndGlobal

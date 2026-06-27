@@ -1,126 +1,243 @@
 @model PagedResult<NotaPedidoListDto>
 @{
     ViewData["Title"] = "Notas de Pedido";
-    var today = DateTime.Today;
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
     var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
     var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
 
 @functions {
     private static string EstadoPagoTexto(EstadoPagoNotaPedido estado) => estado switch
     {
-        EstadoPagoNotaPedido.PENDIENTE => "PENDIENTE",
-        EstadoPagoNotaPedido.PAGO_PARCIAL => "PARCIAL",
-        EstadoPagoNotaPedido.PAGADO => "PAGADO",
+        EstadoPagoNotaPedido.PENDIENTE => "Pendiente",
+        EstadoPagoNotaPedido.PAGO_PARCIAL => "Parcial",
+        EstadoPagoNotaPedido.PAGADO => "Pagado",
         _ => estado.ToString()
     };
 
-    private static string EstadoDocumentoTexto(NotaPedidoEstado estado) =>
-        estado == NotaPedidoEstado.ACTIVO ? "ACTIVO" : "ANULADO";
-}
-
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
-        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
-        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Cliente o numero" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-    <a class="btn btn-sm btn-success" asp-action="Nuevo">Nueva Nota</a>
-</div>
-
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger py-2">@error</div>
-}
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success py-2">@success</div>
-}
-
-<table class="table table-sm table-striped data-grid notas-pedido-grid">
-    <thead>
-        <tr>
-            <th>Numero</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th class="text-end">Total</th>
-            <th class="text-end">Cobrado</th>
-            <th class="text-end">Saldo</th>
-            <th class="estado-pago-col">Estado Pago</th>
-            <th>Estado Devolucion</th>
-            <th class="estado-documento-col">Estado Doc.</th>
-            <th class="text-end actions-heading">Acciones</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
+    private static string EstadoPagoClass(EstadoPagoNotaPedido estado) => estado switch
     {
-        var soloVer = item.EstadoDocumento == NotaPedidoEstado.ANULADO;
-        var tieneComprobante = item.ComprobanteId is not null;
-        var puedeEditar = item.EstadoDocumento == NotaPedidoEstado.ACTIVO && !tieneComprobante;
-        var puedeCobrar = item.EstadoDocumento == NotaPedidoEstado.ACTIVO && !tieneComprobante && item.EstadoPago != EstadoPagoNotaPedido.PAGADO;
-        var puedeAnular = item.EstadoDocumento == NotaPedidoEstado.ACTIVO
-            && !tieneComprobante;
-        <tr>
-            <td>@item.Numero</td>
-            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
-            <td>@item.Cliente</td>
-            <td class="text-end">S/ @item.Total.ToString("N2")</td>
-            <td class="text-end">S/ @item.TotalCobrado.ToString("N2")</td>
-            <td class="text-end">S/ @item.SaldoPendiente.ToString("N2")</td>
-            <td class="estado-pago-col"><span class="status-badge compact @(item.EstadoPago == EstadoPagoNotaPedido.PAGADO ? "active" : item.EstadoPago == EstadoPagoNotaPedido.PAGO_PARCIAL ? "warning" : string.Empty)">@EstadoPagoTexto(item.EstadoPago)</span></td>
-            <td>@item.EstadoDevolucion</td>
-            <td class="estado-documento-col"><span class="status-badge compact @(item.EstadoDocumento == NotaPedidoEstado.ACTIVO ? "active" : "danger")">@EstadoDocumentoTexto(item.EstadoDocumento)</span></td>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <a class="icon-btn" asp-action="Details" asp-route-id="@item.NotaPedidoId" title="Ver" aria-label="Ver">V</a>
-                    <form asp-action="Imprimir" method="post" class="icon-form" target="_blank">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.NotaPedidoId" />
-                        <button type="submit" class="icon-btn" title="Imprimir / descargar PDF" aria-label="Imprimir / descargar PDF">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M6 9V3h12v6" />
-                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                                <path d="M6 14h12v8H6Z" />
-                            </svg>
-                        </button>
-                    </form>
-                    @if (!soloVer && puedeEditar)
-                    {
-                        <a class="icon-btn" asp-action="Edit" asp-route-id="@item.NotaPedidoId" title="Editar" aria-label="Editar">E</a>
-                    }
-                    @if (!soloVer && puedeCobrar)
-                    {
-                        <a class="icon-btn primary" asp-action="RegistrarCobro" asp-route-id="@item.NotaPedidoId" title="Registrar cobro" aria-label="Registrar cobro">$</a>
-                    }
-                    @if (!soloVer && puedeAnular)
-                    {
-                        <form asp-action="Anular" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionNotaPedido(this, '@item.Numero', '@item.Total.ToString("N2")', '@item.TotalCobrado.ToString("N2")');">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@item.NotaPedidoId" />
-                            <input type="hidden" name="motivo" value="" />
-                            <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">X</button>
-                        </form>
-                    }
-                </div>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+        EstadoPagoNotaPedido.PAGADO => "success",
+        EstadoPagoNotaPedido.PAGO_PARCIAL => "info",
+        _ => "warning"
+    };
 
-@await Html.PartialAsync("_Pager", Model)
+    private static string EstadoDocumentoTexto(NotaPedidoEstado estado) =>
+        estado == NotaPedidoEstado.ACTIVO ? "Activo" : "Anulado";
+
+    private static string EstadoDocumentoClass(NotaPedidoEstado estado) =>
+        estado == NotaPedidoEstado.ACTIVO ? "success" : "danger";
+
+    private static string RowIconClass(NotaPedidoListDto item)
+    {
+        if (item.EstadoDocumento == NotaPedidoEstado.ANULADO) return "danger";
+        if (item.EstadoPago == EstadoPagoNotaPedido.PAGADO) return "success";
+        return "warning";
+    }
+}
+
+<section class="comprobantes-page sales-docs-page">
+    <form method="get" class="comprobantes-toolbar sales-docs-toolbar">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Buscar por cliente o n&uacute;mero..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a class="search-clear" asp-action="Index" asp-route-FechaDesde="@fechaDesde" asp-route-FechaHasta="@fechaHasta" asp-route-PageSize="@pageSize" aria-label="Limpiar b&uacute;squeda">&times;</a>
+            }
+        </label>
+
+        <label class="filter-field">
+            <span>Desde</span>
+            <input name="FechaDesde" type="date" value="@fechaDesde" />
+        </label>
+
+        <label class="filter-field">
+            <span>Hasta</span>
+            <input name="FechaHasta" type="date" value="@fechaHasta" />
+        </label>
+
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            Buscar
+        </button>
+
+        <button class="btn-export" type="button" id="exportNotasPedidoCsv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+            Exportar
+        </button>
+    </form>
+
+    @if (TempData["Error"] is string error)
+    {
+        <div class="alert alert-danger py-2">@error</div>
+    }
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success py-2">@success</div>
+    }
+
+    <div class="comprobantes-list sales-docs-list" id="notasPedidoList">
+        <div class="comprobantes-head sales-docs-head" aria-hidden="true">
+            <span>Nota</span>
+            <span>Cliente</span>
+            <span>Total</span>
+            <span>Cobro / Saldo</span>
+            <span>Estado</span>
+            <span>Acciones</span>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="comprobantes-empty">
+                <strong>No hay notas de pedido</strong>
+                <span>Ajusta los filtros o registra una nueva nota de pedido.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                var soloVer = item.EstadoDocumento == NotaPedidoEstado.ANULADO;
+                var tieneComprobante = item.ComprobanteId is not null;
+                var puedeEditar = item.EstadoDocumento == NotaPedidoEstado.ACTIVO && !tieneComprobante;
+                var puedeCobrar = item.EstadoDocumento == NotaPedidoEstado.ACTIVO && !tieneComprobante && item.EstadoPago != EstadoPagoNotaPedido.PAGADO;
+                var puedeAnular = item.EstadoDocumento == NotaPedidoEstado.ACTIVO && !tieneComprobante;
+                <article class="comprobante-row sales-docs-row" data-csv="@item.Numero|@item.Fecha.ToString("dd/MM/yyyy")|@item.Cliente|@item.Total.ToString("N2")|@item.TotalCobrado.ToString("N2")|@item.SaldoPendiente.ToString("N2")|@EstadoPagoTexto(item.EstadoPago)|@EstadoDocumentoTexto(item.EstadoDocumento)">
+                    <div class="comprobante-main">
+                        <span class="comprobante-icon @RowIconClass(item)" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg>
+                        </span>
+                        <span class="comprobante-copy">
+                            <strong>@item.Numero</strong>
+                            <small>@item.Fecha.ToString("dd/MM/yyyy")</small>
+                            <small>Nota de pedido</small>
+                        </span>
+                    </div>
+
+                    <div class="comprobante-client">
+                        <strong>@item.Cliente</strong>
+                        <small>@(tieneComprobante ? "Convertida a comprobante" : "Pendiente de comprobante")</small>
+                    </div>
+
+                    <div class="comprobante-total">S/ @item.Total.ToString("N2")</div>
+
+                    <div class="comprobante-status">
+                        <span class="sunat-line success">Cobrado: S/ @item.TotalCobrado.ToString("N2")</span>
+                        <span class="sunat-line muted">Saldo: S/ @item.SaldoPendiente.ToString("N2")</span>
+                    </div>
+
+                    <div class="comprobante-sunat">
+                        <span class="pill @EstadoPagoClass(item.EstadoPago)">@EstadoPagoTexto(item.EstadoPago)</span>
+                        <span class="pill @EstadoDocumentoClass(item.EstadoDocumento)">@EstadoDocumentoTexto(item.EstadoDocumento)</span>
+                        @if (!string.IsNullOrWhiteSpace(item.EstadoDevolucion))
+                        {
+                            <span class="sunat-line muted">@item.EstadoDevolucion</span>
+                        }
+                    </div>
+
+                    <div class="comprobante-actions">
+                        <details class="row-actions-menu">
+                            <summary aria-label="Abrir acciones">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+                            </summary>
+                            <div class="row-actions-panel">
+                                <a asp-action="Details" asp-route-id="@item.NotaPedidoId">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg>
+                                    Ver nota
+                                </a>
+                                <form asp-action="Imprimir" method="post" target="_blank">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.NotaPedidoId" />
+                                    <button type="submit">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6Z" /></svg>
+                                        Imprimir
+                                    </button>
+                                </form>
+                                @if (!soloVer && puedeEditar)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@item.NotaPedidoId">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+                                        Editar
+                                    </a>
+                                    <form asp-action="ConvertirAComprobante" method="post" onsubmit="return confirm('Convertir esta nota de pedido a comprobante?');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.NotaPedidoId" />
+                                        <button type="submit">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /><path d="M8 13h7" /><path d="m12 10 3 3-3 3" /></svg>
+                                            Convertir a comprobante
+                                        </button>
+                                    </form>
+                                }
+                                @if (!soloVer && puedeCobrar)
+                                {
+                                    <a asp-action="RegistrarCobro" asp-route-id="@item.NotaPedidoId">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 7v10M9 10.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.3 2-3 2-3 .6-3 2 1.3 2 3 2 3-.6 3-2" /></svg>
+                                        Registrar cobro
+                                    </a>
+                                }
+                                @if (!soloVer && puedeAnular)
+                                {
+                                    <form asp-action="Anular" method="post" onsubmit="return solicitarMotivoAnulacionNotaPedido(this, '@item.Numero', '@item.Total.ToString("N2")', '@item.TotalCobrado.ToString("N2")');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.NotaPedidoId" />
+                                        <input type="hidden" name="motivo" value="" />
+                                        <button type="submit" class="danger">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+                                            Anular nota
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </details>
+                    </div>
+                </article>
+            }
+        }
+    </div>
+
+    @await Html.PartialAsync("_Pager", Model)
+</section>
 
 <script>
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => {
+                if (other !== menu) other.removeAttribute('open');
+            });
+        });
+    });
+
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+
+    document.getElementById('exportNotasPedidoCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.sales-docs-row[data-csv]'));
+        const header = ['Nota','Fecha','Cliente','Total','Cobrado','Saldo','Estado pago','Estado documento'];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))]
+            .map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'notas-pedido.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+
     function solicitarMotivoAnulacionNotaPedido(form, numero, total, cobrado) {
-        const mensaje = `Anular nota de pedido ${numero}\n\nTotal documento: S/ ${total}\nTotal cobrado: S/ ${cobrado}\nMonto devolucion pendiente: S/ ${cobrado}\n\nLos ingresos historicos permaneceran registrados para preservar la trazabilidad financiera.\n\nIngrese el motivo de anulacion:`;
+        const mensaje = 'Anular nota de pedido ' + numero + '\n\nTotal documento: S/ ' + total + '\nTotal cobrado: S/ ' + cobrado + '\nMonto devolución pendiente: S/ ' + cobrado + '\n\nLos ingresos históricos permanecerán registrados para preservar la trazabilidad financiera.\n\nIngrese el motivo de anulación:';
         const motivo = prompt(mensaje);
         if (!motivo || !motivo.trim()) {
-            alert('Ingrese el motivo de anulacion.');
+            alert('Ingrese el motivo de anulación.');
             return false;
         }
 

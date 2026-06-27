@@ -22,7 +22,7 @@ public class NotaPedidoEditDto
     public int ClienteId { get; set; }
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public List<NotaPedidoDetalleEditDto> Detalles { get; set; } = new() { new NotaPedidoDetalleEditDto() };
 }
 
@@ -69,7 +69,7 @@ public class RegistrarCobroDto
 {
     public int? NotaPedidoId { get; set; }
     public int? ComprobanteId { get; set; }
-    public DateTime FechaCobro { get; set; } = DateTime.Today;
+    public DateTime FechaCobro { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
     public string Observacion { get; set; } = string.Empty;
@@ -103,6 +103,9 @@ public class CajaIndexDto
 {
     public IReadOnlyList<MovimientoCajaListDto> Movimientos { get; set; } = Array.Empty<MovimientoCajaListDto>();
     public CajaResumenDto Resumen { get; set; } = new(0, 0, 0, 0);
+    public int Total { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
 }
 
 public class EstadoCuentaClienteDto
@@ -158,6 +161,6 @@ public class RegistrarDevolucionDto
     public decimal MontoPendiente { get; set; }
     public decimal MontoDevolver { get; set; }
     public string MedioDevolucion { get; set; } = "EFECTIVO";
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public string Observacion { get; set; } = string.Empty;
 }

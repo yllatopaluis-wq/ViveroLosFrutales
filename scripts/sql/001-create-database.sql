@@ -1,17 +1,21 @@
-IF DB_ID(N'ViveroLosFrutalesDB') IS NULL
+IF OBJECT_ID(N'[erp].[__EFMigrationsHistory]') IS NULL
 BEGIN
-    CREATE DATABASE ViveroLosFrutalesDB;
+    IF SCHEMA_ID(N'erp') IS NULL EXEC(N'CREATE SCHEMA [erp];');
+    CREATE TABLE [erp].[__EFMigrationsHistory] (
+        [MigrationId] nvarchar(150) NOT NULL,
+        [ProductVersion] nvarchar(32) NOT NULL,
+        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+    );
 END;
 GO
 
-USE ViveroLosFrutalesDB;
+BEGIN TRANSACTION;
 GO
 
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
+IF SCHEMA_ID(N'erp') IS NULL EXEC(N'CREATE SCHEMA [erp];');
 GO
 
-CREATE TABLE [dbo].[AspNetRoles] (
+CREATE TABLE [erp].[AspNetRoles] (
     [Id] nvarchar(450) NOT NULL,
     [Name] nvarchar(256) NULL,
     [NormalizedName] nvarchar(256) NULL,
@@ -20,9 +24,7 @@ CREATE TABLE [dbo].[AspNetRoles] (
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetUsers] (
+CREATE TABLE [erp].[AspNetUsers] (
     [Id] nvarchar(450) NOT NULL,
     [Nombres] nvarchar(max) NOT NULL,
     [Apellidos] nvarchar(max) NOT NULL,
@@ -46,9 +48,7 @@ CREATE TABLE [dbo].[AspNetUsers] (
 );
 GO
 
-
-
-CREATE TABLE [Cliente] (
+CREATE TABLE [erp].[Cliente] (
     [ClienteId] int NOT NULL IDENTITY,
     [TipoDocumento] int NOT NULL,
     [NumeroDocumento] nvarchar(20) NOT NULL,
@@ -65,9 +65,7 @@ CREATE TABLE [Cliente] (
 );
 GO
 
-
-
-CREATE TABLE [Empresa] (
+CREATE TABLE [erp].[Empresa] (
     [EmpresaId] int NOT NULL IDENTITY,
     [RUC] nvarchar(11) NOT NULL,
     [RazonSocial] nvarchar(200) NOT NULL,
@@ -89,14 +87,14 @@ CREATE TABLE [Empresa] (
     [SerieNotaCreditoBoleta] nvarchar(10) NOT NULL,
     [SerieNotaPedido] nvarchar(max) NOT NULL,
     [SerieCotizacion] nvarchar(max) NOT NULL,
+    [FechaRegistro] datetime2 NOT NULL,
+    [UsuarioRegistro] nvarchar(max) NOT NULL,
     [Estado] int NOT NULL,
     CONSTRAINT [PK_Empresa] PRIMARY KEY ([EmpresaId])
 );
 GO
 
-
-
-CREATE TABLE [Moneda] (
+CREATE TABLE [erp].[Moneda] (
     [MonedaId] int NOT NULL IDENTITY,
     [Codigo] nvarchar(3) NOT NULL,
     [Descripcion] nvarchar(max) NOT NULL,
@@ -106,9 +104,7 @@ CREATE TABLE [Moneda] (
 );
 GO
 
-
-
-CREATE TABLE [MotivoNotaCredito] (
+CREATE TABLE [erp].[MotivoNotaCredito] (
     [MotivoNotaCreditoId] int NOT NULL IDENTITY,
     [Nombre] nvarchar(150) NOT NULL,
     [FechaRegistro] datetime2 NOT NULL,
@@ -118,9 +114,7 @@ CREATE TABLE [MotivoNotaCredito] (
 );
 GO
 
-
-
-CREATE TABLE [Permiso] (
+CREATE TABLE [erp].[Permiso] (
     [PermisoId] int NOT NULL IDENTITY,
     [Modulo] nvarchar(80) NOT NULL,
     [Accion] nvarchar(40) NOT NULL,
@@ -130,9 +124,7 @@ CREATE TABLE [Permiso] (
 );
 GO
 
-
-
-CREATE TABLE [Rol] (
+CREATE TABLE [erp].[Rol] (
     [RolId] int NOT NULL IDENTITY,
     [Nombre] nvarchar(80) NOT NULL,
     [Descripcion] nvarchar(max) NOT NULL,
@@ -141,68 +133,56 @@ CREATE TABLE [Rol] (
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetRoleClaims] (
+CREATE TABLE [erp].[AspNetRoleClaims] (
     [Id] int NOT NULL IDENTITY,
     [RoleId] nvarchar(450) NOT NULL,
     [ClaimType] nvarchar(max) NULL,
     [ClaimValue] nvarchar(max) NULL,
     CONSTRAINT [PK_AspNetRoleClaims] PRIMARY KEY ([Id]),
-    CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [erp].[AspNetRoles] ([Id]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetUserClaims] (
+CREATE TABLE [erp].[AspNetUserClaims] (
     [Id] int NOT NULL IDENTITY,
     [UserId] nvarchar(450) NOT NULL,
     [ClaimType] nvarchar(max) NULL,
     [ClaimValue] nvarchar(max) NULL,
     CONSTRAINT [PK_AspNetUserClaims] PRIMARY KEY ([Id]),
-    CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetUserLogins] (
+CREATE TABLE [erp].[AspNetUserLogins] (
     [LoginProvider] nvarchar(450) NOT NULL,
     [ProviderKey] nvarchar(450) NOT NULL,
     [ProviderDisplayName] nvarchar(max) NULL,
     [UserId] nvarchar(450) NOT NULL,
     CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
-    CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetUserRoles] (
+CREATE TABLE [erp].[AspNetUserRoles] (
     [UserId] nvarchar(450) NOT NULL,
     [RoleId] nvarchar(450) NOT NULL,
     CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
-    CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE,
-    CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [erp].[AspNetRoles] ([Id]) ON DELETE CASCADE,
+    CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [dbo].[AspNetUserTokens] (
+CREATE TABLE [erp].[AspNetUserTokens] (
     [UserId] nvarchar(450) NOT NULL,
     [LoginProvider] nvarchar(450) NOT NULL,
     [Name] nvarchar(450) NOT NULL,
     [Value] nvarchar(max) NULL,
     CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
-    CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+    CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [Categoria] (
+CREATE TABLE [erp].[Categoria] (
     [CategoriaId] int NOT NULL IDENTITY,
     [Nombre] nvarchar(100) NOT NULL,
     [Descripcion] nvarchar(250) NOT NULL,
@@ -211,13 +191,11 @@ CREATE TABLE [Categoria] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Categoria] PRIMARY KEY ([CategoriaId]),
-    CONSTRAINT [FK_Categoria_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_Categoria_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [CategoriaGasto] (
+CREATE TABLE [erp].[CategoriaGasto] (
     [CategoriaGastoId] int NOT NULL IDENTITY,
     [Nombre] nvarchar(100) NOT NULL,
     [FechaRegistro] datetime2 NOT NULL,
@@ -225,13 +203,11 @@ CREATE TABLE [CategoriaGasto] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_CategoriaGasto] PRIMARY KEY ([CategoriaGastoId]),
-    CONSTRAINT [FK_CategoriaGasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_CategoriaGasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [CategoriaIngreso] (
+CREATE TABLE [erp].[CategoriaIngreso] (
     [CategoriaIngresoId] int NOT NULL IDENTITY,
     [Nombre] nvarchar(100) NOT NULL,
     [FechaRegistro] datetime2 NOT NULL,
@@ -239,13 +215,11 @@ CREATE TABLE [CategoriaIngreso] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_CategoriaIngreso] PRIMARY KEY ([CategoriaIngresoId]),
-    CONSTRAINT [FK_CategoriaIngreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_CategoriaIngreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [ConfiguracionEmpresa] (
+CREATE TABLE [erp].[ConfiguracionEmpresa] (
     [ConfiguracionEmpresaId] int NOT NULL IDENTITY,
     [Clave] nvarchar(100) NOT NULL,
     [Valor] nvarchar(1000) NOT NULL,
@@ -255,13 +229,11 @@ CREATE TABLE [ConfiguracionEmpresa] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_ConfiguracionEmpresa] PRIMARY KEY ([ConfiguracionEmpresaId]),
-    CONSTRAINT [FK_ConfiguracionEmpresa_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_ConfiguracionEmpresa_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [Cotizacion] (
+CREATE TABLE [erp].[Cotizacion] (
     [CotizacionId] int NOT NULL IDENTITY,
     [ClienteId] int NOT NULL,
     [Serie] nvarchar(10) NOT NULL,
@@ -289,14 +261,32 @@ CREATE TABLE [Cotizacion] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Cotizacion] PRIMARY KEY ([CotizacionId]),
-    CONSTRAINT [FK_Cotizacion_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [Cliente] ([ClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Cotizacion_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_Cotizacion_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Cotizacion_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
+CREATE TABLE [erp].[ErrorAplicacion] (
+    [ErrorAplicacionId] int NOT NULL IDENTITY,
+    [EmpresaId] int NULL,
+    [FechaUtc] datetime2 NOT NULL,
+    [Usuario] nvarchar(150) NOT NULL,
+    [Ruta] nvarchar(500) NOT NULL,
+    [MetodoHttp] nvarchar(10) NOT NULL,
+    [TipoExcepcion] nvarchar(300) NOT NULL,
+    [Mensaje] nvarchar(2000) NOT NULL,
+    [Detalle] nvarchar(max) NOT NULL,
+    [Identificador] nvarchar(120) NOT NULL,
+    [Estado] int NOT NULL,
+    [FechaRevisionUtc] datetime2 NULL,
+    [UsuarioRevision] nvarchar(150) NOT NULL,
+    [ObservacionRevision] nvarchar(1000) NOT NULL,
+    CONSTRAINT [PK_ErrorAplicacion] PRIMARY KEY ([ErrorAplicacionId]),
+    CONSTRAINT [FK_ErrorAplicacion_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE NO ACTION
+);
+GO
 
-
-CREATE TABLE [MovimientoCaja] (
+CREATE TABLE [erp].[MovimientoCaja] (
     [MovimientoCajaId] int NOT NULL IDENTITY,
     [ClienteId] int NULL,
     [ProveedorId] int NULL,
@@ -312,13 +302,11 @@ CREATE TABLE [MovimientoCaja] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_MovimientoCaja] PRIMARY KEY ([MovimientoCajaId]),
-    CONSTRAINT [FK_MovimientoCaja_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_MovimientoCaja_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [Producto] (
+CREATE TABLE [erp].[Producto] (
     [ProductoId] int NOT NULL IDENTITY,
     [Categoria] nvarchar(100) NOT NULL,
     [Nombre] nvarchar(200) NOT NULL,
@@ -334,13 +322,11 @@ CREATE TABLE [Producto] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Producto] PRIMARY KEY ([ProductoId]),
-    CONSTRAINT [FK_Producto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_Producto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [Proveedor] (
+CREATE TABLE [erp].[Proveedor] (
     [ProveedorId] int NOT NULL IDENTITY,
     [TipoDocumento] int NOT NULL,
     [NumeroDocumento] nvarchar(20) NOT NULL,
@@ -354,36 +340,30 @@ CREATE TABLE [Proveedor] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Proveedor] PRIMARY KEY ([ProveedorId]),
-    CONSTRAINT [FK_Proveedor_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_Proveedor_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [UsuarioEmpresa] (
+CREATE TABLE [erp].[UsuarioEmpresa] (
     [UsuarioEmpresaId] int NOT NULL IDENTITY,
     [UsuarioId] nvarchar(450) NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_UsuarioEmpresa] PRIMARY KEY ([UsuarioEmpresaId]),
-    CONSTRAINT [FK_UsuarioEmpresa_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_UsuarioEmpresa_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [RolPermiso] (
+CREATE TABLE [erp].[RolPermiso] (
     [RolPermisoId] int NOT NULL IDENTITY,
     [RolId] int NOT NULL,
     [PermisoId] int NOT NULL,
     CONSTRAINT [PK_RolPermiso] PRIMARY KEY ([RolPermisoId]),
-    CONSTRAINT [FK_RolPermiso_Permiso_PermisoId] FOREIGN KEY ([PermisoId]) REFERENCES [Permiso] ([PermisoId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_RolPermiso_Rol_RolId] FOREIGN KEY ([RolId]) REFERENCES [Rol] ([RolId]) ON DELETE CASCADE
+    CONSTRAINT [FK_RolPermiso_Permiso_PermisoId] FOREIGN KEY ([PermisoId]) REFERENCES [erp].[Permiso] ([PermisoId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_RolPermiso_Rol_RolId] FOREIGN KEY ([RolId]) REFERENCES [erp].[Rol] ([RolId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [NotaPedido] (
+CREATE TABLE [erp].[NotaPedido] (
     [NotaPedidoId] int NOT NULL IDENTITY,
     [ClienteId] int NOT NULL,
     [CotizacionId] int NULL,
@@ -405,15 +385,13 @@ CREATE TABLE [NotaPedido] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_NotaPedido] PRIMARY KEY ([NotaPedidoId]),
-    CONSTRAINT [FK_NotaPedido_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [Cliente] ([ClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_NotaPedido_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [Cotizacion] ([CotizacionId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_NotaPedido_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE
+    CONSTRAINT [FK_NotaPedido_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_NotaPedido_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [erp].[Cotizacion] ([CotizacionId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_NotaPedido_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [Gasto] (
+CREATE TABLE [erp].[Gasto] (
     [GastoId] int NOT NULL IDENTITY,
     [Fecha] datetime2 NOT NULL,
     [CategoriaGastoId] int NULL,
@@ -430,15 +408,13 @@ CREATE TABLE [Gasto] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Gasto] PRIMARY KEY ([GastoId]),
-    CONSTRAINT [FK_Gasto_CategoriaGasto_CategoriaGastoId] FOREIGN KEY ([CategoriaGastoId]) REFERENCES [CategoriaGasto] ([CategoriaGastoId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Gasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Gasto_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_Gasto_CategoriaGasto_CategoriaGastoId] FOREIGN KEY ([CategoriaGastoId]) REFERENCES [erp].[CategoriaGasto] ([CategoriaGastoId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Gasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Gasto_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [Ingreso] (
+CREATE TABLE [erp].[Ingreso] (
     [IngresoId] int NOT NULL IDENTITY,
     [Fecha] datetime2 NOT NULL,
     [CategoriaIngresoId] int NULL,
@@ -455,15 +431,13 @@ CREATE TABLE [Ingreso] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Ingreso] PRIMARY KEY ([IngresoId]),
-    CONSTRAINT [FK_Ingreso_CategoriaIngreso_CategoriaIngresoId] FOREIGN KEY ([CategoriaIngresoId]) REFERENCES [CategoriaIngreso] ([CategoriaIngresoId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Ingreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Ingreso_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_Ingreso_CategoriaIngreso_CategoriaIngresoId] FOREIGN KEY ([CategoriaIngresoId]) REFERENCES [erp].[CategoriaIngreso] ([CategoriaIngresoId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Ingreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Ingreso_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [CotizacionDetalle] (
+CREATE TABLE [erp].[CotizacionDetalle] (
     [CotizacionDetalleId] int NOT NULL IDENTITY,
     [CotizacionId] int NOT NULL,
     [ProductoId] int NOT NULL,
@@ -472,14 +446,12 @@ CREATE TABLE [CotizacionDetalle] (
     [Importe] decimal(18,2) NOT NULL,
     [ImporteIgv] decimal(18,2) NOT NULL,
     CONSTRAINT [PK_CotizacionDetalle] PRIMARY KEY ([CotizacionDetalleId]),
-    CONSTRAINT [FK_CotizacionDetalle_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [Cotizacion] ([CotizacionId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_CotizacionDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [Producto] ([ProductoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_CotizacionDetalle_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [erp].[Cotizacion] ([CotizacionId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_CotizacionDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [erp].[Producto] ([ProductoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [MovimientoInventario] (
+CREATE TABLE [erp].[MovimientoInventario] (
     [MovimientoInventarioId] int NOT NULL IDENTITY,
     [ProductoId] int NOT NULL,
     [Tipo] int NOT NULL,
@@ -493,13 +465,11 @@ CREATE TABLE [MovimientoInventario] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_MovimientoInventario] PRIMARY KEY ([MovimientoInventarioId]),
-    CONSTRAINT [FK_MovimientoInventario_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [Producto] ([ProductoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_MovimientoInventario_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [erp].[Producto] ([ProductoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [Compra] (
+CREATE TABLE [erp].[Compra] (
     [CompraId] int NOT NULL IDENTITY,
     [ProveedorId] int NOT NULL,
     [TipoDocumento] int NOT NULL,
@@ -524,14 +494,12 @@ CREATE TABLE [Compra] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Compra] PRIMARY KEY ([CompraId]),
-    CONSTRAINT [FK_Compra_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Compra_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [Proveedor] ([ProveedorId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_Compra_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Compra_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [erp].[Proveedor] ([ProveedorId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [Comprobante] (
+CREATE TABLE [erp].[Comprobante] (
     [ComprobanteId] int NOT NULL IDENTITY,
     [TipoComprobante] int NOT NULL,
     [Serie] nvarchar(10) NOT NULL,
@@ -572,18 +540,16 @@ CREATE TABLE [Comprobante] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Comprobante] PRIMARY KEY ([ComprobanteId]),
-    CONSTRAINT [FK_Comprobante_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [Cliente] ([ClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Comprobante_Comprobante_ComprobanteReferenciaId] FOREIGN KEY ([ComprobanteReferenciaId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Comprobante_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [Cotizacion] ([CotizacionId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Comprobante_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Comprobante_MotivoNotaCredito_MotivoNotaCreditoId] FOREIGN KEY ([MotivoNotaCreditoId]) REFERENCES [MotivoNotaCredito] ([MotivoNotaCreditoId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Comprobante_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_Comprobante_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Comprobante_Comprobante_ComprobanteReferenciaId] FOREIGN KEY ([ComprobanteReferenciaId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Comprobante_Cotizacion_CotizacionId] FOREIGN KEY ([CotizacionId]) REFERENCES [erp].[Cotizacion] ([CotizacionId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Comprobante_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Comprobante_MotivoNotaCredito_MotivoNotaCreditoId] FOREIGN KEY ([MotivoNotaCreditoId]) REFERENCES [erp].[MotivoNotaCredito] ([MotivoNotaCreditoId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Comprobante_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [erp].[NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [NotaPedidoDetalle] (
+CREATE TABLE [erp].[NotaPedidoDetalle] (
     [NotaPedidoDetalleId] int NOT NULL IDENTITY,
     [NotaPedidoId] int NOT NULL,
     [ProductoId] int NOT NULL,
@@ -593,14 +559,12 @@ CREATE TABLE [NotaPedidoDetalle] (
     [Igv] decimal(18,2) NOT NULL,
     [Total] decimal(18,2) NOT NULL,
     CONSTRAINT [PK_NotaPedidoDetalle] PRIMARY KEY ([NotaPedidoDetalleId]),
-    CONSTRAINT [FK_NotaPedidoDetalle_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [NotaPedido] ([NotaPedidoId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_NotaPedidoDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [Producto] ([ProductoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_NotaPedidoDetalle_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [erp].[NotaPedido] ([NotaPedidoId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_NotaPedidoDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [erp].[Producto] ([ProductoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [CompraDetalle] (
+CREATE TABLE [erp].[CompraDetalle] (
     [CompraDetalleId] int NOT NULL IDENTITY,
     [CompraId] int NOT NULL,
     [ProductoId] int NOT NULL,
@@ -611,14 +575,12 @@ CREATE TABLE [CompraDetalle] (
     [Igv] decimal(18,2) NOT NULL,
     [TotalLinea] decimal(18,2) NOT NULL,
     CONSTRAINT [PK_CompraDetalle] PRIMARY KEY ([CompraDetalleId]),
-    CONSTRAINT [FK_CompraDetalle_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [Compra] ([CompraId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_CompraDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [Producto] ([ProductoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_CompraDetalle_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [erp].[Compra] ([CompraId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_CompraDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [erp].[Producto] ([ProductoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [PagoProveedor] (
+CREATE TABLE [erp].[PagoProveedor] (
     [PagoProveedorId] int NOT NULL IDENTITY,
     [ProveedorId] int NOT NULL,
     [CompraId] int NOT NULL,
@@ -635,14 +597,12 @@ CREATE TABLE [PagoProveedor] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_PagoProveedor] PRIMARY KEY ([PagoProveedorId]),
-    CONSTRAINT [FK_PagoProveedor_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [Compra] ([CompraId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_PagoProveedor_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [Proveedor] ([ProveedorId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_PagoProveedor_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [erp].[Compra] ([CompraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_PagoProveedor_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [erp].[Proveedor] ([ProveedorId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [CobroCliente] (
+CREATE TABLE [erp].[CobroCliente] (
     [CobroClienteId] int NOT NULL IDENTITY,
     [ClienteId] int NOT NULL,
     [NotaPedidoId] int NULL,
@@ -659,16 +619,14 @@ CREATE TABLE [CobroCliente] (
     [UsuarioRegistro] nvarchar(max) NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_CobroCliente] PRIMARY KEY ([CobroClienteId]),
-    CONSTRAINT [FK_CobroCliente_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [Cliente] ([ClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_CobroCliente_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_CobroCliente_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_CobroCliente_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_CobroCliente_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_CobroCliente_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_CobroCliente_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_CobroCliente_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [erp].[NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [ComprobanteDetalle] (
+CREATE TABLE [erp].[ComprobanteDetalle] (
     [ComprobanteDetalleId] int NOT NULL IDENTITY,
     [ComprobanteId] int NOT NULL,
     [ProductoId] int NOT NULL,
@@ -678,14 +636,12 @@ CREATE TABLE [ComprobanteDetalle] (
     [ImporteIgv] decimal(18,2) NOT NULL,
     [MontoDetraccion] decimal(18,2) NOT NULL,
     CONSTRAINT [PK_ComprobanteDetalle] PRIMARY KEY ([ComprobanteDetalleId]),
-    CONSTRAINT [FK_ComprobanteDetalle_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_ComprobanteDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [Producto] ([ProductoId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_ComprobanteDetalle_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_ComprobanteDetalle_Producto_ProductoId] FOREIGN KEY ([ProductoId]) REFERENCES [erp].[Producto] ([ProductoId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [Devolucion] (
+CREATE TABLE [erp].[Devolucion] (
     [DevolucionId] int NOT NULL IDENTITY,
     [TipoTercero] int NOT NULL,
     [ClienteId] int NULL,
@@ -709,19 +665,17 @@ CREATE TABLE [Devolucion] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Devolucion] PRIMARY KEY ([DevolucionId]),
-    CONSTRAINT [FK_Devolucion_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [Cliente] ([ClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Devolucion_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [Compra] ([CompraId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Devolucion_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Devolucion_Comprobante_NotaCreditoId] FOREIGN KEY ([NotaCreditoId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Devolucion_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [Empresa] ([EmpresaId]) ON DELETE CASCADE,
-    CONSTRAINT [FK_Devolucion_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_Devolucion_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [Proveedor] ([ProveedorId]) ON DELETE NO ACTION
+    CONSTRAINT [FK_Devolucion_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Devolucion_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [erp].[Compra] ([CompraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Devolucion_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Devolucion_Comprobante_NotaCreditoId] FOREIGN KEY ([NotaCreditoId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Devolucion_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_Devolucion_NotaPedido_NotaPedidoId] FOREIGN KEY ([NotaPedidoId]) REFERENCES [erp].[NotaPedido] ([NotaPedidoId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Devolucion_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [erp].[Proveedor] ([ProveedorId]) ON DELETE NO ACTION
 );
 GO
 
-
-
-CREATE TABLE [NubefactOperacion] (
+CREATE TABLE [erp].[NubefactOperacion] (
     [NubefactOperacionId] int NOT NULL IDENTITY,
     [ComprobanteId] int NOT NULL,
     [TipoOperacion] nvarchar(max) NOT NULL,
@@ -736,13 +690,11 @@ CREATE TABLE [NubefactOperacion] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_NubefactOperacion] PRIMARY KEY ([NubefactOperacionId]),
-    CONSTRAINT [FK_NubefactOperacion_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE CASCADE
+    CONSTRAINT [FK_NubefactOperacion_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE CASCADE
 );
 GO
 
-
-
-CREATE TABLE [ComprobanteCobroAplicado] (
+CREATE TABLE [erp].[ComprobanteCobroAplicado] (
     [ComprobanteCobroAplicadoId] int NOT NULL IDENTITY,
     [EmpresaId] int NOT NULL,
     [ComprobanteId] int NOT NULL,
@@ -751,230 +703,134 @@ CREATE TABLE [ComprobanteCobroAplicado] (
     [FechaAplicacion] datetime2 NOT NULL,
     [UsuarioRegistro] nvarchar(120) NOT NULL,
     CONSTRAINT [PK_ComprobanteCobroAplicado] PRIMARY KEY ([ComprobanteCobroAplicadoId]),
-    CONSTRAINT [FK_ComprobanteCobroAplicado_CobroCliente_CobroClienteId] FOREIGN KEY ([CobroClienteId]) REFERENCES [CobroCliente] ([CobroClienteId]) ON DELETE NO ACTION,
-    CONSTRAINT [FK_ComprobanteCobroAplicado_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [Comprobante] ([ComprobanteId]) ON DELETE CASCADE
+    CONSTRAINT [FK_ComprobanteCobroAplicado_CobroCliente_CobroClienteId] FOREIGN KEY ([CobroClienteId]) REFERENCES [erp].[CobroCliente] ([CobroClienteId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_ComprobanteCobroAplicado_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE CASCADE
 );
 GO
 
-
-
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MonedaId', N'Codigo', N'Descripcion', N'Estado', N'Simbolo') AND [object_id] = OBJECT_ID(N'[Moneda]'))
-    SET IDENTITY_INSERT [Moneda] ON;
-INSERT INTO [Moneda] ([MonedaId], [Codigo], [Descripcion], [Estado], [Simbolo])
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MonedaId', N'Codigo', N'Descripcion', N'Estado', N'Simbolo') AND [object_id] = OBJECT_ID(N'[erp].[Moneda]'))
+    SET IDENTITY_INSERT [erp].[Moneda] ON;
+INSERT INTO [erp].[Moneda] ([MonedaId], [Codigo], [Descripcion], [Estado], [Simbolo])
 VALUES (1, N'PEN', N'Soles', 1, N'S/');
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MonedaId', N'Codigo', N'Descripcion', N'Estado', N'Simbolo') AND [object_id] = OBJECT_ID(N'[Moneda]'))
-    SET IDENTITY_INSERT [Moneda] OFF;
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MonedaId', N'Codigo', N'Descripcion', N'Estado', N'Simbolo') AND [object_id] = OBJECT_ID(N'[erp].[Moneda]'))
+    SET IDENTITY_INSERT [erp].[Moneda] OFF;
 GO
 
-
-
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MotivoNotaCreditoId', N'Estado', N'FechaRegistro', N'Nombre', N'UsuarioRegistro') AND [object_id] = OBJECT_ID(N'[MotivoNotaCredito]'))
-    SET IDENTITY_INSERT [MotivoNotaCredito] ON;
-INSERT INTO [MotivoNotaCredito] ([MotivoNotaCreditoId], [Estado], [FechaRegistro], [Nombre], [UsuarioRegistro])
-VALUES (1, 1, '2026-06-18T22:01:05.7840530Z', N'Anulacion de la operacion', N''),
-(2, 1, '2026-06-18T22:01:05.7840534Z', N'Error en datos del comprobante', N''),
-(3, 1, '2026-06-18T22:01:05.7840536Z', N'Devolucion total', N''),
-(4, 1, '2026-06-18T22:01:05.7840537Z', N'Descuento posterior', N'');
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MotivoNotaCreditoId', N'Estado', N'FechaRegistro', N'Nombre', N'UsuarioRegistro') AND [object_id] = OBJECT_ID(N'[MotivoNotaCredito]'))
-    SET IDENTITY_INSERT [MotivoNotaCredito] OFF;
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MotivoNotaCreditoId', N'Estado', N'FechaRegistro', N'Nombre', N'UsuarioRegistro') AND [object_id] = OBJECT_ID(N'[erp].[MotivoNotaCredito]'))
+    SET IDENTITY_INSERT [erp].[MotivoNotaCredito] ON;
+INSERT INTO [erp].[MotivoNotaCredito] ([MotivoNotaCreditoId], [Estado], [FechaRegistro], [Nombre], [UsuarioRegistro])
+VALUES (1, 1, '2026-06-24T17:55:42.3757293Z', N'Anulacion de la operacion', N''),
+(2, 1, '2026-06-24T17:55:42.3757299Z', N'Error en datos del comprobante', N''),
+(3, 1, '2026-06-24T17:55:42.3757300Z', N'Devolucion total', N''),
+(4, 1, '2026-06-24T17:55:42.3757302Z', N'Descuento posterior', N'');
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'MotivoNotaCreditoId', N'Estado', N'FechaRegistro', N'Nombre', N'UsuarioRegistro') AND [object_id] = OBJECT_ID(N'[erp].[MotivoNotaCredito]'))
+    SET IDENTITY_INSERT [erp].[MotivoNotaCredito] OFF;
 GO
 
-
-
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'PermisoId', N'Accion', N'Descripcion', N'Estado', N'Modulo') AND [object_id] = OBJECT_ID(N'[Permiso]'))
-    SET IDENTITY_INSERT [Permiso] ON;
-INSERT INTO [Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
-VALUES (1, N'Ver', N'Ver Empresas', 1, N'Empresas'),
-(2, N'Crear', N'Crear Empresas', 1, N'Empresas'),
-(3, N'Editar', N'Editar Empresas', 1, N'Empresas'),
-(4, N'Anular', N'Anular Empresas', 1, N'Empresas'),
-(5, N'Imprimir', N'Imprimir Empresas', 1, N'Empresas'),
-(6, N'Configurar', N'Configurar Empresas', 1, N'Empresas'),
-(7, N'Convertir', N'Convertir Empresas', 1, N'Empresas'),
-(8, N'RegistrarPago', N'RegistrarPago Empresas', 1, N'Empresas'),
-(9, N'Ver', N'Ver Usuarios', 1, N'Usuarios'),
-(10, N'Crear', N'Crear Usuarios', 1, N'Usuarios'),
-(11, N'Editar', N'Editar Usuarios', 1, N'Usuarios'),
-(12, N'Anular', N'Anular Usuarios', 1, N'Usuarios'),
-(13, N'Imprimir', N'Imprimir Usuarios', 1, N'Usuarios'),
-(14, N'Configurar', N'Configurar Usuarios', 1, N'Usuarios'),
-(15, N'Convertir', N'Convertir Usuarios', 1, N'Usuarios'),
-(16, N'RegistrarPago', N'RegistrarPago Usuarios', 1, N'Usuarios'),
-(17, N'Ver', N'Ver Roles', 1, N'Roles'),
-(18, N'Crear', N'Crear Roles', 1, N'Roles'),
-(19, N'Editar', N'Editar Roles', 1, N'Roles'),
-(20, N'Anular', N'Anular Roles', 1, N'Roles'),
-(21, N'Imprimir', N'Imprimir Roles', 1, N'Roles'),
-(22, N'Configurar', N'Configurar Roles', 1, N'Roles'),
-(23, N'Convertir', N'Convertir Roles', 1, N'Roles'),
-(24, N'RegistrarPago', N'RegistrarPago Roles', 1, N'Roles'),
-(25, N'Ver', N'Ver Categorias', 1, N'Categorias'),
-(26, N'Crear', N'Crear Categorias', 1, N'Categorias'),
-(27, N'Editar', N'Editar Categorias', 1, N'Categorias'),
-(28, N'Anular', N'Anular Categorias', 1, N'Categorias'),
-(29, N'Imprimir', N'Imprimir Categorias', 1, N'Categorias'),
-(30, N'Configurar', N'Configurar Categorias', 1, N'Categorias'),
-(31, N'Convertir', N'Convertir Categorias', 1, N'Categorias'),
-(32, N'RegistrarPago', N'RegistrarPago Categorias', 1, N'Categorias'),
-(33, N'Ver', N'Ver Productos', 1, N'Productos'),
-(34, N'Crear', N'Crear Productos', 1, N'Productos'),
-(35, N'Editar', N'Editar Productos', 1, N'Productos'),
-(36, N'Anular', N'Anular Productos', 1, N'Productos'),
-(37, N'Imprimir', N'Imprimir Productos', 1, N'Productos'),
-(38, N'Configurar', N'Configurar Productos', 1, N'Productos'),
-(39, N'Convertir', N'Convertir Productos', 1, N'Productos'),
-(40, N'RegistrarPago', N'RegistrarPago Productos', 1, N'Productos'),
-(41, N'Ver', N'Ver Clientes', 1, N'Clientes'),
-(42, N'Crear', N'Crear Clientes', 1, N'Clientes');
-INSERT INTO [Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
-VALUES (43, N'Editar', N'Editar Clientes', 1, N'Clientes'),
-(44, N'Anular', N'Anular Clientes', 1, N'Clientes'),
-(45, N'Imprimir', N'Imprimir Clientes', 1, N'Clientes'),
-(46, N'Configurar', N'Configurar Clientes', 1, N'Clientes'),
-(47, N'Convertir', N'Convertir Clientes', 1, N'Clientes'),
-(48, N'RegistrarPago', N'RegistrarPago Clientes', 1, N'Clientes'),
-(49, N'Ver', N'Ver Proveedores', 1, N'Proveedores'),
-(50, N'Crear', N'Crear Proveedores', 1, N'Proveedores'),
-(51, N'Editar', N'Editar Proveedores', 1, N'Proveedores'),
-(52, N'Anular', N'Anular Proveedores', 1, N'Proveedores'),
-(53, N'Imprimir', N'Imprimir Proveedores', 1, N'Proveedores'),
-(54, N'Configurar', N'Configurar Proveedores', 1, N'Proveedores'),
-(55, N'Convertir', N'Convertir Proveedores', 1, N'Proveedores'),
-(56, N'RegistrarPago', N'RegistrarPago Proveedores', 1, N'Proveedores'),
-(57, N'Ver', N'Ver Compras', 1, N'Compras'),
-(58, N'Crear', N'Crear Compras', 1, N'Compras'),
-(59, N'Editar', N'Editar Compras', 1, N'Compras'),
-(60, N'Anular', N'Anular Compras', 1, N'Compras'),
-(61, N'Imprimir', N'Imprimir Compras', 1, N'Compras'),
-(62, N'Configurar', N'Configurar Compras', 1, N'Compras'),
-(63, N'Convertir', N'Convertir Compras', 1, N'Compras'),
-(64, N'RegistrarPago', N'RegistrarPago Compras', 1, N'Compras'),
-(65, N'Ver', N'Ver Cotizaciones', 1, N'Cotizaciones'),
-(66, N'Crear', N'Crear Cotizaciones', 1, N'Cotizaciones'),
-(67, N'Editar', N'Editar Cotizaciones', 1, N'Cotizaciones'),
-(68, N'Anular', N'Anular Cotizaciones', 1, N'Cotizaciones'),
-(69, N'Imprimir', N'Imprimir Cotizaciones', 1, N'Cotizaciones'),
-(70, N'Configurar', N'Configurar Cotizaciones', 1, N'Cotizaciones'),
-(71, N'Convertir', N'Convertir Cotizaciones', 1, N'Cotizaciones'),
-(72, N'RegistrarPago', N'RegistrarPago Cotizaciones', 1, N'Cotizaciones'),
-(73, N'Ver', N'Ver Comprobantes', 1, N'Comprobantes'),
-(74, N'Crear', N'Crear Comprobantes', 1, N'Comprobantes'),
-(75, N'Editar', N'Editar Comprobantes', 1, N'Comprobantes'),
-(76, N'Anular', N'Anular Comprobantes', 1, N'Comprobantes'),
-(77, N'Imprimir', N'Imprimir Comprobantes', 1, N'Comprobantes'),
-(78, N'Configurar', N'Configurar Comprobantes', 1, N'Comprobantes'),
-(79, N'Convertir', N'Convertir Comprobantes', 1, N'Comprobantes'),
-(80, N'RegistrarPago', N'RegistrarPago Comprobantes', 1, N'Comprobantes'),
-(81, N'Ver', N'Ver NotasCredito', 1, N'NotasCredito'),
-(82, N'Crear', N'Crear NotasCredito', 1, N'NotasCredito'),
-(83, N'Editar', N'Editar NotasCredito', 1, N'NotasCredito'),
-(84, N'Anular', N'Anular NotasCredito', 1, N'NotasCredito');
-INSERT INTO [Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
-VALUES (85, N'Imprimir', N'Imprimir NotasCredito', 1, N'NotasCredito'),
-(86, N'Configurar', N'Configurar NotasCredito', 1, N'NotasCredito'),
-(87, N'Convertir', N'Convertir NotasCredito', 1, N'NotasCredito'),
-(88, N'RegistrarPago', N'RegistrarPago NotasCredito', 1, N'NotasCredito'),
-(89, N'Ver', N'Ver NotasPedido', 1, N'NotasPedido'),
-(90, N'Crear', N'Crear NotasPedido', 1, N'NotasPedido'),
-(91, N'Editar', N'Editar NotasPedido', 1, N'NotasPedido'),
-(92, N'Anular', N'Anular NotasPedido', 1, N'NotasPedido'),
-(93, N'Imprimir', N'Imprimir NotasPedido', 1, N'NotasPedido'),
-(94, N'Configurar', N'Configurar NotasPedido', 1, N'NotasPedido'),
-(95, N'Convertir', N'Convertir NotasPedido', 1, N'NotasPedido'),
-(96, N'RegistrarPago', N'RegistrarPago NotasPedido', 1, N'NotasPedido'),
-(97, N'Ver', N'Ver CobrosClientes', 1, N'CobrosClientes'),
-(98, N'Crear', N'Crear CobrosClientes', 1, N'CobrosClientes'),
-(99, N'Editar', N'Editar CobrosClientes', 1, N'CobrosClientes'),
-(100, N'Anular', N'Anular CobrosClientes', 1, N'CobrosClientes'),
-(101, N'Imprimir', N'Imprimir CobrosClientes', 1, N'CobrosClientes'),
-(102, N'Configurar', N'Configurar CobrosClientes', 1, N'CobrosClientes'),
-(103, N'Convertir', N'Convertir CobrosClientes', 1, N'CobrosClientes'),
-(104, N'RegistrarPago', N'RegistrarPago CobrosClientes', 1, N'CobrosClientes'),
-(105, N'Ver', N'Ver Devoluciones', 1, N'Devoluciones'),
-(106, N'Crear', N'Crear Devoluciones', 1, N'Devoluciones'),
-(107, N'Editar', N'Editar Devoluciones', 1, N'Devoluciones'),
-(108, N'Anular', N'Anular Devoluciones', 1, N'Devoluciones'),
-(109, N'Imprimir', N'Imprimir Devoluciones', 1, N'Devoluciones'),
-(110, N'Configurar', N'Configurar Devoluciones', 1, N'Devoluciones'),
-(111, N'Convertir', N'Convertir Devoluciones', 1, N'Devoluciones'),
-(112, N'RegistrarPago', N'RegistrarPago Devoluciones', 1, N'Devoluciones'),
-(113, N'Ver', N'Ver Caja', 1, N'Caja'),
-(114, N'Crear', N'Crear Caja', 1, N'Caja'),
-(115, N'Editar', N'Editar Caja', 1, N'Caja'),
-(116, N'Anular', N'Anular Caja', 1, N'Caja'),
-(117, N'Imprimir', N'Imprimir Caja', 1, N'Caja'),
-(118, N'Configurar', N'Configurar Caja', 1, N'Caja'),
-(119, N'Convertir', N'Convertir Caja', 1, N'Caja'),
-(120, N'RegistrarPago', N'RegistrarPago Caja', 1, N'Caja'),
-(121, N'Ver', N'Ver EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(122, N'Crear', N'Crear EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(123, N'Editar', N'Editar EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(124, N'Anular', N'Anular EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(125, N'Imprimir', N'Imprimir EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(126, N'Configurar', N'Configurar EstadoCuentaClientes', 1, N'EstadoCuentaClientes');
-INSERT INTO [Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
-VALUES (127, N'Convertir', N'Convertir EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(128, N'RegistrarPago', N'RegistrarPago EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
-(129, N'Ver', N'Ver Gastos', 1, N'Gastos'),
-(130, N'Crear', N'Crear Gastos', 1, N'Gastos'),
-(131, N'Editar', N'Editar Gastos', 1, N'Gastos'),
-(132, N'Anular', N'Anular Gastos', 1, N'Gastos'),
-(133, N'Imprimir', N'Imprimir Gastos', 1, N'Gastos'),
-(134, N'Configurar', N'Configurar Gastos', 1, N'Gastos'),
-(135, N'Convertir', N'Convertir Gastos', 1, N'Gastos'),
-(136, N'RegistrarPago', N'RegistrarPago Gastos', 1, N'Gastos'),
-(137, N'Ver', N'Ver Ingresos', 1, N'Ingresos'),
-(138, N'Crear', N'Crear Ingresos', 1, N'Ingresos'),
-(139, N'Editar', N'Editar Ingresos', 1, N'Ingresos'),
-(140, N'Anular', N'Anular Ingresos', 1, N'Ingresos'),
-(141, N'Imprimir', N'Imprimir Ingresos', 1, N'Ingresos'),
-(142, N'Configurar', N'Configurar Ingresos', 1, N'Ingresos'),
-(143, N'Convertir', N'Convertir Ingresos', 1, N'Ingresos'),
-(144, N'RegistrarPago', N'RegistrarPago Ingresos', 1, N'Ingresos'),
-(145, N'Ver', N'Ver Reportes', 1, N'Reportes'),
-(146, N'Crear', N'Crear Reportes', 1, N'Reportes'),
-(147, N'Editar', N'Editar Reportes', 1, N'Reportes'),
-(148, N'Anular', N'Anular Reportes', 1, N'Reportes'),
-(149, N'Imprimir', N'Imprimir Reportes', 1, N'Reportes'),
-(150, N'Configurar', N'Configurar Reportes', 1, N'Reportes'),
-(151, N'Convertir', N'Convertir Reportes', 1, N'Reportes'),
-(152, N'RegistrarPago', N'RegistrarPago Reportes', 1, N'Reportes'),
-(153, N'Ver', N'Ver Configuracion', 1, N'Configuracion'),
-(154, N'Crear', N'Crear Configuracion', 1, N'Configuracion'),
-(155, N'Editar', N'Editar Configuracion', 1, N'Configuracion'),
-(156, N'Anular', N'Anular Configuracion', 1, N'Configuracion'),
-(157, N'Imprimir', N'Imprimir Configuracion', 1, N'Configuracion'),
-(158, N'Configurar', N'Configurar Configuracion', 1, N'Configuracion'),
-(159, N'Convertir', N'Convertir Configuracion', 1, N'Configuracion'),
-(160, N'RegistrarPago', N'RegistrarPago Configuracion', 1, N'Configuracion'),
-(161, N'Ver', N'Ver NubefactLogs', 1, N'NubefactLogs'),
-(162, N'Crear', N'Crear NubefactLogs', 1, N'NubefactLogs'),
-(163, N'Editar', N'Editar NubefactLogs', 1, N'NubefactLogs'),
-(164, N'Anular', N'Anular NubefactLogs', 1, N'NubefactLogs'),
-(165, N'Imprimir', N'Imprimir NubefactLogs', 1, N'NubefactLogs'),
-(166, N'Configurar', N'Configurar NubefactLogs', 1, N'NubefactLogs'),
-(167, N'Convertir', N'Convertir NubefactLogs', 1, N'NubefactLogs'),
-(168, N'RegistrarPago', N'RegistrarPago NubefactLogs', 1, N'NubefactLogs');
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'PermisoId', N'Accion', N'Descripcion', N'Estado', N'Modulo') AND [object_id] = OBJECT_ID(N'[Permiso]'))
-    SET IDENTITY_INSERT [Permiso] OFF;
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'PermisoId', N'Accion', N'Descripcion', N'Estado', N'Modulo') AND [object_id] = OBJECT_ID(N'[erp].[Permiso]'))
+    SET IDENTITY_INSERT [erp].[Permiso] ON;
+INSERT INTO [erp].[Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
+VALUES (1, N'Ver', N'Ver Home', 1, N'Home'),
+(2, N'Ver', N'Ver Cotizaciones', 1, N'Cotizaciones'),
+(3, N'Crear', N'Crear Cotizaciones', 1, N'Cotizaciones'),
+(4, N'Editar', N'Editar Cotizaciones', 1, N'Cotizaciones'),
+(5, N'Anular', N'Anular Cotizaciones', 1, N'Cotizaciones'),
+(6, N'Imprimir', N'Imprimir Cotizaciones', 1, N'Cotizaciones'),
+(7, N'Convertir', N'Convertir Cotizaciones', 1, N'Cotizaciones'),
+(8, N'Ver', N'Ver NotasPedido', 1, N'NotasPedido'),
+(9, N'Crear', N'Crear NotasPedido', 1, N'NotasPedido'),
+(10, N'Editar', N'Editar NotasPedido', 1, N'NotasPedido'),
+(11, N'Anular', N'Anular NotasPedido', 1, N'NotasPedido'),
+(12, N'Imprimir', N'Imprimir NotasPedido', 1, N'NotasPedido'),
+(13, N'Convertir', N'Convertir NotasPedido', 1, N'NotasPedido'),
+(14, N'RegistrarPago', N'RegistrarPago NotasPedido', 1, N'NotasPedido'),
+(15, N'Ver', N'Ver Comprobantes', 1, N'Comprobantes'),
+(16, N'Crear', N'Crear Comprobantes', 1, N'Comprobantes'),
+(17, N'Editar', N'Editar Comprobantes', 1, N'Comprobantes'),
+(18, N'Anular', N'Anular Comprobantes', 1, N'Comprobantes'),
+(19, N'Imprimir', N'Imprimir Comprobantes', 1, N'Comprobantes'),
+(20, N'RegistrarPago', N'RegistrarPago Comprobantes', 1, N'Comprobantes'),
+(21, N'ConsultarSunat', N'ConsultarSunat Comprobantes', 1, N'Comprobantes'),
+(22, N'Ver', N'Ver NotasCredito', 1, N'NotasCredito'),
+(23, N'Crear', N'Crear NotasCredito', 1, N'NotasCredito'),
+(24, N'Anular', N'Anular NotasCredito', 1, N'NotasCredito'),
+(25, N'Imprimir', N'Imprimir NotasCredito', 1, N'NotasCredito'),
+(26, N'Ver', N'Ver CobrosClientes', 1, N'CobrosClientes'),
+(27, N'Crear', N'Crear CobrosClientes', 1, N'CobrosClientes'),
+(28, N'Anular', N'Anular CobrosClientes', 1, N'CobrosClientes'),
+(29, N'Ver', N'Ver Productos', 1, N'Productos'),
+(30, N'Crear', N'Crear Productos', 1, N'Productos'),
+(31, N'Editar', N'Editar Productos', 1, N'Productos'),
+(32, N'Anular', N'Anular Productos', 1, N'Productos'),
+(33, N'Ver', N'Ver Clientes', 1, N'Clientes'),
+(34, N'Crear', N'Crear Clientes', 1, N'Clientes'),
+(35, N'Editar', N'Editar Clientes', 1, N'Clientes'),
+(36, N'Anular', N'Anular Clientes', 1, N'Clientes'),
+(37, N'Ver', N'Ver Proveedores', 1, N'Proveedores'),
+(38, N'Crear', N'Crear Proveedores', 1, N'Proveedores'),
+(39, N'Editar', N'Editar Proveedores', 1, N'Proveedores'),
+(40, N'Anular', N'Anular Proveedores', 1, N'Proveedores'),
+(41, N'Ver', N'Ver Categorias', 1, N'Categorias'),
+(42, N'Crear', N'Crear Categorias', 1, N'Categorias');
+INSERT INTO [erp].[Permiso] ([PermisoId], [Accion], [Descripcion], [Estado], [Modulo])
+VALUES (43, N'Editar', N'Editar Categorias', 1, N'Categorias'),
+(44, N'Anular', N'Anular Categorias', 1, N'Categorias'),
+(45, N'Ver', N'Ver Compras', 1, N'Compras'),
+(46, N'Crear', N'Crear Compras', 1, N'Compras'),
+(47, N'Anular', N'Anular Compras', 1, N'Compras'),
+(48, N'RegistrarPago', N'RegistrarPago Compras', 1, N'Compras'),
+(49, N'AnularPago', N'AnularPago Compras', 1, N'Compras'),
+(50, N'Ver', N'Ver Gastos', 1, N'Gastos'),
+(51, N'Crear', N'Crear Gastos', 1, N'Gastos'),
+(52, N'Editar', N'Editar Gastos', 1, N'Gastos'),
+(53, N'Anular', N'Anular Gastos', 1, N'Gastos'),
+(54, N'Ver', N'Ver Ingresos', 1, N'Ingresos'),
+(55, N'Crear', N'Crear Ingresos', 1, N'Ingresos'),
+(56, N'Editar', N'Editar Ingresos', 1, N'Ingresos'),
+(57, N'Anular', N'Anular Ingresos', 1, N'Ingresos'),
+(58, N'Ver', N'Ver Devoluciones', 1, N'Devoluciones'),
+(59, N'Registrar', N'Registrar Devoluciones', 1, N'Devoluciones'),
+(60, N'Ver', N'Ver Caja', 1, N'Caja'),
+(61, N'Ver', N'Ver ReporteGeneral', 1, N'ReporteGeneral'),
+(62, N'Ver', N'Ver PropuestasComerciales', 1, N'PropuestasComerciales'),
+(63, N'Ver', N'Ver CuentasPorPagar', 1, N'CuentasPorPagar'),
+(64, N'Ver', N'Ver DevolucionesProveedor', 1, N'DevolucionesProveedor'),
+(65, N'Ver', N'Ver ReporteCaja', 1, N'ReporteCaja'),
+(66, N'Ver', N'Ver EstadoCuentaClientes', 1, N'EstadoCuentaClientes'),
+(67, N'Ver', N'Ver Empresas', 1, N'Empresas'),
+(68, N'Crear', N'Crear Empresas', 1, N'Empresas'),
+(69, N'Editar', N'Editar Empresas', 1, N'Empresas'),
+(70, N'Anular', N'Anular Empresas', 1, N'Empresas'),
+(71, N'Ver', N'Ver Usuarios', 1, N'Usuarios'),
+(72, N'Crear', N'Crear Usuarios', 1, N'Usuarios'),
+(73, N'Editar', N'Editar Usuarios', 1, N'Usuarios'),
+(74, N'RestablecerPassword', N'RestablecerPassword Usuarios', 1, N'Usuarios'),
+(75, N'Ver', N'Ver Roles', 1, N'Roles'),
+(76, N'Crear', N'Crear Roles', 1, N'Roles'),
+(77, N'Editar', N'Editar Roles', 1, N'Roles'),
+(78, N'Ver', N'Ver Configuracion', 1, N'Configuracion'),
+(79, N'Crear', N'Crear Configuracion', 1, N'Configuracion'),
+(80, N'Editar', N'Editar Configuracion', 1, N'Configuracion'),
+(81, N'Configurar', N'Configurar Configuracion', 1, N'Configuracion'),
+(82, N'Ver', N'Ver NubefactLogs', 1, N'NubefactLogs'),
+(83, N'Ver', N'Ver ErroresAplicacion', 1, N'ErroresAplicacion'),
+(84, N'Revisar', N'Revisar ErroresAplicacion', 1, N'ErroresAplicacion');
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'PermisoId', N'Accion', N'Descripcion', N'Estado', N'Modulo') AND [object_id] = OBJECT_ID(N'[erp].[Permiso]'))
+    SET IDENTITY_INSERT [erp].[Permiso] OFF;
 GO
 
-
-
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolId', N'Descripcion', N'Estado', N'Nombre') AND [object_id] = OBJECT_ID(N'[Rol]'))
-    SET IDENTITY_INSERT [Rol] ON;
-INSERT INTO [Rol] ([RolId], [Descripcion], [Estado], [Nombre])
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolId', N'Descripcion', N'Estado', N'Nombre') AND [object_id] = OBJECT_ID(N'[erp].[Rol]'))
+    SET IDENTITY_INSERT [erp].[Rol] ON;
+INSERT INTO [erp].[Rol] ([RolId], [Descripcion], [Estado], [Nombre])
 VALUES (1, N'Acceso total', 1, N'Administrador'),
 (2, N'Operacion comercial', 1, N'Vendedor');
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolId', N'Descripcion', N'Estado', N'Nombre') AND [object_id] = OBJECT_ID(N'[Rol]'))
-    SET IDENTITY_INSERT [Rol] OFF;
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolId', N'Descripcion', N'Estado', N'Nombre') AND [object_id] = OBJECT_ID(N'[erp].[Rol]'))
+    SET IDENTITY_INSERT [erp].[Rol] OFF;
 GO
 
-
-
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolPermisoId', N'PermisoId', N'RolId') AND [object_id] = OBJECT_ID(N'[RolPermiso]'))
-    SET IDENTITY_INSERT [RolPermiso] ON;
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolPermisoId', N'PermisoId', N'RolId') AND [object_id] = OBJECT_ID(N'[erp].[RolPermiso]'))
+    SET IDENTITY_INSERT [erp].[RolPermiso] ON;
+INSERT INTO [erp].[RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
 VALUES (1, 1, 1),
 (2, 2, 1),
 (3, 3, 1),
@@ -1017,7 +873,7 @@ VALUES (1, 1, 1),
 (40, 40, 1),
 (41, 41, 1),
 (42, 42, 1);
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
+INSERT INTO [erp].[RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
 VALUES (43, 43, 1),
 (44, 44, 1),
 (45, 45, 1),
@@ -1060,705 +916,388 @@ VALUES (43, 43, 1),
 (82, 82, 1),
 (83, 83, 1),
 (84, 84, 1);
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
-VALUES (85, 85, 1),
-(86, 86, 1),
-(87, 87, 1),
-(88, 88, 1),
-(89, 89, 1),
-(90, 90, 1),
-(91, 91, 1),
-(92, 92, 1),
-(93, 93, 1),
-(94, 94, 1),
-(95, 95, 1),
-(96, 96, 1),
-(97, 97, 1),
-(98, 98, 1),
-(99, 99, 1),
-(100, 100, 1),
-(101, 101, 1),
-(102, 102, 1),
-(103, 103, 1),
-(104, 104, 1),
-(105, 105, 1),
-(106, 106, 1),
-(107, 107, 1),
-(108, 108, 1),
-(109, 109, 1),
-(110, 110, 1),
-(111, 111, 1),
-(112, 112, 1),
-(113, 113, 1),
-(114, 114, 1),
-(115, 115, 1),
-(116, 116, 1),
-(117, 117, 1),
-(118, 118, 1),
-(119, 119, 1),
-(120, 120, 1),
-(121, 121, 1),
-(122, 122, 1),
-(123, 123, 1),
-(124, 124, 1),
-(125, 125, 1),
-(126, 126, 1);
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
-VALUES (127, 127, 1),
-(128, 128, 1),
-(129, 129, 1),
-(130, 130, 1),
-(131, 131, 1),
-(132, 132, 1),
-(133, 133, 1),
-(134, 134, 1),
-(135, 135, 1),
-(136, 136, 1),
-(137, 137, 1),
-(138, 138, 1),
-(139, 139, 1),
-(140, 140, 1),
-(141, 141, 1),
-(142, 142, 1),
-(143, 143, 1),
-(144, 144, 1),
-(145, 145, 1),
-(146, 146, 1),
-(147, 147, 1),
-(148, 148, 1),
-(149, 149, 1),
-(150, 150, 1),
-(151, 151, 1),
-(152, 152, 1),
-(153, 153, 1),
-(154, 154, 1),
-(155, 155, 1),
-(156, 156, 1),
-(157, 157, 1),
-(158, 158, 1),
-(159, 159, 1),
-(160, 160, 1),
-(161, 161, 1),
-(162, 162, 1),
-(163, 163, 1),
-(164, 164, 1),
-(165, 165, 1),
-(166, 166, 1),
-(167, 167, 1),
-(168, 168, 1);
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
-VALUES (169, 25, 2),
-(170, 26, 2),
-(171, 27, 2),
-(172, 28, 2),
-(173, 29, 2),
-(174, 31, 2),
-(175, 32, 2),
-(176, 33, 2),
-(177, 34, 2),
-(178, 35, 2),
-(179, 36, 2),
-(180, 37, 2),
-(181, 39, 2),
-(182, 40, 2),
-(183, 41, 2),
-(184, 42, 2),
-(185, 43, 2),
-(186, 44, 2),
-(187, 45, 2),
-(188, 47, 2),
-(189, 48, 2),
-(190, 65, 2),
-(191, 66, 2),
-(192, 67, 2),
-(193, 68, 2),
-(194, 69, 2),
-(195, 71, 2),
-(196, 72, 2),
-(197, 73, 2),
-(198, 74, 2),
-(199, 75, 2),
-(200, 76, 2),
-(201, 77, 2),
-(202, 79, 2),
-(203, 80, 2),
-(204, 81, 2),
-(205, 82, 2),
-(206, 83, 2),
-(207, 84, 2),
-(208, 85, 2),
-(209, 87, 2),
-(210, 88, 2);
-INSERT INTO [RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
-VALUES (211, 89, 2),
-(212, 90, 2),
-(213, 91, 2),
-(214, 92, 2),
-(215, 93, 2),
-(216, 95, 2),
-(217, 96, 2),
-(218, 97, 2),
-(219, 98, 2),
-(220, 99, 2),
-(221, 100, 2),
-(222, 101, 2),
-(223, 103, 2),
-(224, 104, 2),
-(225, 105, 2),
-(226, 106, 2),
-(227, 107, 2),
-(228, 108, 2),
-(229, 109, 2),
-(230, 111, 2),
-(231, 112, 2);
-IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolPermisoId', N'PermisoId', N'RolId') AND [object_id] = OBJECT_ID(N'[RolPermiso]'))
-    SET IDENTITY_INSERT [RolPermiso] OFF;
+INSERT INTO [erp].[RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
+VALUES (85, 1, 2),
+(86, 2, 2),
+(87, 3, 2),
+(88, 4, 2),
+(89, 5, 2),
+(90, 6, 2),
+(91, 7, 2),
+(92, 8, 2),
+(93, 9, 2),
+(94, 10, 2),
+(95, 11, 2),
+(96, 12, 2),
+(97, 13, 2),
+(98, 14, 2),
+(99, 15, 2),
+(100, 16, 2),
+(101, 17, 2),
+(102, 18, 2),
+(103, 19, 2),
+(104, 20, 2),
+(105, 22, 2),
+(106, 23, 2),
+(107, 24, 2),
+(108, 25, 2),
+(109, 26, 2),
+(110, 27, 2),
+(111, 28, 2),
+(112, 29, 2),
+(113, 30, 2),
+(114, 31, 2),
+(115, 32, 2),
+(116, 33, 2),
+(117, 34, 2),
+(118, 35, 2),
+(119, 36, 2),
+(120, 41, 2),
+(121, 42, 2),
+(122, 43, 2),
+(123, 44, 2),
+(124, 58, 2);
+IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolPermisoId', N'PermisoId', N'RolId') AND [object_id] = OBJECT_ID(N'[erp].[RolPermiso]'))
+    SET IDENTITY_INSERT [erp].[RolPermiso] OFF;
 GO
 
-
-
-CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [dbo].[AspNetRoleClaims] ([RoleId]);
+CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [erp].[AspNetRoleClaims] ([RoleId]);
 GO
-
 
-
-CREATE UNIQUE INDEX [RoleNameIndex] ON [dbo].[AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
+CREATE UNIQUE INDEX [RoleNameIndex] ON [erp].[AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
 GO
-
-
 
-CREATE INDEX [IX_AspNetUserClaims_UserId] ON [dbo].[AspNetUserClaims] ([UserId]);
+CREATE INDEX [IX_AspNetUserClaims_UserId] ON [erp].[AspNetUserClaims] ([UserId]);
 GO
 
-
-
-CREATE INDEX [IX_AspNetUserLogins_UserId] ON [dbo].[AspNetUserLogins] ([UserId]);
+CREATE INDEX [IX_AspNetUserLogins_UserId] ON [erp].[AspNetUserLogins] ([UserId]);
 GO
-
 
-
-CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [dbo].[AspNetUserRoles] ([RoleId]);
+CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [erp].[AspNetUserRoles] ([RoleId]);
 GO
-
 
-
-CREATE INDEX [EmailIndex] ON [dbo].[AspNetUsers] ([NormalizedEmail]);
+CREATE INDEX [EmailIndex] ON [erp].[AspNetUsers] ([NormalizedEmail]);
 GO
-
 
-
-CREATE UNIQUE INDEX [UserNameIndex] ON [dbo].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
+CREATE UNIQUE INDEX [UserNameIndex] ON [erp].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
 GO
-
-
 
-CREATE INDEX [IX_Categoria_EmpresaId] ON [Categoria] ([EmpresaId]);
+CREATE INDEX [IX_Categoria_EmpresaId] ON [erp].[Categoria] ([EmpresaId]);
 GO
 
-
-
-CREATE UNIQUE INDEX [IX_Categoria_EmpresaId_Nombre] ON [Categoria] ([EmpresaId], [Nombre]);
+CREATE UNIQUE INDEX [IX_Categoria_EmpresaId_Nombre] ON [erp].[Categoria] ([EmpresaId], [Nombre]);
 GO
-
-
 
-CREATE UNIQUE INDEX [IX_CategoriaGasto_EmpresaId_Nombre] ON [CategoriaGasto] ([EmpresaId], [Nombre]);
+CREATE UNIQUE INDEX [IX_CategoriaGasto_EmpresaId_Nombre] ON [erp].[CategoriaGasto] ([EmpresaId], [Nombre]);
 GO
 
-
-
-CREATE UNIQUE INDEX [IX_CategoriaIngreso_EmpresaId_Nombre] ON [CategoriaIngreso] ([EmpresaId], [Nombre]);
+CREATE UNIQUE INDEX [IX_CategoriaIngreso_EmpresaId_Nombre] ON [erp].[CategoriaIngreso] ([EmpresaId], [Nombre]);
 GO
-
 
-
-CREATE INDEX [IX_Cliente_NombreCompleto] ON [Cliente] ([NombreCompleto]);
+CREATE INDEX [IX_Cliente_NombreCompleto] ON [erp].[Cliente] ([NombreCompleto]);
 GO
-
 
-
-CREATE UNIQUE INDEX [UX_Cliente_Tipo_Numero] ON [Cliente] ([TipoDocumento], [NumeroDocumento]);
+CREATE UNIQUE INDEX [UX_Cliente_Tipo_Numero] ON [erp].[Cliente] ([TipoDocumento], [NumeroDocumento]);
 GO
-
 
-
-CREATE INDEX [IX_CobroCliente_ClienteId] ON [CobroCliente] ([ClienteId]);
+CREATE INDEX [IX_CobroCliente_ClienteId] ON [erp].[CobroCliente] ([ClienteId]);
 GO
-
-
 
-CREATE INDEX [IX_CobroCliente_ComprobanteId] ON [CobroCliente] ([ComprobanteId]);
+CREATE INDEX [IX_CobroCliente_ComprobanteId] ON [erp].[CobroCliente] ([ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_CobroCliente_EmpresaId_ClienteId_FechaCobro] ON [CobroCliente] ([EmpresaId], [ClienteId], [FechaCobro]);
+CREATE INDEX [IX_CobroCliente_EmpresaId_ClienteId_FechaCobro] ON [erp].[CobroCliente] ([EmpresaId], [ClienteId], [FechaCobro]);
 GO
-
-
 
-CREATE INDEX [IX_CobroCliente_EmpresaId_ComprobanteId] ON [CobroCliente] ([EmpresaId], [ComprobanteId]);
+CREATE INDEX [IX_CobroCliente_EmpresaId_ComprobanteId] ON [erp].[CobroCliente] ([EmpresaId], [ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_CobroCliente_EmpresaId_NotaPedidoId] ON [CobroCliente] ([EmpresaId], [NotaPedidoId]);
+CREATE INDEX [IX_CobroCliente_EmpresaId_NotaPedidoId] ON [erp].[CobroCliente] ([EmpresaId], [NotaPedidoId]);
 GO
-
 
-
-CREATE INDEX [IX_CobroCliente_NotaPedidoId] ON [CobroCliente] ([NotaPedidoId]);
+CREATE INDEX [IX_CobroCliente_NotaPedidoId] ON [erp].[CobroCliente] ([NotaPedidoId]);
 GO
-
 
-
-CREATE INDEX [IX_Compra_EmpresaId] ON [Compra] ([EmpresaId]);
+CREATE INDEX [IX_Compra_EmpresaId] ON [erp].[Compra] ([EmpresaId]);
 GO
-
 
-
-CREATE INDEX [IX_Compra_EmpresaId_Fecha] ON [Compra] ([EmpresaId], [Fecha]);
+CREATE INDEX [IX_Compra_EmpresaId_Fecha] ON [erp].[Compra] ([EmpresaId], [Fecha]);
 GO
-
-
 
-CREATE INDEX [IX_Compra_EmpresaId_ProveedorId] ON [Compra] ([EmpresaId], [ProveedorId]);
+CREATE INDEX [IX_Compra_EmpresaId_ProveedorId] ON [erp].[Compra] ([EmpresaId], [ProveedorId]);
 GO
 
-
-
-CREATE INDEX [IX_Compra_EmpresaId_ProveedorId_TipoDocumento_Serie_Numero] ON [Compra] ([EmpresaId], [ProveedorId], [TipoDocumento], [Serie], [Numero]);
+CREATE INDEX [IX_Compra_EmpresaId_ProveedorId_TipoDocumento_Serie_Numero] ON [erp].[Compra] ([EmpresaId], [ProveedorId], [TipoDocumento], [Serie], [Numero]);
 GO
-
-
 
-CREATE INDEX [IX_Compra_ProveedorId] ON [Compra] ([ProveedorId]);
+CREATE INDEX [IX_Compra_ProveedorId] ON [erp].[Compra] ([ProveedorId]);
 GO
 
-
-
-CREATE INDEX [IX_CompraDetalle_CompraId] ON [CompraDetalle] ([CompraId]);
+CREATE INDEX [IX_CompraDetalle_CompraId] ON [erp].[CompraDetalle] ([CompraId]);
 GO
-
 
-
-CREATE INDEX [IX_CompraDetalle_ProductoId] ON [CompraDetalle] ([ProductoId]);
+CREATE INDEX [IX_CompraDetalle_ProductoId] ON [erp].[CompraDetalle] ([ProductoId]);
 GO
-
 
-
-CREATE INDEX [IX_Comprobante_ClienteId] ON [Comprobante] ([ClienteId]);
+CREATE INDEX [IX_Comprobante_ClienteId] ON [erp].[Comprobante] ([ClienteId]);
 GO
-
 
-
-CREATE INDEX [IX_Comprobante_ComprobanteReferenciaId] ON [Comprobante] ([ComprobanteReferenciaId]);
+CREATE INDEX [IX_Comprobante_ComprobanteReferenciaId] ON [erp].[Comprobante] ([ComprobanteReferenciaId]);
 GO
-
-
 
-CREATE INDEX [IX_Comprobante_CotizacionId] ON [Comprobante] ([CotizacionId]);
+CREATE INDEX [IX_Comprobante_CotizacionId] ON [erp].[Comprobante] ([CotizacionId]);
 GO
 
-
-
-CREATE INDEX [IX_Comprobante_EmpresaId] ON [Comprobante] ([EmpresaId]);
+CREATE INDEX [IX_Comprobante_EmpresaId] ON [erp].[Comprobante] ([EmpresaId]);
 GO
-
 
-
-CREATE INDEX [IX_Comprobante_EmpresaId_ComprobanteReferenciaId] ON [Comprobante] ([EmpresaId], [ComprobanteReferenciaId]);
+CREATE INDEX [IX_Comprobante_EmpresaId_ComprobanteReferenciaId] ON [erp].[Comprobante] ([EmpresaId], [ComprobanteReferenciaId]);
 GO
-
-
 
-CREATE INDEX [IX_Comprobante_EmpresaId_CotizacionId] ON [Comprobante] ([EmpresaId], [CotizacionId]);
+CREATE INDEX [IX_Comprobante_EmpresaId_CotizacionId] ON [erp].[Comprobante] ([EmpresaId], [CotizacionId]);
 GO
 
-
-
-CREATE INDEX [IX_Comprobante_EmpresaId_EstadoSunat] ON [Comprobante] ([EmpresaId], [EstadoSunat]);
+CREATE INDEX [IX_Comprobante_EmpresaId_EstadoSunat] ON [erp].[Comprobante] ([EmpresaId], [EstadoSunat]);
 GO
-
-
 
-CREATE INDEX [IX_Comprobante_EmpresaId_FechaEmision] ON [Comprobante] ([EmpresaId], [FechaEmision]);
+CREATE INDEX [IX_Comprobante_EmpresaId_FechaEmision] ON [erp].[Comprobante] ([EmpresaId], [FechaEmision]);
 GO
 
-
-
-CREATE INDEX [IX_Comprobante_EmpresaId_NotaPedidoId] ON [Comprobante] ([EmpresaId], [NotaPedidoId]);
+CREATE INDEX [IX_Comprobante_EmpresaId_NotaPedidoId] ON [erp].[Comprobante] ([EmpresaId], [NotaPedidoId]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_Comprobante_EmpresaId_Serie_Correlativo] ON [Comprobante] ([EmpresaId], [Serie], [Correlativo]);
+CREATE UNIQUE INDEX [IX_Comprobante_EmpresaId_Serie_Correlativo] ON [erp].[Comprobante] ([EmpresaId], [Serie], [Correlativo]);
 GO
-
 
-
-CREATE INDEX [IX_Comprobante_EmpresaId_TipoComprobante] ON [Comprobante] ([EmpresaId], [TipoComprobante]);
+CREATE INDEX [IX_Comprobante_EmpresaId_TipoComprobante] ON [erp].[Comprobante] ([EmpresaId], [TipoComprobante]);
 GO
-
 
-
-CREATE INDEX [IX_Comprobante_MotivoNotaCreditoId] ON [Comprobante] ([MotivoNotaCreditoId]);
+CREATE INDEX [IX_Comprobante_MotivoNotaCreditoId] ON [erp].[Comprobante] ([MotivoNotaCreditoId]);
 GO
-
-
 
-CREATE INDEX [IX_Comprobante_NotaPedidoId] ON [Comprobante] ([NotaPedidoId]);
+CREATE INDEX [IX_Comprobante_NotaPedidoId] ON [erp].[Comprobante] ([NotaPedidoId]);
 GO
 
-
-
-CREATE INDEX [IX_ComprobanteCobroAplicado_CobroClienteId] ON [ComprobanteCobroAplicado] ([CobroClienteId]);
+CREATE INDEX [IX_ComprobanteCobroAplicado_CobroClienteId] ON [erp].[ComprobanteCobroAplicado] ([CobroClienteId]);
 GO
-
-
 
-CREATE INDEX [IX_ComprobanteCobroAplicado_ComprobanteId] ON [ComprobanteCobroAplicado] ([ComprobanteId]);
+CREATE INDEX [IX_ComprobanteCobroAplicado_ComprobanteId] ON [erp].[ComprobanteCobroAplicado] ([ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_ComprobanteCobroAplicado_EmpresaId_CobroClienteId] ON [ComprobanteCobroAplicado] ([EmpresaId], [CobroClienteId]);
+CREATE INDEX [IX_ComprobanteCobroAplicado_EmpresaId_CobroClienteId] ON [erp].[ComprobanteCobroAplicado] ([EmpresaId], [CobroClienteId]);
 GO
-
 
-
-CREATE INDEX [IX_ComprobanteCobroAplicado_EmpresaId_ComprobanteId] ON [ComprobanteCobroAplicado] ([EmpresaId], [ComprobanteId]);
+CREATE INDEX [IX_ComprobanteCobroAplicado_EmpresaId_ComprobanteId] ON [erp].[ComprobanteCobroAplicado] ([EmpresaId], [ComprobanteId]);
 GO
-
 
-
-CREATE INDEX [IX_ComprobanteDetalle_ComprobanteId] ON [ComprobanteDetalle] ([ComprobanteId]);
+CREATE INDEX [IX_ComprobanteDetalle_ComprobanteId] ON [erp].[ComprobanteDetalle] ([ComprobanteId]);
 GO
-
 
-
-CREATE INDEX [IX_ComprobanteDetalle_ProductoId] ON [ComprobanteDetalle] ([ProductoId]);
+CREATE INDEX [IX_ComprobanteDetalle_ProductoId] ON [erp].[ComprobanteDetalle] ([ProductoId]);
 GO
-
-
 
-CREATE UNIQUE INDEX [IX_ConfiguracionEmpresa_EmpresaId_Clave] ON [ConfiguracionEmpresa] ([EmpresaId], [Clave]);
+CREATE UNIQUE INDEX [IX_ConfiguracionEmpresa_EmpresaId_Clave] ON [erp].[ConfiguracionEmpresa] ([EmpresaId], [Clave]);
 GO
 
-
-
-CREATE INDEX [IX_Cotizacion_ClienteId] ON [Cotizacion] ([ClienteId]);
+CREATE INDEX [IX_Cotizacion_ClienteId] ON [erp].[Cotizacion] ([ClienteId]);
 GO
-
-
 
-CREATE INDEX [IX_Cotizacion_EmpresaId] ON [Cotizacion] ([EmpresaId]);
+CREATE INDEX [IX_Cotizacion_EmpresaId] ON [erp].[Cotizacion] ([EmpresaId]);
 GO
 
-
-
-CREATE INDEX [IX_Cotizacion_EmpresaId_ClienteId_FechaEmision] ON [Cotizacion] ([EmpresaId], [ClienteId], [FechaEmision]);
+CREATE INDEX [IX_Cotizacion_EmpresaId_ClienteId_FechaEmision] ON [erp].[Cotizacion] ([EmpresaId], [ClienteId], [FechaEmision]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_Cotizacion_EmpresaId_Serie_Correlativo] ON [Cotizacion] ([EmpresaId], [Serie], [Correlativo]);
+CREATE UNIQUE INDEX [IX_Cotizacion_EmpresaId_Serie_Correlativo] ON [erp].[Cotizacion] ([EmpresaId], [Serie], [Correlativo]);
 GO
-
 
-
-CREATE INDEX [IX_CotizacionDetalle_CotizacionId] ON [CotizacionDetalle] ([CotizacionId]);
+CREATE INDEX [IX_CotizacionDetalle_CotizacionId] ON [erp].[CotizacionDetalle] ([CotizacionId]);
 GO
-
 
-
-CREATE INDEX [IX_CotizacionDetalle_ProductoId] ON [CotizacionDetalle] ([ProductoId]);
+CREATE INDEX [IX_CotizacionDetalle_ProductoId] ON [erp].[CotizacionDetalle] ([ProductoId]);
 GO
-
-
 
-CREATE INDEX [IX_Devolucion_ClienteId] ON [Devolucion] ([ClienteId]);
+CREATE INDEX [IX_Devolucion_ClienteId] ON [erp].[Devolucion] ([ClienteId]);
 GO
 
-
-
-CREATE INDEX [IX_Devolucion_CompraId] ON [Devolucion] ([CompraId]);
+CREATE INDEX [IX_Devolucion_CompraId] ON [erp].[Devolucion] ([CompraId]);
 GO
-
-
 
-CREATE INDEX [IX_Devolucion_ComprobanteId] ON [Devolucion] ([ComprobanteId]);
+CREATE INDEX [IX_Devolucion_ComprobanteId] ON [erp].[Devolucion] ([ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_Devolucion_EmpresaId_ClienteId] ON [Devolucion] ([EmpresaId], [ClienteId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_ClienteId] ON [erp].[Devolucion] ([EmpresaId], [ClienteId]);
 GO
-
 
-
-CREATE INDEX [IX_Devolucion_EmpresaId_CompraId] ON [Devolucion] ([EmpresaId], [CompraId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_CompraId] ON [erp].[Devolucion] ([EmpresaId], [CompraId]);
 GO
-
-
 
-CREATE INDEX [IX_Devolucion_EmpresaId_ComprobanteId] ON [Devolucion] ([EmpresaId], [ComprobanteId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_ComprobanteId] ON [erp].[Devolucion] ([EmpresaId], [ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_Devolucion_EmpresaId_FechaGeneracion] ON [Devolucion] ([EmpresaId], [FechaGeneracion]);
+CREATE INDEX [IX_Devolucion_EmpresaId_FechaGeneracion] ON [erp].[Devolucion] ([EmpresaId], [FechaGeneracion]);
 GO
-
 
-
-CREATE INDEX [IX_Devolucion_EmpresaId_NotaCreditoId] ON [Devolucion] ([EmpresaId], [NotaCreditoId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_NotaCreditoId] ON [erp].[Devolucion] ([EmpresaId], [NotaCreditoId]);
 GO
-
 
-
-CREATE INDEX [IX_Devolucion_EmpresaId_NotaPedidoId] ON [Devolucion] ([EmpresaId], [NotaPedidoId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_NotaPedidoId] ON [erp].[Devolucion] ([EmpresaId], [NotaPedidoId]);
 GO
-
 
-
-CREATE INDEX [IX_Devolucion_EmpresaId_ProveedorId] ON [Devolucion] ([EmpresaId], [ProveedorId]);
+CREATE INDEX [IX_Devolucion_EmpresaId_ProveedorId] ON [erp].[Devolucion] ([EmpresaId], [ProveedorId]);
 GO
-
-
 
-CREATE INDEX [IX_Devolucion_EmpresaId_TipoTercero] ON [Devolucion] ([EmpresaId], [TipoTercero]);
+CREATE INDEX [IX_Devolucion_EmpresaId_TipoTercero] ON [erp].[Devolucion] ([EmpresaId], [TipoTercero]);
 GO
 
-
-
-CREATE INDEX [IX_Devolucion_NotaCreditoId] ON [Devolucion] ([NotaCreditoId]);
+CREATE INDEX [IX_Devolucion_NotaCreditoId] ON [erp].[Devolucion] ([NotaCreditoId]);
 GO
-
-
 
-CREATE INDEX [IX_Devolucion_NotaPedidoId] ON [Devolucion] ([NotaPedidoId]);
+CREATE INDEX [IX_Devolucion_NotaPedidoId] ON [erp].[Devolucion] ([NotaPedidoId]);
 GO
 
-
-
-CREATE INDEX [IX_Devolucion_ProveedorId] ON [Devolucion] ([ProveedorId]);
+CREATE INDEX [IX_Devolucion_ProveedorId] ON [erp].[Devolucion] ([ProveedorId]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_Empresa_RUC] ON [Empresa] ([RUC]);
+CREATE UNIQUE INDEX [IX_Empresa_RUC] ON [erp].[Empresa] ([RUC]);
 GO
-
 
-
-CREATE INDEX [IX_Gasto_CategoriaGastoId] ON [Gasto] ([CategoriaGastoId]);
+CREATE INDEX [IX_ErrorAplicacion_EmpresaId_Estado] ON [erp].[ErrorAplicacion] ([EmpresaId], [Estado]);
 GO
-
 
-
-CREATE INDEX [IX_Gasto_EmpresaId] ON [Gasto] ([EmpresaId]);
+CREATE INDEX [IX_ErrorAplicacion_EmpresaId_FechaUtc] ON [erp].[ErrorAplicacion] ([EmpresaId], [FechaUtc]);
 GO
-
-
 
-CREATE INDEX [IX_Gasto_EmpresaId_Fecha] ON [Gasto] ([EmpresaId], [Fecha]);
+CREATE INDEX [IX_Gasto_CategoriaGastoId] ON [erp].[Gasto] ([CategoriaGastoId]);
 GO
 
-
-
-CREATE INDEX [IX_Gasto_MovimientoCajaId] ON [Gasto] ([MovimientoCajaId]);
+CREATE INDEX [IX_Gasto_EmpresaId] ON [erp].[Gasto] ([EmpresaId]);
 GO
-
-
 
-CREATE INDEX [IX_Ingreso_CategoriaIngresoId] ON [Ingreso] ([CategoriaIngresoId]);
+CREATE INDEX [IX_Gasto_EmpresaId_Fecha] ON [erp].[Gasto] ([EmpresaId], [Fecha]);
 GO
 
-
-
-CREATE INDEX [IX_Ingreso_EmpresaId] ON [Ingreso] ([EmpresaId]);
+CREATE INDEX [IX_Gasto_MovimientoCajaId] ON [erp].[Gasto] ([MovimientoCajaId]);
 GO
-
 
-
-CREATE INDEX [IX_Ingreso_EmpresaId_Fecha] ON [Ingreso] ([EmpresaId], [Fecha]);
+CREATE INDEX [IX_Ingreso_CategoriaIngresoId] ON [erp].[Ingreso] ([CategoriaIngresoId]);
 GO
-
 
-
-CREATE INDEX [IX_Ingreso_MovimientoCajaId] ON [Ingreso] ([MovimientoCajaId]);
+CREATE INDEX [IX_Ingreso_EmpresaId] ON [erp].[Ingreso] ([EmpresaId]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_Moneda_Codigo] ON [Moneda] ([Codigo]);
+CREATE INDEX [IX_Ingreso_EmpresaId_Fecha] ON [erp].[Ingreso] ([EmpresaId], [Fecha]);
 GO
-
-
 
-CREATE UNIQUE INDEX [IX_MotivoNotaCredito_Nombre] ON [MotivoNotaCredito] ([Nombre]);
+CREATE INDEX [IX_Ingreso_MovimientoCajaId] ON [erp].[Ingreso] ([MovimientoCajaId]);
 GO
 
-
-
-CREATE INDEX [IX_MovimientoCaja_EmpresaId_ClienteId] ON [MovimientoCaja] ([EmpresaId], [ClienteId]);
+CREATE UNIQUE INDEX [IX_Moneda_Codigo] ON [erp].[Moneda] ([Codigo]);
 GO
-
-
 
-CREATE INDEX [IX_MovimientoCaja_EmpresaId_Fecha] ON [MovimientoCaja] ([EmpresaId], [Fecha]);
+CREATE UNIQUE INDEX [IX_MotivoNotaCredito_Nombre] ON [erp].[MotivoNotaCredito] ([Nombre]);
 GO
 
-
-
-CREATE INDEX [IX_MovimientoCaja_EmpresaId_Origen_OrigenId] ON [MovimientoCaja] ([EmpresaId], [Origen], [OrigenId]);
+CREATE INDEX [IX_MovimientoCaja_EmpresaId_ClienteId] ON [erp].[MovimientoCaja] ([EmpresaId], [ClienteId]);
 GO
-
 
-
-CREATE INDEX [IX_MovimientoCaja_EmpresaId_ProveedorId] ON [MovimientoCaja] ([EmpresaId], [ProveedorId]);
+CREATE INDEX [IX_MovimientoCaja_EmpresaId_Fecha] ON [erp].[MovimientoCaja] ([EmpresaId], [Fecha]);
 GO
-
 
-
-CREATE INDEX [IX_MovimientoInventario_EmpresaId] ON [MovimientoInventario] ([EmpresaId]);
+CREATE INDEX [IX_MovimientoCaja_EmpresaId_Origen_OrigenId] ON [erp].[MovimientoCaja] ([EmpresaId], [Origen], [OrigenId]);
 GO
-
 
-
-CREATE INDEX [IX_MovimientoInventario_EmpresaId_ProductoId_Fecha] ON [MovimientoInventario] ([EmpresaId], [ProductoId], [Fecha]);
+CREATE INDEX [IX_MovimientoCaja_EmpresaId_ProveedorId] ON [erp].[MovimientoCaja] ([EmpresaId], [ProveedorId]);
 GO
-
-
 
-CREATE INDEX [IX_MovimientoInventario_ProductoId] ON [MovimientoInventario] ([ProductoId]);
+CREATE INDEX [IX_MovimientoInventario_EmpresaId] ON [erp].[MovimientoInventario] ([EmpresaId]);
 GO
 
-
-
-CREATE INDEX [IX_NotaPedido_ClienteId] ON [NotaPedido] ([ClienteId]);
+CREATE INDEX [IX_MovimientoInventario_EmpresaId_ProductoId_Fecha] ON [erp].[MovimientoInventario] ([EmpresaId], [ProductoId], [Fecha]);
 GO
-
 
-
-CREATE INDEX [IX_NotaPedido_CotizacionId] ON [NotaPedido] ([CotizacionId]);
+CREATE INDEX [IX_MovimientoInventario_ProductoId] ON [erp].[MovimientoInventario] ([ProductoId]);
 GO
-
-
 
-CREATE INDEX [IX_NotaPedido_EmpresaId] ON [NotaPedido] ([EmpresaId]);
+CREATE INDEX [IX_NotaPedido_ClienteId] ON [erp].[NotaPedido] ([ClienteId]);
 GO
 
-
-
-CREATE INDEX [IX_NotaPedido_EmpresaId_ClienteId_Fecha] ON [NotaPedido] ([EmpresaId], [ClienteId], [Fecha]);
+CREATE INDEX [IX_NotaPedido_CotizacionId] ON [erp].[NotaPedido] ([CotizacionId]);
 GO
-
-
 
-CREATE INDEX [IX_NotaPedido_EmpresaId_ComprobanteId] ON [NotaPedido] ([EmpresaId], [ComprobanteId]);
+CREATE INDEX [IX_NotaPedido_EmpresaId] ON [erp].[NotaPedido] ([EmpresaId]);
 GO
 
-
-
-CREATE INDEX [IX_NotaPedido_EmpresaId_CotizacionId] ON [NotaPedido] ([EmpresaId], [CotizacionId]);
+CREATE INDEX [IX_NotaPedido_EmpresaId_ClienteId_Fecha] ON [erp].[NotaPedido] ([EmpresaId], [ClienteId], [Fecha]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_NotaPedido_EmpresaId_Serie_Correlativo] ON [NotaPedido] ([EmpresaId], [Serie], [Correlativo]);
+CREATE INDEX [IX_NotaPedido_EmpresaId_ComprobanteId] ON [erp].[NotaPedido] ([EmpresaId], [ComprobanteId]);
 GO
-
 
-
-CREATE INDEX [IX_NotaPedidoDetalle_NotaPedidoId] ON [NotaPedidoDetalle] ([NotaPedidoId]);
+CREATE INDEX [IX_NotaPedido_EmpresaId_CotizacionId] ON [erp].[NotaPedido] ([EmpresaId], [CotizacionId]);
 GO
-
 
-
-CREATE INDEX [IX_NotaPedidoDetalle_ProductoId] ON [NotaPedidoDetalle] ([ProductoId]);
+CREATE UNIQUE INDEX [IX_NotaPedido_EmpresaId_Serie_Correlativo] ON [erp].[NotaPedido] ([EmpresaId], [Serie], [Correlativo]);
 GO
-
-
 
-CREATE INDEX [IX_NubefactOperacion_ComprobanteId] ON [NubefactOperacion] ([ComprobanteId]);
+CREATE INDEX [IX_NotaPedidoDetalle_NotaPedidoId] ON [erp].[NotaPedidoDetalle] ([NotaPedidoId]);
 GO
 
-
-
-CREATE INDEX [IX_NubefactOperacion_EmpresaId] ON [NubefactOperacion] ([EmpresaId]);
+CREATE INDEX [IX_NotaPedidoDetalle_ProductoId] ON [erp].[NotaPedidoDetalle] ([ProductoId]);
 GO
-
-
 
-CREATE INDEX [IX_PagoProveedor_CompraId] ON [PagoProveedor] ([CompraId]);
+CREATE INDEX [IX_NubefactOperacion_ComprobanteId] ON [erp].[NubefactOperacion] ([ComprobanteId]);
 GO
 
-
-
-CREATE INDEX [IX_PagoProveedor_EmpresaId_CompraId] ON [PagoProveedor] ([EmpresaId], [CompraId]);
+CREATE INDEX [IX_NubefactOperacion_EmpresaId] ON [erp].[NubefactOperacion] ([EmpresaId]);
 GO
-
 
-
-CREATE INDEX [IX_PagoProveedor_EmpresaId_ProveedorId_FechaPago] ON [PagoProveedor] ([EmpresaId], [ProveedorId], [FechaPago]);
+CREATE INDEX [IX_PagoProveedor_CompraId] ON [erp].[PagoProveedor] ([CompraId]);
 GO
-
 
-
-CREATE INDEX [IX_PagoProveedor_ProveedorId] ON [PagoProveedor] ([ProveedorId]);
+CREATE INDEX [IX_PagoProveedor_EmpresaId_CompraId] ON [erp].[PagoProveedor] ([EmpresaId], [CompraId]);
 GO
-
 
-
-CREATE UNIQUE INDEX [IX_Permiso_Modulo_Accion] ON [Permiso] ([Modulo], [Accion]);
+CREATE INDEX [IX_PagoProveedor_EmpresaId_ProveedorId_FechaPago] ON [erp].[PagoProveedor] ([EmpresaId], [ProveedorId], [FechaPago]);
 GO
-
-
 
-CREATE INDEX [IX_Producto_EmpresaId] ON [Producto] ([EmpresaId]);
+CREATE INDEX [IX_PagoProveedor_ProveedorId] ON [erp].[PagoProveedor] ([ProveedorId]);
 GO
 
-
-
-CREATE INDEX [IX_Producto_EmpresaId_Nombre] ON [Producto] ([EmpresaId], [Nombre]);
+CREATE UNIQUE INDEX [IX_Permiso_Modulo_Accion] ON [erp].[Permiso] ([Modulo], [Accion]);
 GO
-
-
 
-CREATE INDEX [IX_Proveedor_EmpresaId] ON [Proveedor] ([EmpresaId]);
+CREATE INDEX [IX_Producto_EmpresaId] ON [erp].[Producto] ([EmpresaId]);
 GO
 
-
-
-CREATE INDEX [IX_Proveedor_EmpresaId_NumeroDocumento] ON [Proveedor] ([EmpresaId], [NumeroDocumento]);
+CREATE INDEX [IX_Producto_EmpresaId_Nombre] ON [erp].[Producto] ([EmpresaId], [Nombre]);
 GO
-
 
-
-CREATE INDEX [IX_Proveedor_EmpresaId_RazonSocial] ON [Proveedor] ([EmpresaId], [RazonSocial]);
+CREATE INDEX [IX_Proveedor_EmpresaId] ON [erp].[Proveedor] ([EmpresaId]);
 GO
-
 
-
-CREATE INDEX [IX_RolPermiso_PermisoId] ON [RolPermiso] ([PermisoId]);
+CREATE INDEX [IX_Proveedor_EmpresaId_NumeroDocumento] ON [erp].[Proveedor] ([EmpresaId], [NumeroDocumento]);
 GO
-
 
-
-CREATE INDEX [IX_RolPermiso_RolId] ON [RolPermiso] ([RolId]);
+CREATE INDEX [IX_Proveedor_EmpresaId_RazonSocial] ON [erp].[Proveedor] ([EmpresaId], [RazonSocial]);
 GO
-
-
 
-CREATE INDEX [IX_UsuarioEmpresa_EmpresaId] ON [UsuarioEmpresa] ([EmpresaId]);
+CREATE INDEX [IX_RolPermiso_PermisoId] ON [erp].[RolPermiso] ([PermisoId]);
 GO
 
+CREATE INDEX [IX_RolPermiso_RolId] ON [erp].[RolPermiso] ([RolId]);
+GO
 
+CREATE INDEX [IX_UsuarioEmpresa_EmpresaId] ON [erp].[UsuarioEmpresa] ([EmpresaId]);
+GO
 
-CREATE UNIQUE INDEX [IX_UsuarioEmpresa_UsuarioId_EmpresaId] ON [UsuarioEmpresa] ([UsuarioId], [EmpresaId]);
+CREATE UNIQUE INDEX [IX_UsuarioEmpresa_UsuarioId_EmpresaId] ON [erp].[UsuarioEmpresa] ([UsuarioId], [EmpresaId]);
 GO
 
+INSERT INTO [erp].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'20260624175549_InitialCreateErpSchema', N'8.0.6');
+GO
 
+COMMIT;
+GO
 

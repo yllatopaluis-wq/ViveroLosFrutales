@@ -14,8 +14,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlServer(configuration.GetConnectionString("ViveroLosFrutalesConnection")));
+        services.AddDbContextPool<ApplicationDbContext>(options =>
+            options.UseSqlServer(
+                configuration.GetConnectionString("ViveroLosFrutalesConnection"),
+                sqlOptions =>
+                {
+                    sqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "erp");
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(5),
+                        errorNumbersToAdd: null);
+                }));
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
         {
@@ -45,6 +54,8 @@ public static class DependencyInjection
         services.AddScoped<IGastoRepository, GastoRepository>();
         services.AddScoped<IIngresoRepository, IngresoRepository>();
         services.AddScoped<IDashboardRepository, DashboardRepository>();
+        services.AddScoped<IReporteRepository, ReporteRepository>();
+        services.AddScoped<IErrorAplicacionRepository, ErrorAplicacionRepository>();
         services.AddScoped<INotaPedidoRepository, NotaPedidoRepository>();
         services.AddScoped<ICobroClienteRepository, CobroClienteRepository>();
         services.AddScoped<IMovimientoCajaRepository, MovimientoCajaRepository>();

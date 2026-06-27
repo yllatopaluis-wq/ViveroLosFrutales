@@ -17,3 +17,5 @@ Logs/
 *.suo
 *.cache
 *.log
+DeployHosting/
+tmp/

@@ -35,9 +35,9 @@ Solo un modulo del menu queda abierto a la vez para evitar consumo excesivo de e
 
 Los roles permiten seleccionar permisos en 3 niveles:
 
-- Modulo: Ventas, Maestros, Operacion, Administracion, Reportes.
+- Modulo: Tablero, Ventas, Maestros, Operacion, Administracion o Reportes.
 - Formularios: Categorias, Productos, Comprobantes, Usuarios, etc.
-- Botones o acciones: Ver, Crear, Editar, Anular, Imprimir, Configurar.
+- Botones o acciones: solo las operaciones reales de cada formulario. Por ejemplo, Compras permite Registrar Pago, Devoluciones permite Registrar y Usuarios permite Restablecer Password.
 
 Reglas de seleccion:
 
@@ -49,6 +49,8 @@ Roles base:
 
 - Administrador: acceso total.
 - Vendedor: acceso operativo a categorias, productos, clientes, cotizaciones, comprobantes, notas de pedido y cobros de clientes.
+
+El modulo `Administracion > Errores de aplicacion` permite consultar excepciones no controladas, filtrar por fecha, estado o texto, revisar el detalle tecnico y marcar cada incidencia como revisada con una observacion.
 
 ## 5. Empresas
 
@@ -386,6 +388,9 @@ Reglas:
 - No se permite registrar devolucion si el estado es `DEVUELTO` o `ANULADO`.
 - Al confirmar una devolucion se genera `MovimientoCaja` de tipo `EGRESO`, origen `DEVOLUCION_CLIENTE`.
 - Solo el registro real de devolucion impacta caja; la generacion de la devolucion pendiente no mueve caja.
+- La campana del encabezado muestra un contador con las devoluciones `PENDIENTE` o `PARCIAL` de la empresa activa.
+- Al abrir la campana se muestran las cinco alertas mas recientes con tercero, origen, documento y monto pendiente.
+- Cada alerta permite abrir directamente el detalle de la devolucion.
 
 ## 17.1 Gastos e Ingresos Manuales
 
@@ -538,6 +543,16 @@ No muestra el campo hash en la lista principal.
 
 ## 22. Reportes y filtros
 
+El Reporte General presenta un comparativo anual con meses en filas y años en columnas. Permite seleccionar hasta diez años y cambiar el indicador entre:
+
+- Resultado neto.
+- Ventas netas.
+- Ingresos manuales.
+- Gastos.
+- Compras.
+
+Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al año anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+
 Los formularios de lista con informacion fechada usan rango de fechas:
 
 - Fecha desde.
@@ -564,3 +579,35 @@ Los estados se muestran con distintivos de color:
 - `ANULADO`: rojo.
 
 Esto aplica a listas como comprobantes, cotizaciones, empresas, categorias y otros mantenimientos.
+
+## 24. Datos iniciales de salida
+
+La instalación inicial deja preparadas dos empresas activas:
+
+- `20615082997`: VIVERO LOS FRUTALES LIMA SAC.
+- `20615619273`: VIVERO LOS FRUTALES HUARAL SAC.
+
+El usuario inicial para ingreso y configuración es:
+
+```text
+Usuario: admin
+Password: Admin1234
+```
+
+Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesión debe seleccionar una empresa. Después del primer ingreso se debe cambiar la contraseña desde el módulo de usuarios.
+
+Los productos se cargan por empresa desde el catálogo Nubefact. El sistema mantiene stock, precios, unidad, afectación IGV y detracción por producto y empresa. Los clientes se cargan como catálogo global del sistema, por lo que pueden utilizarse desde cualquier empresa activa.
+
+## 25. Sitio público
+
+La solución incluye un sitio público separado del ERP.
+
+El sitio público presenta contenido institucional y comercial:
+
+- Inicio.
+- Nosotros.
+- Productos.
+- Servicios.
+- Contacto.
+
+El catálogo público se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuración. Es una aplicación web independiente para publicación externa.

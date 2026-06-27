@@ -11,7 +11,7 @@ public class NotaPedido : EmpresaEntity
     public int? ComprobanteId { get; set; }
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public decimal Subtotal { get; set; }
     public decimal Igv { get; set; }
     public decimal Total { get; set; }

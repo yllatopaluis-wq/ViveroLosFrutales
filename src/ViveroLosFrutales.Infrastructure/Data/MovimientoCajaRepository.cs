@@ -226,12 +226,18 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
         var egresos = movimientosActivos
             .Where(x => x.Dto.TipoMovimiento == TipoMovimientoCaja.EGRESO)
             .Sum(x => x.Dto.Monto);
-        var take = request.PageSize <= 0 ? 100 : Math.Min(request.PageSize, 100);
+        var page = request.Page <= 0 ? 1 : request.Page;
+        var take = request.PageSize <= 0 ? 20 : Math.Min(request.PageSize, 20);
+        var total = movimientosFiltrados.Count;
+        var skip = (page - 1) * take;
 
         return new CajaIndexDto
         {
-            Movimientos = movimientosFiltrados.Select(x => x.Dto).Take(take).ToList(),
-            Resumen = new CajaResumenDto(ingresos, egresos, ingresos - egresos, movimientosActivos.Count)
+            Movimientos = movimientosFiltrados.Select(x => x.Dto).Skip(skip).Take(take).ToList(),
+            Resumen = new CajaResumenDto(ingresos, egresos, ingresos - egresos, movimientosActivos.Count),
+            Total = total,
+            Page = page,
+            PageSize = take
         };
     }
 
@@ -258,7 +264,7 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
     }
 
     private static string Numero(string serie, int correlativo) =>
-        string.IsNullOrWhiteSpace(serie) || correlativo <= 0 ? string.Empty : $"{serie}-{correlativo:000000}";
+        string.IsNullOrWhiteSpace(serie) || correlativo <= 0 ? string.Empty : $"{serie}-{correlativo}";
 
     private static string DocumentoDevolucion(string notaNumero, string comprobanteNumero, string notaCreditoNumero, string compraDocumento)
     {

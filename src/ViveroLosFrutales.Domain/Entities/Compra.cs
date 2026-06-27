@@ -11,7 +11,7 @@ public class Compra : EmpresaEntity
     public string Serie { get; set; } = string.Empty;
     public string Numero { get; set; } = string.Empty;
     public string Documento { get; set; } = string.Empty;
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public DateTime FechaEmision { get => Fecha; set => Fecha = value; }
     public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CREDITO;
     public string Observacion { get; set; } = string.Empty;

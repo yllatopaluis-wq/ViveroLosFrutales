@@ -25,7 +25,7 @@ public class CompraService(
     {
         Proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
         Productos = await productoRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
-        Compra = new CompraEditDto { Fecha = DateTime.Today, FormaPago = FormaPagoCompra.CREDITO }
+        Compra = new CompraEditDto { Fecha = PeruDateTime.Today, FormaPago = FormaPagoCompra.CREDITO }
     };
 
     public async Task<CompraDetalleViewDto> ObtenerDetalleAsync(int id, CancellationToken cancellationToken)
@@ -47,9 +47,17 @@ public class CompraService(
         var detalles = dto.Detalles.Where(x => x.ProductoId > 0 || x.Cantidad > 0 || x.CostoUnitario > 0).ToList();
         if (dto.ProveedorId <= 0) throw new InvalidOperationException("Seleccione un proveedor.");
         if (detalles.Count == 0) throw new InvalidOperationException("Ingrese al menos un producto.");
-        if (DocumentoRequiereSerieNumero(dto.TipoDocumento) && (string.IsNullOrWhiteSpace(dto.Serie) || string.IsNullOrWhiteSpace(dto.Numero)))
+        if (DocumentoRequiereSerieNumero(dto.TipoDocumento))
         {
-            throw new InvalidOperationException("Serie y numero son obligatorios para el tipo de documento seleccionado.");
+            if (string.IsNullOrWhiteSpace(dto.Serie) || string.IsNullOrWhiteSpace(dto.Numero))
+            {
+                throw new InvalidOperationException("Serie y número son obligatorios para el tipo de documento seleccionado.");
+            }
+        }
+        else
+        {
+            dto.Serie = string.Empty;
+            dto.Numero = string.Empty;
         }
 
         if (await repository.ExisteDocumentoAsync(empresaContext.EmpresaId, dto.ProveedorId, dto.TipoDocumento, dto.Serie, dto.Numero, dto.CompraId == 0 ? null : dto.CompraId, cancellationToken))
@@ -140,7 +148,7 @@ public class CompraService(
             TotalPagado = compra.TotalPagado,
             SaldoPendiente = compra.SaldoPendiente,
             MontoPago = compra.SaldoPendiente,
-            FechaPago = DateTime.Today
+            FechaPago = PeruDateTime.Today
         };
     }
 

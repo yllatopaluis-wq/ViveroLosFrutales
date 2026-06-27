@@ -7,7 +7,7 @@ public record GastoListDto(int GastoId, DateTime Fecha, string Categoria, string
 public class GastoEditDto
 {
     public int GastoId { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public int? CategoriaGastoId { get; set; }
     public string Categoria { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
@@ -22,7 +22,7 @@ public record IngresoListDto(int IngresoId, DateTime Fecha, string TipoIngreso, 
 public class IngresoEditDto
 {
     public int IngresoId { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public int? CategoriaIngresoId { get; set; }
     public string TipoIngreso { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;

@@ -1,0 +1,10 @@
+@model PublicPageViewModel
+@{ ViewData["Title"] = "Productos"; }
+<section class="page-hero products-hero"><div class="container"><span class="eyebrow">Catálogo</span><h1>Plantas elegidas para prosperar</h1><p>Frutales, ornamentales e insumos para proyectos productivos y espacios llenos de vida.</p></div></section>
+<section class="section"><div class="container"><div class="catalog-intro"><h2>Productos disponibles</h2><p>La disponibilidad y los precios pueden variar por temporada. Solicita una cotización para recibir información actualizada.</p></div><div class="product-grid catalog-grid">
+@foreach (var producto in Model.Productos)
+{
+    <article class="product-card"><div class="product-icon">❋</div><span class="tag">@producto.Categoria</span><h3>@producto.Nombre</h3><p>Presentación: @producto.UnidadMedida</p>@if (producto.PrecioReferencial > 0) { <strong class="price">Desde S/ @producto.PrecioReferencial.ToString("N2")</strong> }<a asp-controller="Contacto" asp-action="Index">Consultar disponibilidad →</a></article>
+}
+</div></div></section>
+<section class="cta-band"><div class="container"><div><h2>¿Buscas una variedad específica?</h2><p>Escríbenos. Te ayudaremos a revisar disponibilidad y alternativas.</p></div><a class="btn btn-light" asp-controller="Contacto" asp-action="Index">Solicitar cotización</a></div></section>

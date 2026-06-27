@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -292,21 +292,51 @@ public class NubefactService(
     private static EstadoSunat EstadoSunatDesdeRespuesta(string json, EstadoSunat estadoActual)
     {
         if (TryGetBool(json, "anulado")) return EstadoSunat.Anulado;
-        if (TryGetBool(json, "aceptada_por_sunat")) return EstadoSunat.Aceptado;
-        if (TryGetBool(json, "aceptado_por_sunat")) return EstadoSunat.Aceptado;
+        if (TieneFlagVerdadero(json, "aceptada_por_sunat", "aceptado_por_sunat", "aceptada_sunat", "aceptado_sunat", "sunat_aceptado", "sunat_aceptada"))
+        {
+            return EstadoSunat.Aceptado;
+        }
 
         var sunatResponseCode = TryGetString(json, "sunat_responsecode");
-        if (sunatResponseCode == "0") return EstadoSunat.Aceptado;
+        if (EsCodigoSunatAceptado(sunatResponseCode)) return EstadoSunat.Aceptado;
 
-        var estado = TryGetString(json, "estado");
-        if (MapEstadoTexto(estado) is { } estadoMapeado) return estadoMapeado;
+        foreach (var estadoCampo in new[] { "estado", "estado_sunat", "sunat_estado" })
+        {
+            var estado = TryGetString(json, estadoCampo);
+            if (MapEstadoTexto(estado) is { } estadoMapeado) return estadoMapeado;
+        }
 
-        var sunatDescription = TryGetString(json, "sunat_description");
-        if (sunatDescription.Contains("acept", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Aceptado;
-        if (sunatDescription.Contains("rechaz", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Rechazado;
-        if (sunatDescription.Contains("observ", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Observado;
+        var descripcionSunat = string.Empty;
+        foreach (var descripcionCampo in new[] { "sunat_description", "sunat_descripcion", "descripcion", "mensaje", "message" })
+        {
+            var descripcion = TryGetString(json, descripcionCampo);
+            if (string.IsNullOrWhiteSpace(descripcion)) continue;
+
+            descripcionSunat = descripcion;
+            if (descripcion.Contains("acept", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Aceptado;
+            if (descripcion.Contains("rechaz", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Rechazado;
+            if (descripcion.Contains("observ", StringComparison.OrdinalIgnoreCase)) return EstadoSunat.Observado;
+        }
+
+        if (TieneFlagFalso(json, "aceptada_por_sunat", "aceptado_por_sunat", "aceptada_sunat", "aceptado_sunat", "sunat_aceptado", "sunat_aceptada")
+            && !string.IsNullOrWhiteSpace(descripcionSunat))
+        {
+            return EstadoSunat.Rechazado;
+        }
 
         return estadoActual;
+    }
+
+    private static bool TieneFlagVerdadero(string json, params string[] properties) =>
+        properties.Any(property => TryGetBool(json, property));
+
+    private static bool TieneFlagFalso(string json, params string[] properties) =>
+        properties.Any(property => TryGetBoolNullable(json, property) == false);
+
+    private static bool EsCodigoSunatAceptado(string codigo)
+    {
+        var normalizado = codigo.Trim();
+        return normalizado == "0" || normalizado == "0000";
     }
 
     private static EstadoSunat? MapEstadoTexto(string estado)
@@ -473,30 +503,41 @@ public class NubefactService(
         }
     }
 
-    private static bool TryGetBool(string json, string property)
+    private static bool TryGetBool(string json, string property) =>
+        TryGetBoolNullable(json, property) == true;
+
+    private static bool? TryGetBoolNullable(string json, string property)
     {
         try
         {
             using var document = JsonDocument.Parse(json);
-            return document.RootElement.TryGetProperty(property, out var value) && value.ValueKind switch
+            if (!document.RootElement.TryGetProperty(property, out var value)) return null;
+
+            return value.ValueKind switch
             {
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
-                JsonValueKind.Number => value.TryGetInt32(out var number) && number == 1,
-                JsonValueKind.String => EsValorVerdadero(value.GetString()),
-                _ => false
+                JsonValueKind.Number => value.TryGetInt32(out var number) ? number == 1 : null,
+                JsonValueKind.String => EsValorVerdadero(value.GetString()) ? true : EsValorFalso(value.GetString()) ? false : null,
+                _ => null
             };
         }
         catch
         {
-            return false;
+            return null;
         }
     }
 
     private static bool EsValorVerdadero(string? value)
     {
         var normalizado = value?.Trim().ToUpperInvariant();
-        return normalizado is "TRUE" or "1" or "SI" or "SÍ" or "S" or "YES" or "Y" or "ACEPTADO" or "ACEPTADA";
+        return normalizado is "TRUE" or "1" or "SI" or "SÍ" or "SÃ" or "S" or "YES" or "Y" or "ACEPTADO" or "ACEPTADA";
+    }
+
+    private static bool EsValorFalso(string? value)
+    {
+        var normalizado = value?.Trim().ToUpperInvariant();
+        return normalizado is "FALSE" or "0" or "NO" or "N" or "RECHAZADO" or "RECHAZADA" or "OBSERVADO" or "OBSERVADA";
     }
 
     private static string TryGetErrors(string json)
@@ -530,3 +571,4 @@ public class NubefactService(
         public static DetraccionInfo NoAplica { get; } = new(false, 0, 0, 0);
     }
 }
+

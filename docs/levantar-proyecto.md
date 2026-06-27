@@ -1,167 +1,88 @@
-# Levantar el proyecto - ViveroLosFrutales
+# Levantar ViveroLosFrutales
 
-Esta guia deja el proyecto listo para ejecutar localmente en Windows con SQL Server.
+La solución ejecuta dos procesos web independientes. La web pública ocupa la raíz y el ERP funciona bajo `/app`.
 
-## 1. Requisitos
+## Requisitos
 
-- .NET SDK 8 instalado.
-- SQL Server o SQL Server Express.
-- Acceso a SQL Server con permisos para crear base de datos y tablas.
-- PowerShell.
+- .NET SDK 8
+- SQL Server o SQL Server Express
+- PowerShell o CMD
 
-Verificar .NET:
+Verificar el SDK:
 
-```powershell
+```cmd
 dotnet --version
 ```
 
-## 2. Configurar SQL Server
+## Configuración de datos
 
-Editar:
+Configurar la conexión `ViveroLosFrutalesConnection` en el proyecto que se ejecutará o mediante una variable de entorno:
 
-```text
-src/ViveroLosFrutales.Web/appsettings.json
+```cmd
+set ConnectionStrings__ViveroLosFrutalesConnection=Server=localhost;Database=ViveroLosFrutalesDB;Trusted_Connection=True;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=true
 ```
 
-Cadena esperada:
+Para una instalación nueva, ejecutar los scripts de `scripts/sql` del `001` al `007` en orden. El detalle está en `docs/instalacion-base-datos.md`.
 
-```json
-"ViveroLosFrutalesConnection": "Server=localhost;Database=ViveroLosFrutalesDB;Trusted_Connection=True;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=true"
-```
+## Restaurar y compilar
 
-Si la autenticacion integrada falla, usar usuario SQL Server:
+Desde la raíz:
 
-```json
-"ViveroLosFrutalesConnection": "Server=localhost;Database=ViveroLosFrutalesDB;User Id=sa;Password=TU_PASSWORD;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=true"
-```
-
-## 3. Crear la base de datos
-
-Para una instalacion nueva, ejecutar en SQL Server Management Studio, Azure Data Studio o `sqlcmd`:
-
-```text
-scripts/sql/001-create-database.sql
-```
-
-El script `001` crea el esquema completo vigente, incluyendo Identity, modulos operativos, claves foraneas, indices y datos maestros estaticos.
-
-Despues del primer arranque, cuando ya exista la empresa, ejecutar las cargas requeridas:
-
-```text
-scripts/sql/002-cargar-categorias-financieras.sql
-scripts/sql/003-cargar-productos-catalogo.sql
-```
-
-El catalogo de productos aplica a la empresa con RUC `20615082997` y puede omitirse en otras instalaciones.
-
-## 4. Restaurar paquetes
-
-Desde la raiz del proyecto:
-
-```powershell
+```cmd
 dotnet restore ViveroLosFrutales.sln --configfile NuGet.Config
-```
-
-En entornos restringidos:
-
-```powershell
-$env:DOTNET_CLI_HOME="$PWD\.dotnet"
-$env:NUGET_PACKAGES="$PWD\.nuget\packages"
-$env:APPDATA="$PWD\.appdata"
-$env:LOCALAPPDATA="$PWD\.localappdata"
-dotnet restore ViveroLosFrutales.sln --configfile NuGet.Config
-```
-
-## 5. Compilar
-
-```powershell
 dotnet build ViveroLosFrutales.sln
+dotnet test ViveroLosFrutales.sln
 ```
 
-Si existe una instancia web ejecutandose, el build puede fallar por archivos bloqueados. Opciones:
+## Ejecutar la web pública
 
-- Detener la consola donde corre `dotnet run`.
-- Finalizar el proceso `ViveroLosFrutales.Web`.
-- Compilar a una salida temporal:
-
-```powershell
-dotnet build src/ViveroLosFrutales.Web/ViveroLosFrutales.Web.csproj -o ./.build-check
-Remove-Item -LiteralPath .\.build-check -Recurse -Force
+```cmd
+dotnet run --project src\ViveroLosFrutales.PublicWeb
 ```
 
-## 6. Ejecutar
-
-```powershell
-dotnet run --project src/ViveroLosFrutales.Web
-```
-
-Abrir la URL que imprime la consola. Normalmente:
+Abrir:
 
 ```text
-https://localhost:5001
-http://localhost:5000
+http://localhost:5100
 ```
 
-## 7. Seed inicial
+Las páginas Inicio, Nosotros, Productos, Servicios y Contacto son públicas. El catálogo usa las capas compartidas y muestra contenido de respaldo si SQL Server no está disponible.
 
-El proyecto ejecuta seed al arrancar si esta activo:
+## Ejecutar el ERP
 
-```json
-"Seed": {
-  "RunOnStartup": true
-}
+En otra consola:
+
+```cmd
+dotnet run --project src\ViveroLosFrutales.Web
 ```
 
-Para desactivarlo temporalmente:
+Abrir:
 
-```json
-"Seed": {
-  "RunOnStartup": false
-}
+```text
+http://localhost:5200/app/login
 ```
 
-## 8. Probar modulos principales
+Rutas de comprobación:
 
-Al iniciar sesion:
-
-1. Seleccionar la empresa en el formulario de login.
-2. Verificar que el encabezado muestre empresa activa y usuario.
-3. Verificar que Roles muestre permisos por modulo, formulario y accion.
-4. Crear categorias.
-5. Crear productos asociados a categorias.
-6. Crear clientes.
-7. Crear proveedores.
-8. Registrar compras y validar que el stock del producto aumente.
-9. Registrar gastos e ingresos.
-10. Crear cotizaciones o comprobantes.
-11. Revisar Log Nubefact cuando exista un error o envio.
-
-## 9. Problemas frecuentes
-
-### `Failed to generate SSPI context`
-
-Usar autenticacion SQL Server en la cadena de conexion.
-
-### `The process cannot access the file ... ViveroLosFrutales.Web.dll`
-
-Hay una instancia de la app corriendo. Detenerla o compilar con `-o ./.build-check`.
-
-### Error al consultar vulnerabilidades de NuGet
-
-Si el entorno no tiene acceso a internet, puede aparecer un warning `NU1900`. No impide compilar si los paquetes ya estan restaurados.
-
-### No aparecen tablas nuevas
-
-En una instalacion nueva no se aplican parches incrementales. Verificar que `scripts/sql/001-create-database.sql` se haya ejecutado completamente sobre una base vacia.
-
-### No aparecen todos los permisos en Roles
-
-Reiniciar la aplicacion con el seed activo:
-
-```json
-"Seed": {
-  "RunOnStartup": true
-}
+```text
+http://localhost:5200/app/dashboard
+http://localhost:5200/app/ventas
 ```
 
-Tambien se completan permisos faltantes al entrar al formulario de crear/editar roles.
+Un usuario anónimo es redirigido a `/app/login`. `PathBase` se configura en `src/ViveroLosFrutales.Web/appsettings.PathBase.json`.
+
+## Publicación
+
+```cmd
+dotnet publish src\ViveroLosFrutales.PublicWeb -c Release -o .\DeployHosting\PublicWeb
+dotnet publish src\ViveroLosFrutales.Web -c Release -o .\DeployHosting\ERPApp
+```
+
+Para release completo usar `scripts\publish-release.ps1`. Consultar `docs/despliegue-iis-dos-aplicaciones.md` para montar ambas salidas con un solo dominio y certificado.
+
+## Problemas frecuentes
+
+- Si una DLL está bloqueada, detener la aplicación antes de volver a compilar o publicar.
+- Si falla SQL Server, verificar servidor, credenciales y que el esquema `001` se haya aplicado.
+- Para evitar el seed durante una prueba usar `set Seed__RunOnStartup=false` antes de ejecutar el ERP.
+- En IIS, `/app` debe convertirse en Application; un directorio virtual no es suficiente.

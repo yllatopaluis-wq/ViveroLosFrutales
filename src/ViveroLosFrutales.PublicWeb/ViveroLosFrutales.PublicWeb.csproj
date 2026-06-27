@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ViveroLosFrutales.PublicWeb</RootNamespace>
+    <AssemblyName>ViveroLosFrutales.PublicWeb</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ViveroLosFrutales.Application\ViveroLosFrutales.Application.csproj" />
+    <ProjectReference Include="..\ViveroLosFrutales.Infrastructure\ViveroLosFrutales.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

@@ -58,7 +58,7 @@ public class ComprobanteService(
         return new ComprobanteEditDto
         {
             TipoComprobante = tipoComprobante,
-            FechaEmision = DateTime.Today,
+            FechaEmision = PeruDateTime.Today,
             EmpresaRazonSocial = empresa.RazonSocial,
             EmpresaNombreComercial = empresa.NombreComercial,
             EmpresaRuc = empresa.RUC,
@@ -256,6 +256,8 @@ public class ComprobanteService(
 
         var cliente = await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
+
+        ValidarTipoComprobantePorDocumento(cliente.TipoDocumento, dto.TipoComprobante);
 
         var empresa = await empresaRepository.ObtenerAsync(empresaContext.EmpresaId, cancellationToken)
             ?? throw new InvalidOperationException("Empresa activa no encontrada.");
@@ -560,7 +562,7 @@ public class ComprobanteService(
             throw new InvalidOperationException("El comprobante ya esta anulado.");
         }
 
-        if (DateTime.Today > comprobante.FechaEmision.Date.AddDays(2))
+        if (PeruDateTime.Today > comprobante.FechaEmision.Date.AddDays(2))
         {
             throw new InvalidOperationException("No se puede anular el comprobante porque esta fuera de fecha. Emita una nota de credito para reversar la operacion.");
         }
@@ -630,7 +632,7 @@ public class ComprobanteService(
             ComprobanteReferenciaId = comprobante.ComprobanteId,
             Serie = serie,
             Correlativo = await comprobanteRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, TipoComprobante.NCR, serie, cancellationToken),
-            FechaEmision = DateTime.Today,
+            FechaEmision = PeruDateTime.Today,
             Referencia = $"{comprobante.Serie}-{comprobante.Correlativo:000000}",
             TipoComprobanteOrigen = comprobante.TipoComprobante,
             FechaOrigen = comprobante.FechaEmision,
@@ -663,7 +665,7 @@ public class ComprobanteService(
         {
             Serie = serie,
             Correlativo = await comprobanteRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, TipoComprobante.NCR, serie, cancellationToken),
-            FechaEmision = DateTime.Today,
+            FechaEmision = PeruDateTime.Today,
             MotivoNotaCreditoId = motivos.FirstOrDefault()?.MotivoNotaCreditoId ?? 0,
             Motivo = motivos.FirstOrDefault()?.Nombre ?? string.Empty,
             Motivos = motivos
@@ -795,6 +797,13 @@ public class ComprobanteService(
         _ => empresa.SerieCotizacion
     };
 
+    private static void ValidarTipoComprobantePorDocumento(TipoDocumentoCliente tipoDocumento, TipoComprobante tipoComprobante)
+    {
+        if (tipoDocumento == TipoDocumentoCliente.RUC && tipoComprobante == TipoComprobante.BOL)
+        {
+            throw new InvalidOperationException("No se puede generar una boleta para un cliente con RUC. Seleccione Factura o cambie el cliente.");
+        }
+    }
     private static string ObtenerSerieNotaCredito(Empresa empresa, TipoComprobante tipoOrigen) => tipoOrigen switch
     {
         TipoComprobante.FAC => string.IsNullOrWhiteSpace(empresa.SerieNotaCreditoFactura) ? empresa.SerieNotaCredito : empresa.SerieNotaCreditoFactura,
@@ -898,3 +907,4 @@ public class ComprobanteService(
         return decimal.Round(saldo < 0 ? 0 : saldo, 2);
     }
 }
+

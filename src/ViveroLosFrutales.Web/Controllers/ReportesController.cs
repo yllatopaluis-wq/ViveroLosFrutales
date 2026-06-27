@@ -1,18 +1,28 @@
 using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
 
 namespace ViveroLosFrutales.Web.Controllers;
 
-public class ReportesController(CompraService compraService, DevolucionService devolucionService) : Controller
+public class ReportesController(
+    CompraService compraService,
+    DevolucionService devolucionService,
+    ReporteGeneralService reporteGeneralService) : Controller
 {
-    public IActionResult Ventas() => Reporte("Reporte Ventas");
-    public IActionResult Compras() => Reporte("Reporte Compras");
-    public IActionResult Productos() => Reporte("Reporte Productos");
-    public IActionResult Clientes() => Reporte("Reporte Clientes");
-    public IActionResult Gastos() => Reporte("Reporte Gastos");
-    public IActionResult Ingresos() => Reporte("Reporte Ingresos");
-    public IActionResult FlujoCaja() => Reporte("Flujo de Caja");
+    public async Task<IActionResult> Reporte(int? anioDesde, int? anioHasta, string? indicador, CancellationToken cancellationToken)
+    {
+        ViewData["Title"] = "Reporte general";
+        return View(await reporteGeneralService.ObtenerAsync(anioDesde, anioHasta, indicador, cancellationToken));
+    }
+
+    public IActionResult Ventas() => RedirectToAction(nameof(Reporte), new { indicador = ReporteGeneralIndicadores.Ventas });
+    public IActionResult Compras() => RedirectToAction(nameof(Reporte), new { indicador = ReporteGeneralIndicadores.Compras });
+    public IActionResult Productos() => RedirectToAction("Index", "Productos");
+    public IActionResult Clientes() => RedirectToAction("Index", "Clientes");
+    public IActionResult Gastos() => RedirectToAction(nameof(Reporte), new { indicador = ReporteGeneralIndicadores.Gastos });
+    public IActionResult Ingresos() => RedirectToAction(nameof(Reporte), new { indicador = ReporteGeneralIndicadores.Ingresos });
+    public IActionResult FlujoCaja() => RedirectToAction(nameof(Reporte), new { indicador = ReporteGeneralIndicadores.Resultado });
     public IActionResult Cotizaciones() => RedirectToAction("Index", "Cotizaciones");
     public async Task<IActionResult> CuentasPorPagar([FromQuery] SearchRequest request, CancellationToken cancellationToken)
     {
@@ -26,9 +36,4 @@ public class ReportesController(CompraService compraService, DevolucionService d
         return View(await devolucionService.BuscarAsync(request, cancellationToken));
     }
 
-    private IActionResult Reporte(string title)
-    {
-        ViewData["Title"] = title;
-        return View("Reporte");
-    }
 }

@@ -4,7 +4,7 @@
     ViewData["Title"] = readOnly ? "Visualizar Proveedor" : Model.ProveedorId == 0 ? "Crear Proveedor" : "Editar Proveedor";
 }
 
-<form asp-action="Create" method="post" class="dense-form">
+<form asp-action="Create" method="post" class="dense-form document-entry-form">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="ProveedorId" type="hidden" />

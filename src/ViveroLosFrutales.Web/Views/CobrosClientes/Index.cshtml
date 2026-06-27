@@ -1,73 +1,23 @@
 @model PagedResult<CobroClienteListDto>
 @{
-    ViewData["Title"] = "Cobros de Clientes";
-    var today = DateTime.Today;
+    ViewData["Title"] = "Cobros clientes";
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
     var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
     var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
-
-@functions {
-    private static string EstadoCobroTexto(CobroClienteEstado estado) =>
-        estado == CobroClienteEstado.ACTIVO ? "ACTIVO" : "ANULADO";
-}
-
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
-        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
-        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Cliente, referencia, medio u observacion" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-</div>
-
-<table class="table table-sm table-striped data-grid">
-    <thead><tr><th>Fecha</th><th>Cliente</th><th>Referencia</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr></thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.FechaCobro.ToString("dd/MM/yyyy")</td>
-            <td>@item.Cliente</td>
-            <td>@item.Referencia</td>
-            <td>@item.MedioPago</td>
-            <td class="text-end">S/ @item.Monto.ToString("N2")</td>
-            <td><span class="status-badge @(item.Estado == CobroClienteEstado.ACTIVO ? "active" : "danger")">@EstadoCobroTexto(item.Estado)</span></td>
-            <td class="actions-cell">
-                @if (item.Estado == CobroClienteEstado.ACTIVO)
-                {
-                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionCobro(this);">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.CobroClienteId" />
-                        <input type="hidden" name="motivo" value="" />
-                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M18 6 6 18" />
-                                <path d="m6 6 12 12" />
-                            </svg>
-                        </button>
-                    </form>
-                }
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
-
-<script>
-    function solicitarMotivoAnulacionCobro(form) {
-        const motivo = prompt("Ingrese el motivo de anulacion del cobro:");
-        if (motivo === null) return false;
-
-        const motivoLimpio = motivo.trim();
-        if (!motivoLimpio) {
-            alert("Debe ingresar el motivo de anulacion.");
-            return false;
-        }
-
-        form.querySelector("input[name='motivo']").value = motivoLimpio;
-        return confirm("Confirmar anulacion del cobro?");
-    }
-</script>
+@functions { private static string EstadoCobroTexto(CobroClienteEstado estado) => estado == CobroClienteEstado.ACTIVO ? "Activo" : "Anulado"; private static string EstadoCobroClass(CobroClienteEstado estado) => estado == CobroClienteEstado.ACTIVO ? "success" : "danger"; }
+<section class="comprobantes-page admin-docs-page"><form method="get" class="comprobantes-toolbar admin-docs-toolbar">
+<label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Cliente, referencia, medio u observación..." autocomplete="off" />@if (!string.IsNullOrWhiteSpace(search)) { <a class="search-clear" asp-action="Index" asp-route-FechaDesde="@fechaDesde" asp-route-FechaHasta="@fechaHasta" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a> }</label>
+<label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label><label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label>
+<input type="hidden" name="PageSize" value="@pageSize" />
+<button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+<button class="btn-export" type="button" id="exportCobrosClientesCsv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>Exportar</button>
+</form><div class="comprobantes-list admin-docs-list"><div class="comprobantes-head admin-docs-head"><span>Cobro</span><span>Cliente</span><span>Referencia</span><span>Monto</span><span>Estado</span><span>Acciones</span></div>@if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay cobros</strong><span>Ajusta los filtros para encontrar cobros de clientes.</span></div> } else { @foreach (var item in Model.Items) { <article class="comprobante-row admin-docs-row" data-csv="@item.FechaCobro.ToString("dd/MM/yyyy")|@item.Cliente|@item.Referencia|@item.MedioPago|@item.Monto.ToString("N2")|@EstadoCobroTexto(item.Estado)"><div class="comprobante-main"><span class="comprobante-icon @(item.Estado == CobroClienteEstado.ACTIVO ? "success" : "danger")"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 7v10M9 10.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.3 2-3 2-3 .6-3 2 1.3 2 3 2 3-.6 3-2" /></svg></span><span class="comprobante-copy"><strong>@item.FechaCobro.ToString("dd/MM/yyyy")</strong><small>@item.MedioPago</small></span></div><div class="comprobante-client"><strong>@item.Cliente</strong><small>Cliente</small></div><div class="comprobante-client"><strong>@item.Referencia</strong><small>@item.Observacion</small></div><div class="comprobante-total">S/ @item.Monto.ToString("N2")</div><div class="comprobante-sunat"><span class="pill @EstadoCobroClass(item.Estado)">@EstadoCobroTexto(item.Estado)</span></div><div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel">@if (item.Estado == CobroClienteEstado.ACTIVO) { <form asp-action="Anular" method="post" onsubmit="return solicitarMotivoAnulacionCobro(this);">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.CobroClienteId" /><input type="hidden" name="motivo" value="" /><button type="submit" class="danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg> Anular cobro</button></form> }</div></details></div></article> } }</div>@await Html.PartialAsync("_Pager", Model)</section><script>
+document.querySelectorAll('.row-actions-menu').forEach(menu => { menu.addEventListener('toggle', () => { if (!menu.open) return; document.querySelectorAll('.row-actions-menu[open]').forEach(other => { if (other !== menu) other.removeAttribute('open'); }); }); });
+document.addEventListener('click', event => { if (event.target.closest('.row-actions-menu')) return; document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open')); });
+document.getElementById('exportCobrosClientesCsv')?.addEventListener('click', () => { const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]')); const header = ["Fecha","Cliente","Referencia","Medio pago","Monto","Estado"]; const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')); const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'cobros-clientes.csv'; link.click(); URL.revokeObjectURL(url); });
+</script><script>function solicitarMotivoAnulacionCobro(form) { const motivo = prompt('Ingrese el motivo de anulación del cobro:'); if (motivo === null) return false; const motivoLimpio = motivo.trim(); if (!motivoLimpio) { alert('Debe ingresar el motivo de anulación.'); return false; } form.querySelector("input[name='motivo']").value = motivoLimpio; return confirm('Confirmar anulación del cobro?'); }</script>

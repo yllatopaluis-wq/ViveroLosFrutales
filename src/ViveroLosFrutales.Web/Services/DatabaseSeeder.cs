@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Security;
 using ViveroLosFrutales.Infrastructure.Data;
 using ViveroLosFrutales.Infrastructure.Identity;
 
@@ -84,114 +85,116 @@ public static class DatabaseSeeder
     private static async Task EnsureDatabaseSchemaAsync(ApplicationDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync(@"
-IF OBJECT_ID('dbo.Empresa', 'U') IS NOT NULL AND COL_LENGTH('dbo.Empresa', 'Direccion') IS NULL
+IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'Direccion') IS NULL
 BEGIN
-    ALTER TABLE dbo.Empresa ADD Direccion nvarchar(max) NOT NULL CONSTRAINT DF_Empresa_Direccion DEFAULT N'';
+    ALTER TABLE erp.Empresa ADD Direccion nvarchar(max) NOT NULL CONSTRAINT DF_Empresa_Direccion DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Empresa', 'U') IS NOT NULL AND COL_LENGTH('dbo.Empresa', 'LogoPath') IS NULL
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'LogoPath') IS NULL
 BEGIN
-    ALTER TABLE dbo.Empresa ADD LogoPath nvarchar(500) NOT NULL CONSTRAINT DF_Empresa_LogoPath DEFAULT N'';
+    ALTER TABLE erp.Empresa ADD LogoPath nvarchar(500) NOT NULL CONSTRAINT DF_Empresa_LogoPath DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Empresa', 'U') IS NOT NULL AND COL_LENGTH('dbo.Empresa', 'SerieNotaCredito') IS NULL
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'SerieNotaCredito') IS NULL
 BEGIN
-    ALTER TABLE dbo.Empresa ADD SerieNotaCredito nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCredito DEFAULT N'NC001';
+    ALTER TABLE erp.Empresa ADD SerieNotaCredito nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCredito DEFAULT N'NC001';
 END;
-IF OBJECT_ID('dbo.Empresa', 'U') IS NOT NULL AND COL_LENGTH('dbo.Empresa', 'SerieNotaCreditoFactura') IS NULL
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'SerieNotaCreditoFactura') IS NULL
 BEGIN
-    ALTER TABLE dbo.Empresa ADD SerieNotaCreditoFactura nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCreditoFactura DEFAULT N'F101';
+    ALTER TABLE erp.Empresa ADD SerieNotaCreditoFactura nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCreditoFactura DEFAULT N'F101';
 END;
-IF OBJECT_ID('dbo.Empresa', 'U') IS NOT NULL AND COL_LENGTH('dbo.Empresa', 'SerieNotaCreditoBoleta') IS NULL
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'SerieNotaCreditoBoleta') IS NULL
 BEGIN
-    ALTER TABLE dbo.Empresa ADD SerieNotaCreditoBoleta nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCreditoBoleta DEFAULT N'B101';
+    ALTER TABLE erp.Empresa ADD SerieNotaCreditoBoleta nvarchar(10) NOT NULL CONSTRAINT DF_Empresa_SerieNotaCreditoBoleta DEFAULT N'B101';
 END;
-IF OBJECT_ID('dbo.Cliente', 'U') IS NOT NULL AND COL_LENGTH('dbo.Cliente', 'Direccion') IS NULL
+IF OBJECT_ID('erp.Cliente', 'U') IS NOT NULL AND COL_LENGTH('erp.Cliente', 'Direccion') IS NULL
 BEGIN
-    ALTER TABLE dbo.Cliente ADD Direccion nvarchar(max) NOT NULL CONSTRAINT DF_Cliente_Direccion DEFAULT N'';
+    ALTER TABLE erp.Cliente ADD Direccion nvarchar(max) NOT NULL CONSTRAINT DF_Cliente_Direccion DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'Direccion') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'Direccion') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD Direccion nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_Direccion DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD Direccion nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_Direccion DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaRazonSocial') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaRazonSocial') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaRazonSocial nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaRazonSocial DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaRazonSocial nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaRazonSocial DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaNombreComercial') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaNombreComercial') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaNombreComercial nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaNombreComercial DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaNombreComercial nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaNombreComercial DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaRuc') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaRuc') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaRuc nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaRuc DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaRuc nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaRuc DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaDireccion') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaDireccion') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaDireccion nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaDireccion DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaDireccion nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaDireccion DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaTelefono') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaTelefono') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaTelefono nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaTelefono DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaTelefono nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaTelefono DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'EmpresaEmail') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'EmpresaEmail') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD EmpresaEmail nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaEmail DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD EmpresaEmail nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_EmpresaEmail DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'CondicionesVenta') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'CondicionesVenta') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD CondicionesVenta nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_CondicionesVenta DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD CondicionesVenta nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_CondicionesVenta DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'CaracteristicasTecnicas') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'CaracteristicasTecnicas') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD CaracteristicasTecnicas nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_CaracteristicasTecnicas DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD CaracteristicasTecnicas nvarchar(max) NOT NULL CONSTRAINT DF_Comprobante_CaracteristicasTecnicas DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'DocumentoImpreso') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'DocumentoImpreso') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD DocumentoImpreso bit NOT NULL CONSTRAINT DF_Comprobante_DocumentoImpreso DEFAULT CAST(0 AS bit);
+    ALTER TABLE erp.Comprobante ADD DocumentoImpreso bit NOT NULL CONSTRAINT DF_Comprobante_DocumentoImpreso DEFAULT CAST(0 AS bit);
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'DocumentoImpreso') IS NOT NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'DocumentoImpreso') IS NOT NULL
 BEGIN
-    UPDATE dbo.Comprobante
+    UPDATE erp.Comprobante
     SET DocumentoImpreso = CAST(1 AS bit)
     WHERE DocumentoImpreso = CAST(0 AS bit)
       AND NULLIF(LTRIM(RTRIM(PdfUrl)), N'') IS NOT NULL;
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'ComprobanteReferenciaId') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'ComprobanteReferenciaId') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD ComprobanteReferenciaId int NULL;
+    ALTER TABLE erp.Comprobante ADD ComprobanteReferenciaId int NULL;
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'MotivoNotaCredito') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'MotivoNotaCredito') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD MotivoNotaCredito nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_MotivoNotaCredito DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD MotivoNotaCredito nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_MotivoNotaCredito DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'MotivoAnulacion') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'MotivoAnulacion') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_MotivoAnulacion DEFAULT N'';
+    ALTER TABLE erp.Comprobante ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Comprobante_MotivoAnulacion DEFAULT N'';
 END;
-IF OBJECT_ID('dbo.MotivoNotaCredito', 'U') IS NULL
+IF OBJECT_ID('erp.MotivoNotaCredito', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.MotivoNotaCredito (
+    CREATE TABLE erp.MotivoNotaCredito (
         MotivoNotaCreditoId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_MotivoNotaCredito PRIMARY KEY,
         Nombre nvarchar(150) NOT NULL,
         FechaRegistro datetime2 NOT NULL CONSTRAINT DF_MotivoNotaCredito_FechaRegistro DEFAULT SYSUTCDATETIME(),
         UsuarioRegistro nvarchar(max) NOT NULL CONSTRAINT DF_MotivoNotaCredito_UsuarioRegistro DEFAULT N'system',
         Estado int NOT NULL CONSTRAINT DF_MotivoNotaCredito_Estado DEFAULT 1
     );
-    CREATE UNIQUE INDEX UX_MotivoNotaCredito_Nombre ON dbo.MotivoNotaCredito(Nombre);
+    CREATE UNIQUE INDEX UX_MotivoNotaCredito_Nombre ON erp.MotivoNotaCredito(Nombre);
 END;
-IF OBJECT_ID('dbo.MotivoNotaCredito', 'U') IS NOT NULL
+IF OBJECT_ID('erp.MotivoNotaCredito', 'U') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.MotivoNotaCredito (Nombre, UsuarioRegistro, Estado)
+    INSERT INTO erp.MotivoNotaCredito (Nombre, UsuarioRegistro, Estado)
     SELECT v.Nombre, N'system', 1
     FROM (VALUES (N'Anulacion de la operacion'), (N'Error en datos del comprobante'), (N'Devolucion total'), (N'Descuento posterior')) v(Nombre)
-    WHERE NOT EXISTS (SELECT 1 FROM dbo.MotivoNotaCredito m WHERE m.Nombre = v.Nombre);
+    WHERE NOT EXISTS (SELECT 1 FROM erp.MotivoNotaCredito m WHERE m.Nombre = v.Nombre);
 END;
-IF OBJECT_ID('dbo.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('dbo.Comprobante', 'MotivoNotaCreditoId') IS NULL
+IF OBJECT_ID('erp.Comprobante', 'U') IS NOT NULL AND COL_LENGTH('erp.Comprobante', 'MotivoNotaCreditoId') IS NULL
 BEGIN
-    ALTER TABLE dbo.Comprobante ADD MotivoNotaCreditoId int NULL;
+    ALTER TABLE erp.Comprobante ADD MotivoNotaCreditoId int NULL;
 END;
-IF OBJECT_ID('dbo.Devolucion', 'U') IS NULL
+IF OBJECT_ID('erp.Devolucion', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.Devolucion (
+    CREATE TABLE erp.Devolucion (
         DevolucionId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_Devolucion PRIMARY KEY,
         EmpresaId int NOT NULL,
         TipoTercero int NOT NULL,
@@ -215,46 +218,48 @@ BEGIN
         FechaModificacion datetime2 NULL,
         UsuarioModificacion nvarchar(120) NOT NULL CONSTRAINT DF_Devolucion_UsuarioModificacion DEFAULT N''
     );
-    CREATE INDEX IX_Devolucion_Empresa_Fecha ON dbo.Devolucion(EmpresaId, FechaGeneracion);
-    CREATE INDEX IX_Devolucion_Empresa_TipoTercero ON dbo.Devolucion(EmpresaId, TipoTercero);
-    CREATE INDEX IX_Devolucion_Empresa_Cliente ON dbo.Devolucion(EmpresaId, ClienteId);
-    CREATE INDEX IX_Devolucion_Empresa_Proveedor ON dbo.Devolucion(EmpresaId, ProveedorId);
-    CREATE INDEX IX_Devolucion_Empresa_NotaPedido ON dbo.Devolucion(EmpresaId, NotaPedidoId);
-    CREATE INDEX IX_Devolucion_Empresa_Comprobante ON dbo.Devolucion(EmpresaId, ComprobanteId);
-    CREATE INDEX IX_Devolucion_Empresa_NotaCredito ON dbo.Devolucion(EmpresaId, NotaCreditoId);
-    CREATE INDEX IX_Devolucion_Empresa_Compra ON dbo.Devolucion(EmpresaId, CompraId);
+    CREATE INDEX IX_Devolucion_Empresa_Fecha ON erp.Devolucion(EmpresaId, FechaGeneracion);
+    CREATE INDEX IX_Devolucion_Empresa_TipoTercero ON erp.Devolucion(EmpresaId, TipoTercero);
+    CREATE INDEX IX_Devolucion_Empresa_Cliente ON erp.Devolucion(EmpresaId, ClienteId);
+    CREATE INDEX IX_Devolucion_Empresa_Proveedor ON erp.Devolucion(EmpresaId, ProveedorId);
+    CREATE INDEX IX_Devolucion_Empresa_NotaPedido ON erp.Devolucion(EmpresaId, NotaPedidoId);
+    CREATE INDEX IX_Devolucion_Empresa_Comprobante ON erp.Devolucion(EmpresaId, ComprobanteId);
+    CREATE INDEX IX_Devolucion_Empresa_NotaCredito ON erp.Devolucion(EmpresaId, NotaCreditoId);
+    CREATE INDEX IX_Devolucion_Empresa_Compra ON erp.Devolucion(EmpresaId, CompraId);
 END;
-IF OBJECT_ID('dbo.NubefactOperacion', 'U') IS NOT NULL AND COL_LENGTH('dbo.NubefactOperacion', 'SolicitudJson') IS NULL
+IF OBJECT_ID('erp.NubefactOperacion', 'U') IS NOT NULL AND COL_LENGTH('erp.NubefactOperacion', 'SolicitudJson') IS NULL
 BEGIN
-    ALTER TABLE dbo.NubefactOperacion ADD SolicitudJson nvarchar(max) NOT NULL CONSTRAINT DF_NubefactOperacion_SolicitudJson DEFAULT N'';
+    ALTER TABLE erp.NubefactOperacion ADD SolicitudJson nvarchar(max) NOT NULL CONSTRAINT DF_NubefactOperacion_SolicitudJson DEFAULT N'';
 END;");
         await db.Database.ExecuteSqlRawAsync(@"
-IF OBJECT_ID('dbo.Compra', 'U') IS NOT NULL
+IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.Compra', 'U') IS NOT NULL
 BEGIN
-    IF COL_LENGTH('dbo.Compra', 'TipoDocumento') IS NULL ALTER TABLE dbo.Compra ADD TipoDocumento int NOT NULL CONSTRAINT DF_Compra_TipoDocumento DEFAULT 1;
-    IF COL_LENGTH('dbo.Compra', 'Serie') IS NULL ALTER TABLE dbo.Compra ADD Serie nvarchar(20) NOT NULL CONSTRAINT DF_Compra_Serie DEFAULT N'';
-    IF COL_LENGTH('dbo.Compra', 'Numero') IS NULL ALTER TABLE dbo.Compra ADD Numero nvarchar(30) NOT NULL CONSTRAINT DF_Compra_Numero DEFAULT N'';
-    IF COL_LENGTH('dbo.Compra', 'FormaPago') IS NULL ALTER TABLE dbo.Compra ADD FormaPago int NOT NULL CONSTRAINT DF_Compra_FormaPago DEFAULT 2;
-    IF COL_LENGTH('dbo.Compra', 'Observacion') IS NULL ALTER TABLE dbo.Compra ADD Observacion nvarchar(500) NOT NULL CONSTRAINT DF_Compra_Observacion DEFAULT N'';
-    IF COL_LENGTH('dbo.Compra', 'TotalPagado') IS NULL ALTER TABLE dbo.Compra ADD TotalPagado decimal(18,2) NOT NULL CONSTRAINT DF_Compra_TotalPagado DEFAULT 0;
-    IF COL_LENGTH('dbo.Compra', 'SaldoPendiente') IS NULL ALTER TABLE dbo.Compra ADD SaldoPendiente decimal(18,2) NOT NULL CONSTRAINT DF_Compra_SaldoPendiente DEFAULT 0;
-    IF COL_LENGTH('dbo.Compra', 'EstadoPago') IS NULL ALTER TABLE dbo.Compra ADD EstadoPago int NOT NULL CONSTRAINT DF_Compra_EstadoPago DEFAULT 1;
-    IF COL_LENGTH('dbo.Compra', 'EstadoDocumento') IS NULL ALTER TABLE dbo.Compra ADD EstadoDocumento int NOT NULL CONSTRAINT DF_Compra_EstadoDocumento DEFAULT 1;
-    IF COL_LENGTH('dbo.Compra', 'FechaAnulacion') IS NULL ALTER TABLE dbo.Compra ADD FechaAnulacion datetime2 NULL;
-    IF COL_LENGTH('dbo.Compra', 'MotivoAnulacion') IS NULL ALTER TABLE dbo.Compra ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Compra_MotivoAnulacion DEFAULT N'';
-    IF COL_LENGTH('dbo.Compra', 'UsuarioAnulacion') IS NULL ALTER TABLE dbo.Compra ADD UsuarioAnulacion nvarchar(120) NOT NULL CONSTRAINT DF_Compra_UsuarioAnulacion DEFAULT N'';
-    EXEC sp_executesql N'UPDATE dbo.Compra SET SaldoPendiente = CASE WHEN SaldoPendiente = 0 AND TotalPagado = 0 THEN Total ELSE SaldoPendiente END WHERE EstadoPago = 1;';
+    IF COL_LENGTH('erp.Compra', 'TipoDocumento') IS NULL ALTER TABLE erp.Compra ADD TipoDocumento int NOT NULL CONSTRAINT DF_Compra_TipoDocumento DEFAULT 1;
+    IF COL_LENGTH('erp.Compra', 'Serie') IS NULL ALTER TABLE erp.Compra ADD Serie nvarchar(20) NOT NULL CONSTRAINT DF_Compra_Serie DEFAULT N'';
+    IF COL_LENGTH('erp.Compra', 'Numero') IS NULL ALTER TABLE erp.Compra ADD Numero nvarchar(30) NOT NULL CONSTRAINT DF_Compra_Numero DEFAULT N'';
+    IF COL_LENGTH('erp.Compra', 'FormaPago') IS NULL ALTER TABLE erp.Compra ADD FormaPago int NOT NULL CONSTRAINT DF_Compra_FormaPago DEFAULT 2;
+    IF COL_LENGTH('erp.Compra', 'Observacion') IS NULL ALTER TABLE erp.Compra ADD Observacion nvarchar(500) NOT NULL CONSTRAINT DF_Compra_Observacion DEFAULT N'';
+    IF COL_LENGTH('erp.Compra', 'TotalPagado') IS NULL ALTER TABLE erp.Compra ADD TotalPagado decimal(18,2) NOT NULL CONSTRAINT DF_Compra_TotalPagado DEFAULT 0;
+    IF COL_LENGTH('erp.Compra', 'SaldoPendiente') IS NULL ALTER TABLE erp.Compra ADD SaldoPendiente decimal(18,2) NOT NULL CONSTRAINT DF_Compra_SaldoPendiente DEFAULT 0;
+    IF COL_LENGTH('erp.Compra', 'EstadoPago') IS NULL ALTER TABLE erp.Compra ADD EstadoPago int NOT NULL CONSTRAINT DF_Compra_EstadoPago DEFAULT 1;
+    IF COL_LENGTH('erp.Compra', 'EstadoDocumento') IS NULL ALTER TABLE erp.Compra ADD EstadoDocumento int NOT NULL CONSTRAINT DF_Compra_EstadoDocumento DEFAULT 1;
+    IF COL_LENGTH('erp.Compra', 'FechaAnulacion') IS NULL ALTER TABLE erp.Compra ADD FechaAnulacion datetime2 NULL;
+    IF COL_LENGTH('erp.Compra', 'MotivoAnulacion') IS NULL ALTER TABLE erp.Compra ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Compra_MotivoAnulacion DEFAULT N'';
+    IF COL_LENGTH('erp.Compra', 'UsuarioAnulacion') IS NULL ALTER TABLE erp.Compra ADD UsuarioAnulacion nvarchar(120) NOT NULL CONSTRAINT DF_Compra_UsuarioAnulacion DEFAULT N'';
+    EXEC sp_executesql N'UPDATE erp.Compra SET SaldoPendiente = CASE WHEN SaldoPendiente = 0 AND TotalPagado = 0 THEN Total ELSE SaldoPendiente END WHERE EstadoPago = 1;';
 END;
-IF OBJECT_ID('dbo.CompraDetalle', 'U') IS NOT NULL
+IF OBJECT_ID('erp.CompraDetalle', 'U') IS NOT NULL
 BEGIN
-    IF COL_LENGTH('dbo.CompraDetalle', 'UnidadMedida') IS NULL ALTER TABLE dbo.CompraDetalle ADD UnidadMedida nvarchar(20) NOT NULL CONSTRAINT DF_CompraDetalle_UnidadMedida DEFAULT N'';
-    IF COL_LENGTH('dbo.CompraDetalle', 'Igv') IS NULL ALTER TABLE dbo.CompraDetalle ADD Igv decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_Igv DEFAULT 0;
-    IF COL_LENGTH('dbo.CompraDetalle', 'TotalLinea') IS NULL ALTER TABLE dbo.CompraDetalle ADD TotalLinea decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_TotalLinea DEFAULT 0;
-    EXEC sp_executesql N'UPDATE dbo.CompraDetalle SET TotalLinea = Importe + Igv WHERE TotalLinea = 0;';
+    IF COL_LENGTH('erp.CompraDetalle', 'UnidadMedida') IS NULL ALTER TABLE erp.CompraDetalle ADD UnidadMedida nvarchar(20) NOT NULL CONSTRAINT DF_CompraDetalle_UnidadMedida DEFAULT N'';
+    IF COL_LENGTH('erp.CompraDetalle', 'Igv') IS NULL ALTER TABLE erp.CompraDetalle ADD Igv decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_Igv DEFAULT 0;
+    IF COL_LENGTH('erp.CompraDetalle', 'TotalLinea') IS NULL ALTER TABLE erp.CompraDetalle ADD TotalLinea decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_TotalLinea DEFAULT 0;
+    EXEC sp_executesql N'UPDATE erp.CompraDetalle SET TotalLinea = Importe + Igv WHERE TotalLinea = 0;';
 END;
-IF OBJECT_ID('dbo.PagoProveedor', 'U') IS NULL
+IF OBJECT_ID('erp.PagoProveedor', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.PagoProveedor (
+    CREATE TABLE erp.PagoProveedor (
         PagoProveedorId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PagoProveedor PRIMARY KEY,
         EmpresaId int NOT NULL,
         ProveedorId int NOT NULL,
@@ -271,137 +276,173 @@ BEGIN
         UsuarioRegistro nvarchar(max) NOT NULL CONSTRAINT DF_PagoProveedor_UsuarioRegistro DEFAULT N'system',
         Estado int NOT NULL CONSTRAINT DF_PagoProveedor_Estado DEFAULT 1
     );
-    CREATE INDEX IX_PagoProveedor_Empresa_Proveedor_Fecha ON dbo.PagoProveedor(EmpresaId, ProveedorId, FechaPago);
-    CREATE INDEX IX_PagoProveedor_Empresa_Compra ON dbo.PagoProveedor(EmpresaId, CompraId);
+    CREATE INDEX IX_PagoProveedor_Empresa_Proveedor_Fecha ON erp.PagoProveedor(EmpresaId, ProveedorId, FechaPago);
+    CREATE INDEX IX_PagoProveedor_Empresa_Compra ON erp.PagoProveedor(EmpresaId, CompraId);
 END;
-IF OBJECT_ID('dbo.MovimientoCaja', 'U') IS NOT NULL
+IF OBJECT_ID('erp.MovimientoCaja', 'U') IS NOT NULL
 BEGIN
-    IF COL_LENGTH('dbo.MovimientoCaja', 'ClienteId') IS NULL ALTER TABLE dbo.MovimientoCaja ADD ClienteId int NULL;
-    IF COL_LENGTH('dbo.MovimientoCaja', 'ProveedorId') IS NULL ALTER TABLE dbo.MovimientoCaja ADD ProveedorId int NULL;
+    IF COL_LENGTH('erp.MovimientoCaja', 'ClienteId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ClienteId int NULL;
+    IF COL_LENGTH('erp.MovimientoCaja', 'ProveedorId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ProveedorId int NULL;
 END;
-IF OBJECT_ID('dbo.CategoriaGasto', 'U') IS NULL
+IF OBJECT_ID('erp.CategoriaGasto', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.CategoriaGasto (
+    CREATE TABLE erp.CategoriaGasto (
         CategoriaGastoId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CategoriaGasto PRIMARY KEY,
         EmpresaId int NOT NULL,
         Nombre nvarchar(100) NOT NULL,
         FechaRegistro datetime2 NOT NULL CONSTRAINT DF_CategoriaGasto_FechaRegistro DEFAULT SYSUTCDATETIME(),
         UsuarioRegistro nvarchar(max) NOT NULL CONSTRAINT DF_CategoriaGasto_UsuarioRegistro DEFAULT N'system',
         Estado int NOT NULL CONSTRAINT DF_CategoriaGasto_Estado DEFAULT 1,
-        CONSTRAINT FK_CategoriaGasto_Empresa FOREIGN KEY (EmpresaId) REFERENCES dbo.Empresa(EmpresaId)
+        CONSTRAINT FK_CategoriaGasto_Empresa FOREIGN KEY (EmpresaId) REFERENCES erp.Empresa(EmpresaId)
     );
-    CREATE UNIQUE INDEX UX_CategoriaGasto_Empresa_Nombre ON dbo.CategoriaGasto(EmpresaId, Nombre);
+    CREATE UNIQUE INDEX UX_CategoriaGasto_Empresa_Nombre ON erp.CategoriaGasto(EmpresaId, Nombre);
 END;
-IF OBJECT_ID('dbo.CategoriaIngreso', 'U') IS NULL
+IF OBJECT_ID('erp.CategoriaIngreso', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.CategoriaIngreso (
+    CREATE TABLE erp.CategoriaIngreso (
         CategoriaIngresoId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_CategoriaIngreso PRIMARY KEY,
         EmpresaId int NOT NULL,
         Nombre nvarchar(100) NOT NULL,
         FechaRegistro datetime2 NOT NULL CONSTRAINT DF_CategoriaIngreso_FechaRegistro DEFAULT SYSUTCDATETIME(),
         UsuarioRegistro nvarchar(max) NOT NULL CONSTRAINT DF_CategoriaIngreso_UsuarioRegistro DEFAULT N'system',
         Estado int NOT NULL CONSTRAINT DF_CategoriaIngreso_Estado DEFAULT 1,
-        CONSTRAINT FK_CategoriaIngreso_Empresa FOREIGN KEY (EmpresaId) REFERENCES dbo.Empresa(EmpresaId)
+        CONSTRAINT FK_CategoriaIngreso_Empresa FOREIGN KEY (EmpresaId) REFERENCES erp.Empresa(EmpresaId)
     );
-    CREATE UNIQUE INDEX UX_CategoriaIngreso_Empresa_Nombre ON dbo.CategoriaIngreso(EmpresaId, Nombre);
+    CREATE UNIQUE INDEX UX_CategoriaIngreso_Empresa_Nombre ON erp.CategoriaIngreso(EmpresaId, Nombre);
 END;
-IF OBJECT_ID('dbo.Gasto', 'U') IS NOT NULL
+IF OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
 BEGIN
-    IF COL_LENGTH('dbo.Gasto', 'CategoriaGastoId') IS NULL ALTER TABLE dbo.Gasto ADD CategoriaGastoId int NULL;
-    IF COL_LENGTH('dbo.Gasto', 'MovimientoCajaId') IS NULL ALTER TABLE dbo.Gasto ADD MovimientoCajaId int NULL;
-    IF COL_LENGTH('dbo.Gasto', 'MotivoAnulacion') IS NULL ALTER TABLE dbo.Gasto ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Gasto_MotivoAnulacion DEFAULT N'';
-    IF COL_LENGTH('dbo.Gasto', 'FechaAnulacion') IS NULL ALTER TABLE dbo.Gasto ADD FechaAnulacion datetime2 NULL;
+    IF COL_LENGTH('erp.Gasto', 'CategoriaGastoId') IS NULL ALTER TABLE erp.Gasto ADD CategoriaGastoId int NULL;
+    IF COL_LENGTH('erp.Gasto', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Gasto ADD MovimientoCajaId int NULL;
+    IF COL_LENGTH('erp.Gasto', 'MotivoAnulacion') IS NULL ALTER TABLE erp.Gasto ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Gasto_MotivoAnulacion DEFAULT N'';
+    IF COL_LENGTH('erp.Gasto', 'FechaAnulacion') IS NULL ALTER TABLE erp.Gasto ADD FechaAnulacion datetime2 NULL;
 END;
-IF OBJECT_ID('dbo.Ingreso', 'U') IS NOT NULL
+IF OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
 BEGIN
-    IF COL_LENGTH('dbo.Ingreso', 'CategoriaIngresoId') IS NULL ALTER TABLE dbo.Ingreso ADD CategoriaIngresoId int NULL;
-    IF COL_LENGTH('dbo.Ingreso', 'MedioPago') IS NULL ALTER TABLE dbo.Ingreso ADD MedioPago nvarchar(80) NOT NULL CONSTRAINT DF_Ingreso_MedioPago DEFAULT N'EFECTIVO';
-    IF COL_LENGTH('dbo.Ingreso', 'MovimientoCajaId') IS NULL ALTER TABLE dbo.Ingreso ADD MovimientoCajaId int NULL;
-    IF COL_LENGTH('dbo.Ingreso', 'MotivoAnulacion') IS NULL ALTER TABLE dbo.Ingreso ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Ingreso_MotivoAnulacion DEFAULT N'';
-    IF COL_LENGTH('dbo.Ingreso', 'FechaAnulacion') IS NULL ALTER TABLE dbo.Ingreso ADD FechaAnulacion datetime2 NULL;
+    IF COL_LENGTH('erp.Ingreso', 'CategoriaIngresoId') IS NULL ALTER TABLE erp.Ingreso ADD CategoriaIngresoId int NULL;
+    IF COL_LENGTH('erp.Ingreso', 'MedioPago') IS NULL ALTER TABLE erp.Ingreso ADD MedioPago nvarchar(80) NOT NULL CONSTRAINT DF_Ingreso_MedioPago DEFAULT N'EFECTIVO';
+    IF COL_LENGTH('erp.Ingreso', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Ingreso ADD MovimientoCajaId int NULL;
+    IF COL_LENGTH('erp.Ingreso', 'MotivoAnulacion') IS NULL ALTER TABLE erp.Ingreso ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Ingreso_MotivoAnulacion DEFAULT N'';
+    IF COL_LENGTH('erp.Ingreso', 'FechaAnulacion') IS NULL ALTER TABLE erp.Ingreso ADD FechaAnulacion datetime2 NULL;
 END;");
 
         await db.Database.ExecuteSqlRawAsync(@"
+IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
 DECLARE @CategoriasGasto TABLE (Nombre nvarchar(100) NOT NULL);
 INSERT INTO @CategoriasGasto (Nombre) VALUES
 (N'MOVILIDAD'), (N'COMBUSTIBLE'), (N'LUZ'), (N'ALQUILER'), (N'INTERNET'), (N'MANTENIMIENTO'),
 (N'HERRAMIENTAS MENORES'), (N'VIATICOS'), (N'COMISION'), (N'CAMPO PALTA'), (N'PAGO PERSONAL'), (N'PAPELERIA');
-INSERT INTO dbo.CategoriaGasto (EmpresaId, Nombre, FechaRegistro, UsuarioRegistro, Estado)
+INSERT INTO erp.CategoriaGasto (EmpresaId, Nombre, FechaRegistro, UsuarioRegistro, Estado)
 SELECT e.EmpresaId, c.Nombre, SYSUTCDATETIME(), N'system', 1
-FROM dbo.Empresa e
+FROM erp.Empresa e
 CROSS JOIN @CategoriasGasto c
 WHERE NOT EXISTS (
-    SELECT 1 FROM dbo.CategoriaGasto x WHERE x.EmpresaId = e.EmpresaId AND x.Nombre = c.Nombre
+    SELECT 1 FROM erp.CategoriaGasto x WHERE x.EmpresaId = e.EmpresaId AND x.Nombre = c.Nombre
 );
 
 DECLARE @CategoriasIngreso TABLE (Nombre nvarchar(100) NOT NULL);
 INSERT INTO @CategoriasIngreso (Nombre) VALUES
 (N'PRESTAMO RECIBIDO'), (N'APORTE DE SOCIOS'), (N'ALQUILER'), (N'EMBALAJE'), (N'FLETE');
-INSERT INTO dbo.CategoriaIngreso (EmpresaId, Nombre, FechaRegistro, UsuarioRegistro, Estado)
+INSERT INTO erp.CategoriaIngreso (EmpresaId, Nombre, FechaRegistro, UsuarioRegistro, Estado)
 SELECT e.EmpresaId, c.Nombre, SYSUTCDATETIME(), N'system', 1
-FROM dbo.Empresa e
+FROM erp.Empresa e
 CROSS JOIN @CategoriasIngreso c
 WHERE NOT EXISTS (
-    SELECT 1 FROM dbo.CategoriaIngreso x WHERE x.EmpresaId = e.EmpresaId AND x.Nombre = c.Nombre
+    SELECT 1 FROM erp.CategoriaIngreso x WHERE x.EmpresaId = e.EmpresaId AND x.Nombre = c.Nombre
 );
 
-IF OBJECT_ID('dbo.MovimientoCaja', 'U') IS NOT NULL AND OBJECT_ID('dbo.Gasto', 'U') IS NOT NULL
+IF OBJECT_ID('erp.MovimientoCaja', 'U') IS NOT NULL AND OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.MovimientoCaja (EmpresaId, TipoMovimiento, Origen, OrigenId, Fecha, Monto, MedioPago, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
+    INSERT INTO erp.MovimientoCaja (EmpresaId, TipoMovimiento, Origen, OrigenId, Fecha, Monto, MedioPago, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
     SELECT g.EmpresaId, 2, 3, g.GastoId, g.Fecha, g.Importe, g.MedioPago, g.Descripcion, g.Estado, SYSUTCDATETIME(), N'backfill'
-    FROM dbo.Gasto g
+    FROM erp.Gasto g
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.MovimientoCaja m WHERE m.EmpresaId = g.EmpresaId AND m.Origen = 3 AND m.OrigenId = g.GastoId
+        SELECT 1 FROM erp.MovimientoCaja m WHERE m.EmpresaId = g.EmpresaId AND m.Origen = 3 AND m.OrigenId = g.GastoId
     );
 
     UPDATE g
     SET MovimientoCajaId = m.MovimientoCajaId
-    FROM dbo.Gasto g
-    INNER JOIN dbo.MovimientoCaja m ON m.EmpresaId = g.EmpresaId AND m.Origen = 3 AND m.OrigenId = g.GastoId
+    FROM erp.Gasto g
+    INNER JOIN erp.MovimientoCaja m ON m.EmpresaId = g.EmpresaId AND m.Origen = 3 AND m.OrigenId = g.GastoId
     WHERE g.MovimientoCajaId IS NULL;
 END;
 
-IF OBJECT_ID('dbo.MovimientoCaja', 'U') IS NOT NULL AND OBJECT_ID('dbo.Ingreso', 'U') IS NOT NULL
+IF OBJECT_ID('erp.MovimientoCaja', 'U') IS NOT NULL AND OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
 BEGIN
-    INSERT INTO dbo.MovimientoCaja (EmpresaId, TipoMovimiento, Origen, OrigenId, Fecha, Monto, MedioPago, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
+    INSERT INTO erp.MovimientoCaja (EmpresaId, TipoMovimiento, Origen, OrigenId, Fecha, Monto, MedioPago, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
     SELECT i.EmpresaId, 1, 6, i.IngresoId, i.Fecha, i.Importe, i.MedioPago, i.Descripcion, i.Estado, SYSUTCDATETIME(), N'backfill'
-    FROM dbo.Ingreso i
+    FROM erp.Ingreso i
     WHERE NOT EXISTS (
-        SELECT 1 FROM dbo.MovimientoCaja m WHERE m.EmpresaId = i.EmpresaId AND m.Origen = 6 AND m.OrigenId = i.IngresoId
+        SELECT 1 FROM erp.MovimientoCaja m WHERE m.EmpresaId = i.EmpresaId AND m.Origen = 6 AND m.OrigenId = i.IngresoId
     );
 
     UPDATE i
     SET MovimientoCajaId = m.MovimientoCajaId
-    FROM dbo.Ingreso i
-    INNER JOIN dbo.MovimientoCaja m ON m.EmpresaId = i.EmpresaId AND m.Origen = 6 AND m.OrigenId = i.IngresoId
+    FROM erp.Ingreso i
+    INNER JOIN erp.MovimientoCaja m ON m.EmpresaId = i.EmpresaId AND m.Origen = 6 AND m.OrigenId = i.IngresoId
     WHERE i.MovimientoCajaId IS NULL;
+END;");
+
+        await db.Database.ExecuteSqlRawAsync(@"
+IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.ErrorAplicacion', 'U') IS NULL
+BEGIN
+    CREATE TABLE erp.ErrorAplicacion (
+        ErrorAplicacionId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_ErrorAplicacion PRIMARY KEY,
+        EmpresaId int NULL,
+        FechaUtc datetime2 NOT NULL,
+        Usuario nvarchar(150) NOT NULL CONSTRAINT DF_ErrorAplicacion_Usuario DEFAULT N'',
+        Ruta nvarchar(500) NOT NULL CONSTRAINT DF_ErrorAplicacion_Ruta DEFAULT N'',
+        MetodoHttp nvarchar(10) NOT NULL CONSTRAINT DF_ErrorAplicacion_MetodoHttp DEFAULT N'',
+        TipoExcepcion nvarchar(300) NOT NULL CONSTRAINT DF_ErrorAplicacion_TipoExcepcion DEFAULT N'',
+        Mensaje nvarchar(2000) NOT NULL CONSTRAINT DF_ErrorAplicacion_Mensaje DEFAULT N'',
+        Detalle nvarchar(max) NOT NULL CONSTRAINT DF_ErrorAplicacion_Detalle DEFAULT N'',
+        Identificador nvarchar(120) NOT NULL CONSTRAINT DF_ErrorAplicacion_Identificador DEFAULT N'',
+        Estado int NOT NULL CONSTRAINT DF_ErrorAplicacion_Estado DEFAULT 1,
+        FechaRevisionUtc datetime2 NULL,
+        UsuarioRevision nvarchar(150) NOT NULL CONSTRAINT DF_ErrorAplicacion_UsuarioRevision DEFAULT N'',
+        ObservacionRevision nvarchar(1000) NOT NULL CONSTRAINT DF_ErrorAplicacion_ObservacionRevision DEFAULT N'',
+        CONSTRAINT FK_ErrorAplicacion_Empresa FOREIGN KEY (EmpresaId) REFERENCES erp.Empresa(EmpresaId)
+    );
+    CREATE INDEX IX_ErrorAplicacion_EmpresaId_FechaUtc ON erp.ErrorAplicacion(EmpresaId, FechaUtc);
+    CREATE INDEX IX_ErrorAplicacion_EmpresaId_Estado ON erp.ErrorAplicacion(EmpresaId, Estado);
 END;");
     }
 
     private static async Task EnsurePermissionsAsync(ApplicationDbContext db)
     {
-        var modulos = new[] { "Empresas", "Usuarios", "Roles", "Categorias", "Productos", "Clientes", "Proveedores", "Compras", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "EstadoCuentaClientes", "Gastos", "Ingresos", "Reportes", "Configuracion", "NubefactLogs" };
-        var acciones = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Configurar", "Convertir" };
-
+        var catalogo = PermissionCatalog.All().ToArray();
+        var catalogoSet = catalogo
+            .Select(x => $"{x.Module}|{x.Action}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var existentes = await db.Permisos
-            .Select(x => new { x.Modulo, x.Accion })
+            .Include(x => x.RolPermisos)
             .ToListAsync();
-        var existentesSet = existentes.Select(x => $"{x.Modulo}|{x.Accion}").ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var modulo in modulos)
+        var obsoletos = existentes
+            .Where(x => !catalogoSet.Contains($"{x.Modulo}|{x.Accion}"))
+            .ToList();
+        if (obsoletos.Count > 0)
         {
-            foreach (var accion in acciones)
-            {
-                if (existentesSet.Contains($"{modulo}|{accion}")) continue;
+            db.RolPermisos.RemoveRange(obsoletos.SelectMany(x => x.RolPermisos));
+            db.Permisos.RemoveRange(obsoletos);
+        }
 
-                db.Permisos.Add(new Permiso
-                {
-                    Modulo = modulo,
-                    Accion = accion,
-                    Descripcion = $"{accion} {modulo}",
-                    Estado = EstadoRegistro.Activo
-                });
-            }
+        var existentesSet = existentes
+            .Except(obsoletos)
+            .Select(x => $"{x.Modulo}|{x.Accion}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var permiso in catalogo.Where(x => !existentesSet.Contains($"{x.Module}|{x.Action}")))
+        {
+            db.Permisos.Add(new Permiso
+            {
+                Modulo = permiso.Module,
+                Accion = permiso.Action,
+                Descripcion = $"{permiso.Action} {permiso.Module}",
+                Estado = EstadoRegistro.Activo
+            });
         }
 
         await db.SaveChangesAsync();
@@ -422,8 +463,8 @@ END;");
         var vendedor = await db.RolesNegocio.FirstOrDefaultAsync(x => x.RolId == 2);
         if (vendedor is not null)
         {
-            var modulosVendedor = new[] { "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
-            var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir" };
+            var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
+            var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "RegistrarPago" };
             var permisos = await db.Permisos
                 .Where(x => modulosVendedor.Contains(x.Modulo) && accionesVendedor.Contains(x.Accion))
                 .Select(x => x.PermisoId)

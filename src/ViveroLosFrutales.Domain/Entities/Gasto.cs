@@ -5,7 +5,7 @@ namespace ViveroLosFrutales.Domain.Entities;
 public class Gasto : EmpresaEntity
 {
     public int GastoId { get; set; }
-    public DateTime Fecha { get; set; } = DateTime.Today;
+    public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public int? CategoriaGastoId { get; set; }
     public string Categoria { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;

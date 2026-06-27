@@ -71,6 +71,7 @@ public interface ICotizacionRepository
 public interface INubefactOperacionRepository
 {
     Task<PagedResult<NubefactOperacionDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
+    Task<NubefactOperacionDto?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
     Task<IReadOnlyList<NubefactOperacionDto>> ListarPorComprobanteAsync(int empresaId, int comprobanteId, CancellationToken cancellationToken);
 }
 
@@ -125,6 +126,18 @@ public interface IDashboardRepository
     Task<DashboardDto> ObtenerAsync(int empresaId, DateTime fechaDesde, DateTime fechaHasta, CancellationToken cancellationToken);
 }
 
+public interface IReporteRepository
+{
+    Task<ReporteGeneralDto> ObtenerGeneralAsync(int empresaId, int anioDesde, int anioHasta, string indicador, CancellationToken cancellationToken);
+}
+
+public interface IErrorAplicacionRepository
+{
+    Task<PagedResult<ErrorAplicacionListDto>> BuscarAsync(int empresaId, ErrorAplicacionSearchDto request, CancellationToken cancellationToken);
+    Task<ErrorAplicacion?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task GuardarAsync(ErrorAplicacion error, CancellationToken cancellationToken);
+}
+
 public interface INotaPedidoRepository
 {
     Task<PagedResult<NotaPedidoListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
@@ -165,6 +178,7 @@ public interface IEstadoCuentaClienteRepository
 public interface IDevolucionRepository
 {
     Task<PagedResult<DevolucionListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
+    Task<DevolucionAlertasDto> ObtenerAlertasAsync(int empresaId, int cantidad, CancellationToken cancellationToken);
     Task<Devolucion?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
     Task<bool> ExisteActivaPorNotaPedidoAsync(int empresaId, int notaPedidoId, CancellationToken cancellationToken);
     Task<bool> ExisteActivaPorNotaCreditoAsync(int empresaId, int notaCreditoId, CancellationToken cancellationToken);

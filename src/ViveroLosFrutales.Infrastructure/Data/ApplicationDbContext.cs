@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Security;
 using ViveroLosFrutales.Infrastructure.Identity;
 
 namespace ViveroLosFrutales.Infrastructure.Data;
@@ -40,18 +41,21 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Cotizacion> Cotizaciones => Set<Cotizacion>();
     public DbSet<CotizacionDetalle> CotizacionDetalles => Set<CotizacionDetalle>();
     public DbSet<Devolucion> Devoluciones => Set<Devolucion>();
+    public DbSet<ErrorAplicacion> ErroresAplicacion => Set<ErrorAplicacion>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<ApplicationUser>().ToTable("AspNetUsers", "dbo");
-        builder.Entity<IdentityRole>().ToTable("AspNetRoles", "dbo");
-        builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles", "dbo");
-        builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims", "dbo");
-        builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins", "dbo");
-        builder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaims", "dbo");
-        builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens", "dbo");
+        builder.HasDefaultSchema("erp");
+
+        builder.Entity<ApplicationUser>().ToTable("AspNetUsers", "erp");
+        builder.Entity<IdentityRole>().ToTable("AspNetRoles", "erp");
+        builder.Entity<IdentityUserRole<string>>().ToTable("AspNetUserRoles", "erp");
+        builder.Entity<IdentityUserClaim<string>>().ToTable("AspNetUserClaims", "erp");
+        builder.Entity<IdentityUserLogin<string>>().ToTable("AspNetUserLogins", "erp");
+        builder.Entity<IdentityRoleClaim<string>>().ToTable("AspNetRoleClaims", "erp");
+        builder.Entity<IdentityUserToken<string>>().ToTable("AspNetUserTokens", "erp");
 
         builder.Entity<Empresa>(entity =>
         {
@@ -477,6 +481,23 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Compra).WithMany().HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        builder.Entity<ErrorAplicacion>(entity =>
+        {
+            entity.ToTable("ErrorAplicacion");
+            entity.HasKey(x => x.ErrorAplicacionId);
+            entity.Property(x => x.Usuario).HasMaxLength(150);
+            entity.Property(x => x.Ruta).HasMaxLength(500);
+            entity.Property(x => x.MetodoHttp).HasMaxLength(10);
+            entity.Property(x => x.TipoExcepcion).HasMaxLength(300);
+            entity.Property(x => x.Mensaje).HasMaxLength(2000);
+            entity.Property(x => x.Identificador).HasMaxLength(120);
+            entity.Property(x => x.UsuarioRevision).HasMaxLength(150);
+            entity.Property(x => x.ObservacionRevision).HasMaxLength(1000);
+            entity.HasIndex(x => new { x.EmpresaId, x.FechaUtc });
+            entity.HasIndex(x => new { x.EmpresaId, x.Estado });
+            entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         builder.Entity<Cotizacion>(entity =>
         {
             entity.ToTable("Cotizacion");
@@ -511,23 +532,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     private static Permiso[] BuildPermisos()
     {
         var permisos = new List<Permiso>();
-        var modulos = new[] { "Empresas", "Usuarios", "Roles", "Categorias", "Productos", "Clientes", "Proveedores", "Compras", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "EstadoCuentaClientes", "Gastos", "Ingresos", "Reportes", "Configuracion", "NubefactLogs" };
-        var acciones = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Configurar", "Convertir", "RegistrarPago" };
         var id = 1;
 
-        foreach (var modulo in modulos)
+        foreach (var permiso in PermissionCatalog.All())
         {
-            foreach (var accion in acciones)
+            permisos.Add(new Permiso
             {
-                permisos.Add(new Permiso
-                {
-                    PermisoId = id++,
-                    Modulo = modulo,
-                    Accion = accion,
-                    Descripcion = $"{accion} {modulo}",
-                    Estado = EstadoRegistro.Activo
-                });
-            }
+                PermisoId = id++,
+                Modulo = permiso.Module,
+                Accion = permiso.Action,
+                Descripcion = $"{permiso.Action} {permiso.Module}",
+                Estado = EstadoRegistro.Activo
+            });
         }
 
         return permisos.ToArray();
@@ -543,7 +559,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             PermisoId = permiso.PermisoId
         });
 
-        var modulosVendedor = new[] { "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
+        var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
         var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "RegistrarPago" };
         var permisos = permisosBase
             .Where(x => modulosVendedor.Contains(x.Modulo) && accionesVendedor.Contains(x.Accion))

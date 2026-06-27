@@ -1,49 +1,113 @@
 @model PagedResult<NubefactOperacionDto>
 @{
     ViewData["Title"] = "Log Nubefact";
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="Search" class="form-control form-control-sm" placeholder="Buscar operacion, serie o error" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
+<section class="comprobantes-page admin-docs-page">
+    <form method="get" class="comprobantes-toolbar admin-docs-toolbar compact">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Buscar operación, serie o error..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a class="search-clear" asp-action="Index" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a>
+            }
+        </label>
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            Buscar
+        </button>
+        <button class="btn-export" type="button" id="exportNubefactCsv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+            Exportar
+        </button>
     </form>
-</div>
 
-<table class="table table-sm data-grid">
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>Comprobante</th>
-            <th>Operacion</th>
-            <th>Estado</th>
-            <th>Detalle</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</td>
-            <td>@item.NumeroComprobante</td>
-            <td>@item.TipoOperacion</td>
-            <td>@item.EstadoSunat</td>
-            <td>
-                <details>
-                    <summary>Ver solicitud y respuesta</summary>
-                    <div class="log-grid">
-                        <section>
-                            <strong>Solicitud enviada</strong>
-                            <pre class="json-log">@item.SolicitudJson</pre>
-                        </section>
-                        <section>
-                            <strong>Respuesta Nubefact</strong>
-                            <pre class="json-log">@item.RespuestaCompleta</pre>
-                        </section>
+    <div class="comprobantes-list admin-docs-list">
+        <div class="comprobantes-head admin-docs-head">
+            <span>Comprobante</span>
+            <span>Operación</span>
+            <span>Fecha</span>
+            <span>Estado</span>
+            <span>Detalle</span>
+            <span>Acciones</span>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="comprobantes-empty">
+                <strong>No hay logs Nubefact</strong>
+                <span>Ajusta la búsqueda para encontrar operaciones.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                <article class="comprobante-row admin-docs-row" data-csv="@item.FechaRegistro.ToString("dd/MM/yyyy HH:mm")|@item.NumeroComprobante|@item.TipoOperacion|@item.EstadoSunat">
+                    <div class="comprobante-main">
+                        <span class="comprobante-icon @(item.EstadoSunat.Contains("Acept", StringComparison.OrdinalIgnoreCase) || item.EstadoSunat.Contains("OK", StringComparison.OrdinalIgnoreCase) ? "success" : "warning")">
+                            <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg>
+                        </span>
+                        <span class="comprobante-copy">
+                            <strong>@item.NumeroComprobante</strong>
+                            <small>@item.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</small>
+                        </span>
                     </div>
-                </details>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+                    <div class="comprobante-client"><strong>@item.TipoOperacion</strong><small>Operación</small></div>
+                    <div class="comprobante-total">@item.FechaRegistro.ToString("dd/MM/yyyy")<small>@item.FechaRegistro.ToString("HH:mm")</small></div>
+                    <div class="comprobante-sunat"><span class="pill info">@item.EstadoSunat</span></div>
+                    <div class="comprobante-client"><strong>@(string.IsNullOrWhiteSpace(item.Hash) ? "Sin hash" : item.Hash)</strong><small>Hash</small></div>
+                    <div class="comprobante-actions">
+                        <details class="row-actions-menu">
+                            <summary aria-label="Abrir acciones">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+                            </summary>
+                            <div class="row-actions-panel">
+                                <a asp-action="Descargar" asp-route-id="@item.NubefactOperacionId">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+                                    Descargar request/response
+                                </a>
+                            </div>
+                        </details>
+                    </div>
+                </article>
+            }
+        }
+    </div>
+
+    @await Html.PartialAsync("_Pager", Model)
+</section>
+
+<script>
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => {
+                if (other !== menu) other.removeAttribute('open');
+            });
+        });
+    });
+
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+
+    document.getElementById('exportNubefactCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]'));
+        const header = ["Fecha", "Comprobante", "Operacion", "Estado"];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))]
+            .map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'nubefact-logs.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+</script>

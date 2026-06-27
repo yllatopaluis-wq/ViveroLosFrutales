@@ -1,8 +1,8 @@
-using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Common;
 
 namespace ViveroLosFrutales.Domain.Entities;
 
-public class Empresa
+public class Empresa : AuditableEntity
 {
     public int EmpresaId { get; set; }
     public string RUC { get; set; } = string.Empty;
@@ -25,7 +25,6 @@ public class Empresa
     public string SerieNotaCreditoBoleta { get; set; } = "B101";
     public string SerieNotaPedido { get; set; } = "NP001";
     public string SerieCotizacion { get; set; } = "C001";
-    public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
 
     public ICollection<UsuarioEmpresa> UsuarioEmpresas { get; set; } = new List<UsuarioEmpresa>();
     public ICollection<Producto> Productos { get; set; } = new List<Producto>();

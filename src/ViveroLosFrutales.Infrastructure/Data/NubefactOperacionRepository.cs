@@ -36,6 +36,23 @@ public class NubefactOperacionRepository(ApplicationDbContext db) : INubefactOpe
             .ToPagedAsync(request, cancellationToken);
     }
 
+    public Task<NubefactOperacionDto?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken)
+    {
+        return db.NubefactOperaciones.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.NubefactOperacionId == id)
+            .Select(x => new NubefactOperacionDto(
+                x.NubefactOperacionId,
+                x.Comprobante!.Serie + "-" + x.Comprobante.Correlativo.ToString(),
+                x.TipoOperacion,
+                x.EstadoSunat.ToString(),
+                x.PdfUrl,
+                x.XmlUrl,
+                x.Hash,
+                x.SolicitudJson,
+                x.RespuestaCompleta,
+                x.FechaRegistro))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
     public async Task<IReadOnlyList<NubefactOperacionDto>> ListarPorComprobanteAsync(int empresaId, int comprobanteId, CancellationToken cancellationToken)
     {
         return await db.NubefactOperaciones.AsNoTracking()

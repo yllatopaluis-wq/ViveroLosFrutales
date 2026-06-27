@@ -1,51 +1,78 @@
 @model PagedResult<ProductoListDto>
 @{
     ViewData["Title"] = "Productos";
-
-    static string EstadoRegistroTexto(EstadoRegistro estado) =>
-        estado == EstadoRegistro.Activo ? "ACTIVO" : "ANULADO";
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
+@functions {
+    private static string EstadoRegistroTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+    private static string EstadoRegistroClass(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "success" : "danger";
+}
+<section class="comprobantes-page master-docs-page">
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="Search" class="form-control form-control-sm" placeholder="Buscar categoria o producto" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
+    <form method="get" class="comprobantes-toolbar master-docs-toolbar compact">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Buscar por categoría o producto..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a class="search-clear" asp-action="Index" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a>
+            }
+        </label>
+
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            Buscar
+        </button>
+        <button class="btn-export" type="button" id="exportProductosCsv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+            Exportar
+        </button>
     </form>
-    <a class="btn btn-sm btn-success" asp-action="Edit">Crear</a>
-</div>
+    <div class="comprobantes-list master-docs-list">
+        <div class="comprobantes-head master-docs-head"><span>Producto</span><span>Categoría</span><span>Precio</span><span>Stock</span><span>Estado</span><span>Acciones</span></div>
+        @if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay productos</strong><span>Ajusta la búsqueda o registra un nuevo producto.</span></div> } else {
+        @foreach (var item in Model.Items) {
+            <article class="comprobante-row master-docs-row" data-csv="@item.Nombre|@item.Categoria|@item.PrecioVentaSinIgv.ToString("N2")|@item.PrecioVentaConIgv.ToString("N2")|@item.Stock.ToString("N2")|@EstadoRegistroTexto(item.Estado)">
+                <div class="comprobante-main"><span class="comprobante-icon @(item.Estado == EstadoRegistro.Activo ? "success" : "danger")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.Nombre</strong><small>@(item.AfectoIgv ? "Afecto IGV" : "Inafecto")</small></span></div>
+                <div class="comprobante-client"><strong>@item.Categoria</strong><small>Categoría</small></div>
+                <div class="comprobante-total"><span>S/ @item.PrecioVentaConIgv.ToString("N2")</span><small>Sin IGV: S/ @item.PrecioVentaSinIgv.ToString("N2")</small></div>
+                <div class="comprobante-status"><span class="sunat-line muted">Stock: @item.Stock.ToString("N2")</span></div>
+                <div class="comprobante-sunat"><span class="pill @EstadoRegistroClass(item.Estado)">@EstadoRegistroTexto(item.Estado)</span></div>
+                <div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Visualizar" asp-route-id="@item.ProductoId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg> Ver producto</a><a asp-action="Edit" asp-route-id="@item.ProductoId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg> Editar</a><form asp-action="Anular" method="post" onsubmit="return confirm('Anular este producto?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.ProductoId" /><button type="submit" class="danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg> Anular producto</button></form></div></details></div>
+            </article>
+        }}
+    </div>
+    @await Html.PartialAsync("_Pager", Model)
+</section>
 
-<table class="table table-sm table-striped data-grid">
-    <thead><tr><th>Categoria</th><th>Nombre</th><th class="text-end">Precio Sin IGV</th><th class="text-end">Precio Con IGV</th><th class="text-end">Stock</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr></thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.Categoria</td>
-            <td>@item.Nombre</td>
-            <td class="text-end">S/ @item.PrecioVentaSinIgv.ToString("N2")</td>
-            <td class="text-end">S/ @item.PrecioVentaConIgv.ToString("N2")</td>
-            <td class="text-end">@item.Stock.ToString("N2")</td>
-            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@EstadoRegistroTexto(item.Estado)</span></td>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <a class="icon-btn" asp-action="Visualizar" asp-route-id="@item.ProductoId" title="Visualizar" aria-label="Visualizar">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg>
-                    </a>
-                    <a class="icon-btn" asp-action="Edit" asp-route-id="@item.ProductoId" title="Editar" aria-label="Editar">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                    </a>
-                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return confirm('Anular este producto?');">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.ProductoId" />
-                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<script>
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => {
+                if (other !== menu) other.removeAttribute('open');
+            });
+        });
+    });
 
-@await Html.PartialAsync("_Pager", Model)
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+
+    document.getElementById('exportProductosCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.master-docs-row[data-csv]'));
+        const header = ["Producto","Categoria","Precio sin IGV","Precio con IGV","Stock","Estado"];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))]
+            .map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'productos.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
+</script>

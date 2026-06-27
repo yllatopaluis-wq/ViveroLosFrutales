@@ -1,7 +1,7 @@
 @model CajaIndexDto
 @{
     ViewData["Title"] = "Caja";
-    var today = DateTime.Today;
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
@@ -9,63 +9,98 @@
     var medioPago = Context.Request.Query["medioPago"].FirstOrDefault();
     var tipoMovimiento = Context.Request.Query["tipoMovimiento"].FirstOrDefault();
     var search = Context.Request.Query["Search"].FirstOrDefault();
+
+    static string Money(decimal value) => $"S/ {value:N2}";
+    static string TipoTexto(TipoMovimientoCaja tipo) => tipo == TipoMovimientoCaja.INGRESO ? "Ingreso" : "Egreso";
+    static string TipoClass(TipoMovimientoCaja tipo) => tipo == TipoMovimientoCaja.INGRESO ? "income" : "expense";
+    static string MontoTexto(MovimientoCajaListDto item) => $"{(item.TipoMovimiento == TipoMovimientoCaja.INGRESO ? "+" : "-")} {Money(item.Monto)}";
+    static string EstadoTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+    static string EstadoClass(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "success" : "danger";
+    static string TextoCapitalizado(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "-";
+        var normalized = value.Trim().ToLowerInvariant();
+        return string.Join(" ", normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
+    }
 }
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
-        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
-        <select name="medioPago" class="form-select form-select-sm">
-            <option value="">Todos los medios</option>
-            <option value="EFECTIVO" selected="@(medioPago == "EFECTIVO")">Efectivo</option>
-            <option value="TRANSFERENCIA" selected="@(medioPago == "TRANSFERENCIA")">Transferencia</option>
-            <option value="YAPE" selected="@(medioPago == "YAPE")">Yape</option>
-            <option value="TARJETA DEBITO" selected="@(medioPago == "TARJETA DEBITO")">Tarjeta debito</option>
-            <option value="TARJETA CREDITO" selected="@(medioPago == "TARJETA CREDITO")">Tarjeta Credito</option>
-        </select>
-        <select name="tipoMovimiento" class="form-select form-select-sm">
-            <option value="">Todos</option>
-            <option value="@TipoMovimientoCaja.INGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.INGRESO.ToString())">Ingresos</option>
-            <option value="@TipoMovimientoCaja.EGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.EGRESO.ToString())">Egresos</option>
-        </select>
-        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Buscar por cliente, proveedor o documento" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-</div>
+<section class="cash-page">
+    <div class="cash-summary-grid">
+        <article class="cash-summary-card income">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7" /><path d="M9 7h8v8" /></svg></span>
+            <div><small>Ingresos</small><strong>@Money(Model.Resumen.Ingresos)</strong><span>Total en el periodo</span></div>
+        </article>
+        <article class="cash-summary-card expense">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7 17 17" /><path d="M17 9v8H9" /></svg></span>
+            <div><small>Egresos</small><strong>@Money(Model.Resumen.Egresos)</strong><span>Total en el periodo</span></div>
+        </article>
+        <article class="cash-summary-card balance">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v11H5z" /><path d="M16 11h3v4h-3a2 2 0 0 1 0-4Z" /></svg></span>
+            <div><small>Saldo actual</small><strong>@Money(Model.Resumen.Saldo)</strong><span>Disponible en caja</span></div>
+        </article>
+        <article class="cash-summary-card movements">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <div><small>Movimientos</small><strong>@Model.Resumen.Movimientos</strong><span>Total de movimientos</span></div>
+        </article>
+    </div>
 
-<div class="finance-summary">
-    <div><span>Ingresos</span><strong>S/ @Model.Resumen.Ingresos.ToString("N2")</strong></div>
-    <div><span>Egresos</span><strong>S/ @Model.Resumen.Egresos.ToString("N2")</strong></div>
-    <div><span>Saldo</span><strong>S/ @Model.Resumen.Saldo.ToString("N2")</strong></div>
-    <div><span>Movimientos</span><strong>@Model.Resumen.Movimientos</strong></div>
-</div>
+    <section class="cash-filter-card">
+        <div class="cash-filter-title">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v5l-4 2v-7Z" /></svg></span>
+            <strong>Filtros</strong>
+        </div>
+        <form method="get" class="cash-filter-grid">
+            <input type="hidden" name="Page" value="1" />
+            <input type="hidden" name="PageSize" value="20" />
+            <label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label>
+            <label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label>
+            <label class="filter-field"><span>Tipo</span><select name="tipoMovimiento"><option value="">Todos</option><option value="@TipoMovimientoCaja.INGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.INGRESO.ToString())">Ingresos</option><option value="@TipoMovimientoCaja.EGRESO" selected="@(tipoMovimiento == TipoMovimientoCaja.EGRESO.ToString())">Egresos</option></select></label>
+            <label class="filter-field"><span>Medio de pago</span><select name="medioPago"><option value="">Todos los medios</option><option value="EFECTIVO" selected="@(medioPago == "EFECTIVO")">Efectivo</option><option value="TRANSFERENCIA" selected="@(medioPago == "TRANSFERENCIA")">Transferencia</option><option value="YAPE" selected="@(medioPago == "YAPE")">Yape</option><option value="TARJETA DEBITO" selected="@(medioPago == "TARJETA DEBITO")">Tarjeta d&eacute;bito</option><option value="TARJETA CREDITO" selected="@(medioPago == "TARJETA CREDITO")">Tarjeta cr&eacute;dito</option></select></label>
+            <label class="cash-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar cliente, documento o referencia..." autocomplete="off" /></label>
+            <button class="cash-btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+        </form>
+    </section>
 
-<table class="table table-sm table-striped data-grid">
-    <thead>
-        <tr>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Cliente / Proveedor</th>
-            <th>Origen</th>
-            <th>Documento</th>
-            <th>Medio</th>
-            <th class="text-end">Monto</th>
-            <th>Estado</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Movimientos)
-    {
-        <tr>
-            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
-            <td>@item.TipoMovimiento</td>
-            <td>@item.ClienteProveedor</td>
-            <td>@item.OrigenDescripcion</td>
-            <td>@item.Documento</td>
-            <td>@item.MedioPago</td>
-            <td class="text-end">S/ @item.Monto.ToString("N2")</td>
-            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@item.Estado</span></td>
-        </tr>
-    }
-    </tbody>
-</table>
+    <section class="cash-history-card">
+        <h2>Hist&oacute;rico de movimientos</h2>
+        <div class="cash-table-wrap">
+            <table class="table table-sm cash-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Descripci&oacute;n</th>
+                        <th>Origen</th>
+                        <th>Documento</th>
+                        <th>Medio</th>
+                        <th class="text-end">Monto</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.Movimientos.Any())
+                {
+                    <tr><td colspan="8" class="cash-empty">No hay movimientos para los filtros seleccionados.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in Model.Movimientos)
+                    {
+                        <tr>
+                            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td><span class="cash-type @TipoClass(item.TipoMovimiento)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="@(item.TipoMovimiento == TipoMovimientoCaja.INGRESO ? "M7 17 17 7M9 7h8v8" : "M7 7l10 10M17 9v8H9")" /></svg>@TipoTexto(item.TipoMovimiento)</span></td>
+                            <td><strong>@item.OrigenDescripcion</strong><small>@item.ClienteProveedor</small></td>
+                            <td>@item.OrigenDescripcion</td>
+                            <td>@item.Documento</td>
+                            <td>@TextoCapitalizado(item.MedioPago)</td>
+                            <td class="text-end"><span class="cash-amount @TipoClass(item.TipoMovimiento)">@MontoTexto(item)</span></td>
+                            <td><span class="pill @EstadoClass(item.Estado)">@EstadoTexto(item.Estado)</span></td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+        <partial name="_Pager" model="Model" />
+    </section>
+</section>

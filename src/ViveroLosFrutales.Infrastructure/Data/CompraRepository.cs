@@ -106,7 +106,7 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
                 EmpresaId = compra.EmpresaId,
                 ProductoId = producto.ProductoId,
                 Tipo = TipoMovimientoInventario.REVERSA_COMPRA,
-                Fecha = DateTime.Today,
+                Fecha = PeruDateTime.Today,
                 Cantidad = -detalle.Cantidad,
                 StockAnterior = stockAnterior,
                 StockNuevo = producto.Stock,

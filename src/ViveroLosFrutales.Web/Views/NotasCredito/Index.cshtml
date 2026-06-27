@@ -1,90 +1,199 @@
 @model PagedResult<ComprobanteListDto>
 @{
-    ViewData["Title"] = "Notas de Credito";
-    var today = DateTime.Today;
+    ViewData["Title"] = "Notas de Crédito";
+    var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
     var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
     var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
     var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
 }
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="FechaDesde" class="form-control form-control-sm" type="date" value="@fechaDesde" />
-        <input name="FechaHasta" class="form-control form-control-sm" type="date" value="@fechaHasta" />
-        <input name="Search" class="form-control form-control-sm" value="@search" placeholder="Buscar serie, cliente o documento" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
+@functions {
+    private static string EstadoRegistroTexto(EstadoRegistro estado) =>
+        estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+
+    private static string EstadoRegistroClass(EstadoRegistro estado) =>
+        estado == EstadoRegistro.Activo ? "success" : "danger";
+
+    private static string SunatTexto(ComprobanteListDto item) => item.DocumentoAceptadoSunat
+        ? "SUNAT OK"
+        : item.EstadoSunat == EstadoSunat.Pendiente ? "Pendiente" : "No enviado";
+
+    private static string SunatClass(ComprobanteListDto item) => item.DocumentoAceptadoSunat
+        ? "success"
+        : item.EstadoSunat == EstadoSunat.Pendiente ? "warning" : "muted";
+
+    private static string RowIconClass(ComprobanteListDto item) =>
+        item.Estado == EstadoRegistro.Anulado ? "danger" : item.DocumentoAceptadoSunat ? "success" : "warning";
+}
+
+<section class="comprobantes-page sales-docs-page">
+    <form method="get" class="comprobantes-toolbar sales-docs-toolbar">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Buscar por cliente, serie o documento..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(search))
+            {
+                <a class="search-clear" asp-action="Index" asp-route-FechaDesde="@fechaDesde" asp-route-FechaHasta="@fechaHasta" asp-route-PageSize="@pageSize" aria-label="Limpiar b&uacute;squeda">&times;</a>
+            }
+        </label>
+
+        <label class="filter-field">
+            <span>Desde</span>
+            <input name="FechaDesde" type="date" value="@fechaDesde" />
+        </label>
+
+        <label class="filter-field">
+            <span>Hasta</span>
+            <input name="FechaHasta" type="date" value="@fechaHasta" />
+        </label>
+
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            Buscar
+        </button>
+
+        <button class="btn-export" type="button" id="exportNotasCreditoCsv">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>
+            Exportar
+        </button>
     </form>
-    <a class="btn btn-sm btn-success" asp-action="Create">Crear nota de credito</a>
-</div>
 
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger py-2">@error</div>
-}
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success py-2">@success</div>
-}
-
-<table class="table table-sm table-striped data-grid">
-    <thead>
-        <tr>
-            <th class="text-end actions-heading">Acciones</th>
-            <th>Numero</th>
-            <th>Fecha</th>
-            <th>Cliente</th>
-            <th>Documento</th>
-            <th class="text-end">Total</th>
-            <th>Doc. Impreso</th>
-            <th>Doc. Aceptado SUNAT</th>
-            <th>Estado</th>
-        </tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
+    @if (TempData["Error"] is string error)
     {
-        <tr>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <form asp-action="Imprimir" method="post" class="icon-form" target="_blank" onsubmit="return registrarImpresionNotaCredito();">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.ComprobanteId" />
-                        <button type="submit" class="icon-btn" title="Imprimir / descargar" aria-label="Imprimir / descargar">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6Z" /></svg>
-                        </button>
-                    </form>
-                    @if (item.PuedeAnular)
-                    {
-                        <form asp-action="Anular" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionNotaCredito(this);">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@item.ComprobanteId" />
-                            <input type="hidden" name="motivo" value="" />
-                            <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
-                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                            </button>
-                        </form>
-                    }
-                </div>
-            </td>
-            <td>@($"{item.Serie}-{item.Correlativo:000000}")</td>
-            <td>@item.FechaEmision.ToString("dd/MM/yyyy")</td>
-            <td>@item.Cliente</td>
-            <td>@item.Documento</td>
-            <td class="text-end">S/ @item.Total.ToString("N2")</td>
-            <td>@(item.DocumentoImpreso ? "SI" : "NO")</td>
-            <td>@(item.DocumentoAceptadoSunat ? "SI" : "NO")</td>
-            <td><span class="status-badge @(item.Estado == EstadoRegistro.Activo ? "active" : "danger")">@item.Estado</span></td>
-        </tr>
+        <div class="alert alert-danger py-2">@error</div>
     }
-    </tbody>
-</table>
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success py-2">@success</div>
+    }
 
-@await Html.PartialAsync("_Pager", Model)
+    <div class="comprobantes-list sales-docs-list" id="notasCreditoList">
+        <div class="comprobantes-head sales-docs-head" aria-hidden="true">
+            <span>Nota de crédito</span>
+            <span>Cliente</span>
+            <span>Total</span>
+            <span>Estado</span>
+            <span>SUNAT / Impresi&oacute;n</span>
+            <span>Acciones</span>
+        </div>
+
+        @if (!Model.Items.Any())
+        {
+            <div class="comprobantes-empty">
+                <strong>No hay notas de crédito</strong>
+                <span>Ajusta los filtros o registra una nueva nota de crédito.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                var numero = $"{item.Serie}-{item.Correlativo:000000}";
+                <article class="comprobante-row sales-docs-row" data-csv="@numero|@item.FechaEmision.ToString("dd/MM/yyyy")|@item.Cliente|@item.Documento|@item.Total.ToString("N2")|@EstadoRegistroTexto(item.Estado)|@SunatTexto(item)">
+                    <div class="comprobante-main">
+                        <span class="comprobante-icon @RowIconClass(item)" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg>
+                        </span>
+                        <span class="comprobante-copy">
+                            <strong>@numero</strong>
+                            <small>@item.FechaEmision.ToString("dd/MM/yyyy")</small>
+                            <small>Nota de crédito</small>
+                        </span>
+                    </div>
+
+                    <div class="comprobante-client">
+                        <strong>@item.Cliente</strong>
+                        <small>@item.Documento</small>
+                    </div>
+
+                    <div class="comprobante-total">S/ @item.Total.ToString("N2")</div>
+
+                    <div class="comprobante-status">
+                        <span class="pill @EstadoRegistroClass(item.Estado)">@EstadoRegistroTexto(item.Estado)</span>
+                    </div>
+
+                    <div class="comprobante-sunat">
+                        <span class="sunat-line @SunatClass(item)">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 16.5a4 4 0 0 0-3.8-5 5 5 0 0 0-9.4-1.7A3.5 3.5 0 0 0 7.5 17H19" /></svg>
+                            @SunatTexto(item)
+                        </span>
+                        <span class="sunat-line">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6Z" /></svg>
+                            @(item.DocumentoImpreso ? "Impreso" : "No impreso")
+                        </span>
+                    </div>
+
+                    <div class="comprobante-actions">
+                        <details class="row-actions-menu">
+                            <summary aria-label="Abrir acciones">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+                            </summary>
+                            <div class="row-actions-panel">
+                                <form asp-action="Imprimir" method="post" target="_blank" onsubmit="return registrarImpresionNotaCredito();">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@item.ComprobanteId" />
+                                    <button type="submit">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6Z" /></svg>
+                                        Imprimir
+                                    </button>
+                                </form>
+                                @if (item.PuedeAnular)
+                                {
+                                    <form asp-action="Anular" method="post" onsubmit="return solicitarMotivoAnulacionNotaCredito(this);">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@item.ComprobanteId" />
+                                        <input type="hidden" name="motivo" value="" />
+                                        <button type="submit" class="danger">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg>
+                                            Anular nota de crédito
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </details>
+                    </div>
+                </article>
+            }
+        }
+    </div>
+
+    @await Html.PartialAsync("_Pager", Model)
+</section>
 
 <script>
     let recargarListadoPorImpresionNc = false;
+
+    document.querySelectorAll('.row-actions-menu').forEach(menu => {
+        menu.addEventListener('toggle', () => {
+            if (!menu.open) return;
+            document.querySelectorAll('.row-actions-menu[open]').forEach(other => {
+                if (other !== menu) other.removeAttribute('open');
+            });
+        });
+    });
+
+    document.addEventListener('click', event => {
+        if (event.target.closest('.row-actions-menu')) return;
+        document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open'));
+    });
+
+    document.getElementById('exportNotasCreditoCsv')?.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('.sales-docs-row[data-csv]'));
+        const header = ['Nota credito','Fecha','Cliente','Documento','Total','Estado','SUNAT'];
+        const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))]
+            .map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(','));
+        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'notas-credito.csv';
+        link.click();
+        URL.revokeObjectURL(url);
+    });
 
     function registrarImpresionNotaCredito() {
         recargarListadoPorImpresionNc = true;
@@ -105,16 +214,16 @@
     });
 
     function solicitarMotivoAnulacionNotaCredito(form) {
-        const motivo = prompt("Ingrese el motivo de anulacion de la nota de credito:");
+        const motivo = prompt('Ingrese el motivo de anulación de la nota de crédito:');
         if (motivo === null) return false;
 
         const motivoLimpio = motivo.trim();
         if (!motivoLimpio) {
-            alert("Debe ingresar el motivo de anulacion.");
+            alert('Debe ingresar el motivo de anulación.');
             return false;
         }
 
         form.querySelector("input[name='motivo']").value = motivoLimpio;
-        return confirm("Confirmar anulacion de la nota de credito?");
+        return confirm('Confirmar anulación de la nota de crédito?');
     }
 </script>

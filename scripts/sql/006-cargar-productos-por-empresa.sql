@@ -1,15 +1,23 @@
-﻿/*
-    Carga de productos desde catalogo Nubefact: 20615082997-CATALOGO (1).xlsx
+﻿IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
+GO
 
-    Reglas aplicadas:
-    - TIPO DE AFECTACION (IGV) = 10 => AfectoIgv = 1.
-    - TIPO DE AFECTACION (IGV) = 20 => AfectoIgv = 0.
-    - TIPO DE AFECTACION (IGV) = 20 => TieneDetraccion = 1 y PorcentajeDetraccion = 1.50.
-    - Si falta el precio con IGV en productos afectos, se calcula desde el valor sin IGV con tasa 18%.
-    - Si falta el valor sin IGV en productos afectos, se calcula desde el precio con IGV con tasa 18%.
-    - Si el producto es inafecto, ambos precios quedan iguales tomando el precio disponible.
-    - Las filas sin tipo de afectacion 10/20 no se cargan.
-    - Como dbo.Producto no tiene columna para codigo interno, la carga se empata por EmpresaId + Nombre.
+/*
+    Carga de productos por empresa desde catalogo Nubefact: 20615082997-CATALOGO (2).xlsx
+
+    Objetivo:
+    - Cargar el mismo catalogo de productos para cada empresa activa registrada en erp.Empresa.
+    - Mantener productos y categorias separados por EmpresaId.
+    - Evitar duplicados por empresa usando EmpresaId + Nombre normalizado.
+    - Si el producto ya existe para una empresa, actualiza categoria, unidad, precios, stock, IGV y detraccion.
+
+    Uso:
+    - Por defecto carga para las empresas Vivero Los Frutales Huaral y Lima.
+    - Para cargar solo empresas especificas, agregue RUC en @RucsFiltro antes de la carga.
+
+    RUC considerados:
+        - 20615619273: Vivero Los Frutales Huaral
+        - 20615082997: Vivero Los Frutales Lima
 */
 
 USE ViveroLosFrutalesDB;
@@ -19,15 +27,28 @@ SET NOCOUNT ON;
 SET XACT_ABORT ON;
 GO
 
-DECLARE @EmpresaId int;
+DECLARE @RucsFiltro TABLE (RUC nvarchar(20) NOT NULL PRIMARY KEY);
+-- Empresas destino para esta carga inicial.
+INSERT INTO @RucsFiltro (RUC) VALUES (N'20615619273'), (N'20615082997');
 
-SELECT @EmpresaId = EmpresaId
-FROM dbo.Empresa
-WHERE RUC = N'20615082997';
+DECLARE @Empresas TABLE (
+    EmpresaId int NOT NULL PRIMARY KEY,
+    RUC nvarchar(20) NOT NULL,
+    RazonSocial nvarchar(250) NOT NULL
+);
 
-IF @EmpresaId IS NULL
+INSERT INTO @Empresas (EmpresaId, RUC, RazonSocial)
+SELECT e.EmpresaId, e.RUC, e.RazonSocial
+FROM erp.Empresa e
+WHERE e.Estado = 1
+  AND (
+      NOT EXISTS (SELECT 1 FROM @RucsFiltro)
+      OR EXISTS (SELECT 1 FROM @RucsFiltro f WHERE f.RUC = e.RUC)
+  );
+
+IF NOT EXISTS (SELECT 1 FROM @Empresas)
 BEGIN
-    THROW 51000, 'No existe una empresa con RUC 20615082997. Cree la empresa antes de cargar el catalogo.', 1;
+    THROW 51000, 'No existen empresas activas para cargar productos. Registre una empresa activa o revise @RucsFiltro.', 1;
 END;
 
 DECLARE @Catalogo TABLE (
@@ -50,6 +71,8 @@ INSERT INTO @Catalogo (
     TipoAfectacionIgv
 )
 VALUES
+    (N'99985', N'Ruda', N'NIU', N'Ornamentales', 2.542, 3, 10),
+    (N'99986', N'Arandano Ventura', N'NIU', N'Frutales', 10.169, 12, 10),
     (N'172', N'PLANTA DE DAMASCO INJERTO', N'NIU', N'Frutales', 6, 6, 20),
     (N'99998', N'TURBA', N'SA', N'Materiales', 190, NULL, 20),
     (N'99991', N'UVINA INJERTA', N'NIU', N'Frutales', 6, NULL, 20),
@@ -464,15 +487,19 @@ VALUES
     (N'106', N'PLANTA DE  PALTA HASS INJERTA EN TOPA TOPA', N'NIU', N'Frutales', 10, 10, 20),
     (N'101', N'PLANTA DE  CIRUELO SANTA ROSA INJERTA', N'NIU', N'Frutales', 6, 6, 20),
     (N'10', N'PLANTA DE  OLIVO INJERTA', N'NIU', N'Frutales', 10, 10, 20),
-    (N'1', N'PLANTA DE  SAKURA INJERTA', N'NIU', N'Frutales', 35, 35, 20);
+    (N'1', N'PLANTA DE  SAKURA INJERTA', N'NIU', N'Frutales', 35, 35, 20),
+    (N'99999', N'Semilla de Pouteria lucuma', N'KGM', N'Semillas', 10, NULL, 40);
 
-INSERT INTO dbo.Categoria (EmpresaId, Nombre, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
-SELECT DISTINCT @EmpresaId, c.Categoria, '', 1, SYSUTCDATETIME(), 'catalogo-nubefact'
-FROM @Catalogo c
+BEGIN TRANSACTION;
+
+INSERT INTO erp.Categoria (EmpresaId, Nombre, Descripcion, Estado, FechaRegistro, UsuarioRegistro)
+SELECT DISTINCT e.EmpresaId, c.Categoria, N'', 1, SYSUTCDATETIME(), N'catalogo-productos-empresa'
+FROM @Empresas e
+CROSS JOIN @Catalogo c
 WHERE NOT EXISTS (
     SELECT 1
-    FROM dbo.Categoria ca
-    WHERE ca.EmpresaId = @EmpresaId
+    FROM erp.Categoria ca
+    WHERE ca.EmpresaId = e.EmpresaId
       AND UPPER(LTRIM(RTRIM(ca.Nombre))) = UPPER(LTRIM(RTRIM(c.Categoria)))
 );
 
@@ -493,7 +520,7 @@ WHERE NOT EXISTS (
                 CodigoInterno
         )
     FROM @Catalogo
-    WHERE TipoAfectacionIgv IN (10, 20)
+    WHERE TipoAfectacionIgv IN (10, 20, 40)
 ), Productos AS (
     SELECT
         Nombre,
@@ -516,10 +543,25 @@ WHERE NOT EXISTS (
             END)
     FROM Base
     WHERE Prioridad = 1
+), ProductosEmpresa AS (
+    SELECT
+        e.EmpresaId,
+        p.Nombre,
+        p.NombreClave,
+        p.Categoria,
+        p.UnidadMedida,
+        p.AfectoIgv,
+        p.TieneDetraccion,
+        p.PorcentajeDetraccion,
+        p.Stock,
+        p.PrecioVentaSinIgv,
+        p.PrecioVentaConIgv
+    FROM @Empresas e
+    CROSS JOIN Productos p
 )
-MERGE dbo.Producto WITH (HOLDLOCK) AS target
-USING Productos AS source
-ON target.EmpresaId = @EmpresaId
+MERGE erp.Producto WITH (HOLDLOCK) AS target
+USING ProductosEmpresa AS source
+ON target.EmpresaId = source.EmpresaId
    AND UPPER(LTRIM(RTRIM(target.Nombre))) = source.NombreClave
 WHEN MATCHED THEN
     UPDATE SET
@@ -549,7 +591,7 @@ WHEN NOT MATCHED BY TARGET THEN
         Estado
     )
     VALUES (
-        @EmpresaId,
+        source.EmpresaId,
         source.Categoria,
         source.Nombre,
         source.UnidadMedida,
@@ -560,7 +602,27 @@ WHEN NOT MATCHED BY TARGET THEN
         source.TieneDetraccion,
         source.PorcentajeDetraccion,
         SYSUTCDATETIME(),
-        'catalogo-nubefact',
+        N'catalogo-productos-empresa',
         1
     );
+
+DECLARE @ProductosPorEmpresa int = (
+    SELECT COUNT(*)
+    FROM (
+        SELECT UPPER(LTRIM(RTRIM(Nombre))) AS NombreClave
+        FROM @Catalogo
+        WHERE TipoAfectacionIgv IN (10, 20, 40)
+        GROUP BY UPPER(LTRIM(RTRIM(Nombre)))
+    ) x
+);
+DECLARE @EmpresasCargadas int = (SELECT COUNT(*) FROM @Empresas);
+
+COMMIT TRANSACTION;
+
+PRINT CONCAT(N'Empresas procesadas: ', @EmpresasCargadas);
+PRINT CONCAT(N'Productos base por empresa: ', @ProductosPorEmpresa);
+PRINT CONCAT(N'Productos esperados empresa x catalogo: ', @EmpresasCargadas * @ProductosPorEmpresa);
 GO
+
+
+

@@ -240,8 +240,15 @@ window.viveroComprobanteForm = function (config) {
       document.body.appendChild(results);
     }
 
+    let punteroEnResultados = false;
+
     function cerrarResultados() {
       results.hidden = true;
+    }
+
+    function cerrarResultadosPorScroll(event) {
+      if (event?.target && results.contains(event.target)) return;
+      cerrarResultados();
     }
 
     function seleccionarProducto(producto) {
@@ -279,18 +286,32 @@ window.viveroComprobanteForm = function (config) {
     search.addEventListener("change", resolverProducto);
     search.addEventListener("blur", function () {
       resolverProducto();
-      window.setTimeout(cerrarResultados, 150);
+      window.setTimeout(function () {
+        if (!punteroEnResultados) cerrarResultados();
+      }, 150);
     });
     toggle?.addEventListener("click", function () {
       search.focus();
       mostrarResultados();
     });
-    window.addEventListener("scroll", cerrarResultados, true);
+    toggle?.addEventListener("blur", function () {
+      window.setTimeout(function () {
+        if (!punteroEnResultados && document.activeElement !== search) cerrarResultados();
+      }, 150);
+    });
+    window.addEventListener("scroll", cerrarResultadosPorScroll, true);
     window.addEventListener("resize", cerrarResultados);
+    results.addEventListener("pointerenter", function () {
+      punteroEnResultados = true;
+    });
+    results.addEventListener("pointerleave", function () {
+      punteroEnResultados = false;
+      if (document.activeElement !== search) cerrarResultados();
+    });
     results.addEventListener("mousedown", function (event) {
-      event.preventDefault();
       const option = event.target.closest(".producto-search-option");
       if (!option) return;
+      event.preventDefault();
       const producto = obtenerProducto(option.dataset.id);
       if (producto) seleccionarProducto(producto);
     });
@@ -658,3 +679,46 @@ function viveroPermissionTree() {
 }
 
 document.addEventListener("DOMContentLoaded", viveroPermissionTree);
+
+window.viveroCompraDocumentoForm = function () {
+  const tipoDocumento = document.querySelector("#tipoDocumentoCompra");
+  const serie = document.querySelector("#serieCompra");
+  const numero = document.querySelector("#numeroCompra");
+  const fields = Array.from(document.querySelectorAll(".compra-document-number-field"));
+  if (!tipoDocumento || !serie || !numero || fields.length === 0) return;
+
+  const documentosSinSerieNumero = new Set(["6", "7", "PENDIENTE_COMPROBANTE", "SIN_DOCUMENTO"]);
+
+  function normalizarTipoDocumento() {
+    const value = (tipoDocumento.value || "").trim().toUpperCase();
+    const text = (tipoDocumento.selectedOptions?.[0]?.textContent || "").trim().toUpperCase();
+    return { value, text };
+  }
+
+  function sincronizarDocumento() {
+    const tipo = normalizarTipoDocumento();
+    const ocultar = documentosSinSerieNumero.has(tipo.value)
+      || tipo.text.includes("PENDIENTE")
+      || tipo.text.includes("SIN DOCUMENTO");
+
+    fields.forEach((field) => {
+      field.hidden = ocultar;
+      field.classList.toggle("d-none", ocultar);
+      field.style.display = ocultar ? "none" : "";
+    });
+
+    serie.required = !ocultar;
+    numero.required = !ocultar;
+    serie.toggleAttribute("required", !ocultar);
+    numero.toggleAttribute("required", !ocultar);
+
+    if (ocultar) {
+      serie.value = "";
+      numero.value = "";
+    }
+  }
+
+  tipoDocumento.addEventListener("change", sincronizarDocumento);
+  tipoDocumento.addEventListener("input", sincronizarDocumento);
+  sincronizarDocumento();
+};

@@ -34,7 +34,7 @@ public class ComprobanteEditDto
     public int? CotizacionId { get; set; }
     public int? NotaPedidoId { get; set; }
     public string Direccion { get; set; } = string.Empty;
-    public DateTime FechaEmision { get; set; } = DateTime.Today;
+    public DateTime FechaEmision { get; set; } = PeruDateTime.Today;
     public FormaPago FormaPago { get; set; } = FormaPago.Contado;
     public EstadoPagoComprobante EstadoPago { get; set; } = EstadoPagoComprobante.PENDIENTE;
     public string MedioPago { get; set; } = "EFECTIVO";
@@ -71,7 +71,7 @@ public class NotaCreditoEditDto
     public int MotivoNotaCreditoId { get; set; }
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
-    public DateTime FechaEmision { get; set; } = DateTime.Today;
+    public DateTime FechaEmision { get; set; } = PeruDateTime.Today;
     public string Referencia { get; set; } = string.Empty;
     public TipoComprobante TipoComprobanteOrigen { get; set; }
     public DateTime FechaOrigen { get; set; }

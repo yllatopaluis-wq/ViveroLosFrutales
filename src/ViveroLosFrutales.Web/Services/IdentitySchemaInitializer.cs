@@ -8,9 +8,12 @@ public static class IdentitySchemaInitializer
     public static async Task EnsureIdentitySchemaAsync(this ApplicationDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync("""
-IF OBJECT_ID(N'[dbo].[AspNetRoles]', N'U') IS NULL
+IF SCHEMA_ID(N'erp') IS NULL
+    EXEC(N'CREATE SCHEMA erp');
+
+IF OBJECT_ID(N'[erp].[AspNetRoles]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetRoles] (
+    CREATE TABLE [erp].[AspNetRoles] (
         [Id] nvarchar(450) NOT NULL,
         [Name] nvarchar(256) NULL,
         [NormalizedName] nvarchar(256) NULL,
@@ -19,9 +22,9 @@ BEGIN
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetUsers]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetUsers]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUsers] (
+    CREATE TABLE [erp].[AspNetUsers] (
         [Id] nvarchar(450) NOT NULL,
         [UserName] nvarchar(256) NULL,
         [NormalizedUserName] nvarchar(256) NULL,
@@ -45,85 +48,85 @@ BEGIN
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetRoleClaims]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetRoleClaims]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetRoleClaims] (
+    CREATE TABLE [erp].[AspNetRoleClaims] (
         [Id] int IDENTITY(1,1) NOT NULL,
         [RoleId] nvarchar(450) NOT NULL,
         [ClaimType] nvarchar(max) NULL,
         [ClaimValue] nvarchar(max) NULL,
         CONSTRAINT [PK_AspNetRoleClaims] PRIMARY KEY ([Id]),
-        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [erp].[AspNetRoles] ([Id]) ON DELETE CASCADE
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetUserClaims]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetUserClaims]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserClaims] (
+    CREATE TABLE [erp].[AspNetUserClaims] (
         [Id] int IDENTITY(1,1) NOT NULL,
         [UserId] nvarchar(450) NOT NULL,
         [ClaimType] nvarchar(max) NULL,
         [ClaimValue] nvarchar(max) NULL,
         CONSTRAINT [PK_AspNetUserClaims] PRIMARY KEY ([Id]),
-        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetUserLogins]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetUserLogins]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserLogins] (
+    CREATE TABLE [erp].[AspNetUserLogins] (
         [LoginProvider] nvarchar(450) NOT NULL,
         [ProviderKey] nvarchar(450) NOT NULL,
         [ProviderDisplayName] nvarchar(max) NULL,
         [UserId] nvarchar(450) NOT NULL,
         CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
-        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetUserRoles]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetUserRoles]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserRoles] (
+    CREATE TABLE [erp].[AspNetUserRoles] (
         [UserId] nvarchar(450) NOT NULL,
         [RoleId] nvarchar(450) NOT NULL,
         CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
-        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId] FOREIGN KEY ([RoleId]) REFERENCES [erp].[AspNetRoles] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
     );
 END
 
-IF OBJECT_ID(N'[dbo].[AspNetUserTokens]', N'U') IS NULL
+IF OBJECT_ID(N'[erp].[AspNetUserTokens]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserTokens] (
+    CREATE TABLE [erp].[AspNetUserTokens] (
         [UserId] nvarchar(450) NOT NULL,
         [LoginProvider] nvarchar(450) NOT NULL,
         [Name] nvarchar(450) NOT NULL,
         [Value] nvarchar(max) NULL,
         CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
-        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId] FOREIGN KEY ([UserId]) REFERENCES [erp].[AspNetUsers] ([Id]) ON DELETE CASCADE
     );
 END
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'EmailIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetUsers]'))
-    CREATE INDEX [EmailIndex] ON [dbo].[AspNetUsers] ([NormalizedEmail]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'EmailIndex' AND object_id = OBJECT_ID(N'[erp].[AspNetUsers]'))
+    CREATE INDEX [EmailIndex] ON [erp].[AspNetUsers] ([NormalizedEmail]);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UserNameIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetUsers]'))
-    CREATE UNIQUE INDEX [UserNameIndex] ON [dbo].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UserNameIndex' AND object_id = OBJECT_ID(N'[erp].[AspNetUsers]'))
+    CREATE UNIQUE INDEX [UserNameIndex] ON [erp].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'RoleNameIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetRoles]'))
-    CREATE UNIQUE INDEX [RoleNameIndex] ON [dbo].[AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'RoleNameIndex' AND object_id = OBJECT_ID(N'[erp].[AspNetRoles]'))
+    CREATE UNIQUE INDEX [RoleNameIndex] ON [erp].[AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetRoleClaims_RoleId' AND object_id = OBJECT_ID(N'[dbo].[AspNetRoleClaims]'))
-    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [dbo].[AspNetRoleClaims] ([RoleId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetRoleClaims_RoleId' AND object_id = OBJECT_ID(N'[erp].[AspNetRoleClaims]'))
+    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [erp].[AspNetRoleClaims] ([RoleId]);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserClaims_UserId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserClaims]'))
-    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [dbo].[AspNetUserClaims] ([UserId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserClaims_UserId' AND object_id = OBJECT_ID(N'[erp].[AspNetUserClaims]'))
+    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [erp].[AspNetUserClaims] ([UserId]);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserLogins_UserId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserLogins]'))
-    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [dbo].[AspNetUserLogins] ([UserId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserLogins_UserId' AND object_id = OBJECT_ID(N'[erp].[AspNetUserLogins]'))
+    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [erp].[AspNetUserLogins] ([UserId]);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserRoles_RoleId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserRoles]'))
-    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [dbo].[AspNetUserRoles] ([RoleId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserRoles_RoleId' AND object_id = OBJECT_ID(N'[erp].[AspNetUserRoles]'))
+    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [erp].[AspNetUserRoles] ([RoleId]);
 """);
     }
 }

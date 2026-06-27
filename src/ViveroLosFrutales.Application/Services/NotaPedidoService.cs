@@ -30,7 +30,7 @@ public class NotaPedidoService(
         {
             Serie = empresa.SerieNotaPedido,
             Correlativo = await notaPedidoRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, empresa.SerieNotaPedido, cancellationToken),
-            Fecha = DateTime.Today
+            Fecha = PeruDateTime.Today
         }, cancellationToken);
     }
 
@@ -393,7 +393,7 @@ public class NotaPedidoService(
             ClienteId = cliente.ClienteId,
             Cliente = cliente,
             Direccion = cliente.Direccion,
-            FechaEmision = DateTime.Today,
+            FechaEmision = PeruDateTime.Today,
             FormaPago = FormaPago.Contado,
             Empresa = empresa,
             EmpresaRazonSocial = empresa.RazonSocial,
@@ -452,7 +452,7 @@ public class NotaPedidoService(
                 await cobroClienteService.RegistrarAsync(new RegistrarCobroDto
                 {
                     ComprobanteId = comprobante.ComprobanteId,
-                    FechaCobro = DateTime.Today,
+                    FechaCobro = PeruDateTime.Today,
                     Monto = pagoAdicional,
                     MedioPago = medioPago,
                     Observacion = "Pago adicional al emitir comprobante"

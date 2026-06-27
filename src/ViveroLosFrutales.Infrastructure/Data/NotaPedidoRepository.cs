@@ -58,7 +58,7 @@ public class NotaPedidoRepository(ApplicationDbContext db) : INotaPedidoReposito
                         ? EstadoPagoNotaPedido.PAGADO
                         : EstadoPagoNotaPedido.PAGO_PARCIAL,
                 x.EstadoDevolucion == null
-                    ? "No aplica"
+                    ? string.Empty
                     : x.EstadoDevolucion == (int)EstadoDevolucion.PENDIENTE
                         ? "Pendiente"
                         : x.EstadoDevolucion == (int)EstadoDevolucion.PARCIAL

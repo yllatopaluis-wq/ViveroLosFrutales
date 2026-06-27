@@ -12,8 +12,11 @@ public class ConfiguracionEmpresaService(
     IEmpresaRepository empresaRepository,
     IEmpresaContext empresaContext)
 {
-    public Task<PagedResult<ConfiguracionEmpresaListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
-        repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
+    public async Task<PagedResult<ConfiguracionEmpresaListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken)
+    {
+        await AsegurarCorrelativosAsync(cancellationToken);
+        return await repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
+    }
 
     public Task<ConfiguracionEmpresaEditDto?> ObtenerAsync(int id, CancellationToken cancellationToken) =>
         repository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken);
@@ -26,6 +29,8 @@ public class ConfiguracionEmpresaService(
 
     public async Task<CorrelativosEmpresaDto> ObtenerCorrelativosAsync(CancellationToken cancellationToken)
     {
+        await AsegurarCorrelativosAsync(cancellationToken);
+
         var empresa = await empresaRepository.ObtenerAsync(empresaContext.EmpresaId, cancellationToken)
             ?? throw new InvalidOperationException("Empresa activa no encontrada.");
 
@@ -71,13 +76,54 @@ public class ConfiguracionEmpresaService(
         }
     }
 
+    private async Task AsegurarCorrelativosAsync(CancellationToken cancellationToken)
+    {
+        var empresa = await empresaRepository.ObtenerAsync(empresaContext.EmpresaId, cancellationToken)
+            ?? throw new InvalidOperationException("Empresa activa no encontrada.");
+
+        foreach (var item in ObtenerSeries(empresa))
+        {
+            if (string.IsNullOrWhiteSpace(item.Serie))
+            {
+                continue;
+            }
+
+            var serie = item.Serie.Trim();
+            var clave = CrearClave(item.Tipo, serie);
+            var existente = await repository.ObtenerPorClaveAsync(empresaContext.EmpresaId, clave, cancellationToken);
+            if (existente is not null)
+            {
+                continue;
+            }
+
+            var siguiente = await comprobanteRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, item.Tipo, serie, cancellationToken);
+            await repository.GuardarPorClaveAsync(
+                empresaContext.EmpresaId,
+                empresaContext.UsuarioNombre,
+                clave,
+                siguiente.ToString(),
+                $"Siguiente correlativo para {item.Nombre} {serie}",
+                cancellationToken);
+        }
+    }
+
     private static IEnumerable<(TipoComprobante Tipo, string Nombre, string Serie)> ObtenerSeries(Empresa empresa)
     {
-        yield return (TipoComprobante.BOL, "Boleta", empresa.SerieBoleta);
-        yield return (TipoComprobante.FAC, "Factura", empresa.SerieFactura);
-        yield return (TipoComprobante.NCR, "Nota credito factura", string.IsNullOrWhiteSpace(empresa.SerieNotaCreditoFactura) ? empresa.SerieNotaCredito : empresa.SerieNotaCreditoFactura);
-        yield return (TipoComprobante.NCR, "Nota credito boleta", string.IsNullOrWhiteSpace(empresa.SerieNotaCreditoBoleta) ? empresa.SerieNotaCredito : empresa.SerieNotaCreditoBoleta);
-        yield return (TipoComprobante.COT, "Cotizacion", empresa.SerieCotizacion);
+        var series = new[]
+        {
+            (Tipo: TipoComprobante.BOL, Nombre: "Boleta", Serie: empresa.SerieBoleta),
+            (Tipo: TipoComprobante.FAC, Nombre: "Factura", Serie: empresa.SerieFactura),
+            (Tipo: TipoComprobante.NCR, Nombre: "Nota de credito factura", Serie: string.IsNullOrWhiteSpace(empresa.SerieNotaCreditoFactura) ? empresa.SerieNotaCredito : empresa.SerieNotaCreditoFactura),
+            (Tipo: TipoComprobante.NCR, Nombre: "Nota de credito boleta", Serie: string.IsNullOrWhiteSpace(empresa.SerieNotaCreditoBoleta) ? empresa.SerieNotaCredito : empresa.SerieNotaCreditoBoleta),
+            (Tipo: TipoComprobante.NPE, Nombre: "Nota de pedido", Serie: empresa.SerieNotaPedido),
+            (Tipo: TipoComprobante.COT, Nombre: "Cotizacion", Serie: empresa.SerieCotizacion)
+        };
+
+        return series
+            .Where(x => !string.IsNullOrWhiteSpace(x.Serie))
+            .Select(x => (x.Tipo, x.Nombre, x.Serie.Trim()))
+            .GroupBy(x => CrearClave(x.Tipo, x.Item3), StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First());
     }
 
     private static string CrearClave(TipoComprobante tipo, string serie) => $"Correlativo.{tipo}.{serie}";

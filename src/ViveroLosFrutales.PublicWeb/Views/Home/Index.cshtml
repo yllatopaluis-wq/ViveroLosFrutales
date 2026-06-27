@@ -1,0 +1,43 @@
+@model PublicPageViewModel
+@inject IConfiguration Configuration
+@{ ViewData["Title"] = "Inicio"; var whatsapp = Configuration["PublicSite:WhatsAppUrl"] ?? "#"; }
+
+<section class="hero">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <span class="eyebrow">Cultivamos confianza desde Huaral</span>
+        <h1>Todo lo que tu cultivo necesita para <em>crecer mejor</em></h1>
+        <p>Plantas frutales y ornamentales seleccionadas, acompañadas de asesoría técnica para lograr jardines y campos productivos.</p>
+        <div class="hero-actions"><a class="btn btn-primary" asp-controller="Productos" asp-action="Index">Ver productos</a><a class="btn btn-light" href="@whatsapp" target="_blank" rel="noopener">Hablar con un asesor</a></div>
+        <div class="hero-trust"><span><strong>Plantas</strong> seleccionadas</span><span><strong>Atención</strong> personalizada</span><span><strong>Soporte</strong> técnico</span></div>
+    </div>
+</section>
+
+<section class="section intro-section">
+    <div class="container split">
+        <div><span class="eyebrow green">Tu aliado agrícola</span><h2>Más que plantas, entregamos experiencia</h2></div>
+        <div><p>En Vivero Los Frutales te ayudamos a elegir la variedad adecuada y cuidamos cada detalle: desde la preparación y el injerto hasta el riego y el manejo fitosanitario.</p><a class="text-link" asp-controller="Nosotros" asp-action="Index">Conoce nuestra historia →</a></div>
+    </div>
+</section>
+
+<section class="section section-soft">
+    <div class="container">
+        <div class="section-heading"><div><span class="eyebrow green">Nuestro catálogo</span><h2>Plantas para cada proyecto</h2></div><a class="text-link" asp-controller="Productos" asp-action="Index">Ver catálogo completo →</a></div>
+        <div class="product-grid">
+            @foreach (var producto in Model.Productos)
+            {
+                <article class="product-card"><div class="product-icon">✦</div><span class="tag">@producto.Categoria</span><h3>@producto.Nombre</h3><p>Unidad: @producto.UnidadMedida</p><a asp-controller="Contacto" asp-action="Index">Solicitar cotización →</a></article>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="section-heading centered"><div><span class="eyebrow green">Soluciones completas</span><h2>Te acompañamos en todo el proceso</h2><p>Combinamos conocimiento de campo y atención cercana para que tomes mejores decisiones.</p></div></div>
+        <div class="service-grid"><article><span>01</span><h3>Asesoría agrícola</h3><p>Orientación técnica según clima, suelo, variedad y objetivos de producción.</p></article><article><span>02</span><h3>Injertos</h3><p>Propagación y mejora varietal realizada con cuidado especializado.</p></article><article><span>03</span><h3>Riego tecnificado</h3><p>Diseño e instalación de soluciones eficientes para aprovechar cada gota.</p></article><article><span>04</span><h3>Fumigación</h3><p>Prevención y control responsable para proteger la salud de tus plantas.</p></article></div>
+        <div class="center-action"><a class="btn btn-outline" asp-controller="Servicios" asp-action="Index">Conocer servicios</a></div>
+    </div>
+</section>
+
+<section class="cta-band"><div class="container"><div><span class="eyebrow">Conversemos</span><h2>¿Listo para hacer crecer tu proyecto?</h2><p>Cuéntanos qué necesitas y nuestro equipo te ayudará a encontrar la mejor solución.</p></div><a class="btn btn-light" asp-controller="Contacto" asp-action="Index">Solicitar asesoría</a></div></section>

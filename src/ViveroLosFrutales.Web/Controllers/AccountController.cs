@@ -16,6 +16,11 @@ public class AccountController(
 {
     public async Task<IActionResult> Login(CancellationToken cancellationToken)
     {
+        if (Request.Query.ContainsKey("expired"))
+        {
+            ModelState.AddModelError(string.Empty, "La sesión expiró. Inicie sesión nuevamente.");
+        }
+
         await CargarEmpresasLoginAsync(cancellationToken);
         return View(new LoginDto());
     }
@@ -58,12 +63,19 @@ public class AccountController(
             return View(dto);
         }
 
+        EstablecerUsuarioActivo(user);
         EstablecerEmpresaActiva(empresa);
         return RedirectToAction("Index", "Home");
     }
 
     public async Task<IActionResult> SeleccionarEmpresa(CancellationToken cancellationToken)
     {
+        if (HttpContext.Session.GetInt32("EmpresaId") is null)
+        {
+            await CerrarSesionAsync();
+            return RedirectToAction(nameof(Login), new { expired = 1 });
+        }
+
         var user = await userManager.GetUserAsync(User);
         if (user is null) return RedirectToAction(nameof(Login));
 
@@ -75,6 +87,12 @@ public class AccountController(
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SeleccionarEmpresa(SeleccionarEmpresaDto dto, CancellationToken cancellationToken)
     {
+        if (HttpContext.Session.GetInt32("EmpresaId") is null)
+        {
+            await CerrarSesionAsync();
+            return RedirectToAction(nameof(Login), new { expired = 1 });
+        }
+
         var user = await userManager.GetUserAsync(User);
         if (user is null) return RedirectToAction(nameof(Login));
 
@@ -87,18 +105,55 @@ public class AccountController(
         }
 
         var empresa = empresas.First(x => x.EmpresaId == dto.EmpresaId);
+        EstablecerUsuarioActivo(user);
         EstablecerEmpresaActiva(empresa);
         return RedirectToAction("Index", "Home");
+    }
+
+    [HttpGet]
+    [ActionName(nameof(Logout))]
+    public async Task<IActionResult> LogoutGet()
+    {
+        var expired = Request.Query.ContainsKey("expired");
+        await CerrarSesionAsync();
+        return expired ? RedirectToAction(nameof(Login), new { expired = 1 }) : RedirectToAction(nameof(Login));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
     {
+        await CerrarSesionAsync();
+        return RedirectToAction(nameof(Login));
+    }
+
+    private async Task CerrarSesionAsync()
+    {
+        LimpiarSesionActiva();
+        await signInManager.SignOutAsync();
+    }
+
+    private void LimpiarSesionActiva()
+    {
         HttpContext.Session.Remove("EmpresaId");
         HttpContext.Session.Remove("EmpresaNombre");
-        await signInManager.SignOutAsync();
-        return RedirectToAction(nameof(Login));
+        HttpContext.Session.Remove("UsuarioId");
+        HttpContext.Session.Remove("UsuarioNombre");
+        HttpContext.Session.Remove("UsuarioIniciales");
+        HttpContext.Session.Remove("UsuarioRolId");
+    }
+
+    private void EstablecerUsuarioActivo(ApplicationUser user)
+    {
+        var nombre = string.Join(" ", new[] { user.Nombres, user.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        nombre = string.IsNullOrWhiteSpace(nombre) ? user.UserName ?? string.Empty : nombre;
+        var iniciales = $"{user.Nombres.FirstOrDefault()}{user.Apellidos.FirstOrDefault()}".Trim().ToUpperInvariant();
+        iniciales = string.IsNullOrWhiteSpace(iniciales) ? (user.UserName?.Substring(0, 1).ToUpperInvariant() ?? "U") : iniciales;
+
+        HttpContext.Session.SetString("UsuarioId", user.Id);
+        HttpContext.Session.SetString("UsuarioNombre", nombre);
+        HttpContext.Session.SetString("UsuarioIniciales", iniciales);
+        HttpContext.Session.SetInt32("UsuarioRolId", user.RolId);
     }
 
     private void EstablecerEmpresaActiva(UsuarioEmpresaDto empresa)
@@ -119,3 +174,4 @@ public class AccountController(
             .ToList();
     }
 }
+

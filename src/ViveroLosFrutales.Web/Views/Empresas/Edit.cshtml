@@ -7,7 +7,7 @@
         : null;
 }
 
-<form asp-action="Edit" method="post" enctype="multipart/form-data" class="dense-form">
+<form asp-action="Edit" method="post" enctype="multipart/form-data" class="dense-form document-entry-form">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger"></div>
     <input asp-for="EmpresaId" type="hidden" />

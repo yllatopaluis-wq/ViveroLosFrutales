@@ -5,7 +5,7 @@
     var empresas = ViewBag.Empresas as IReadOnlyList<EmpresaListDto> ?? Array.Empty<EmpresaListDto>();
 }
 
-<form method="post" class="dense-form">
+<form method="post" class="dense-form document-entry-form">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="UsuarioId" type="hidden" />
     <div class="form-grid cols-4">

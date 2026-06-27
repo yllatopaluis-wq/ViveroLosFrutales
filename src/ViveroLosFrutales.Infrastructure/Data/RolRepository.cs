@@ -4,6 +4,7 @@ using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Security;
 
 namespace ViveroLosFrutales.Infrastructure.Data;
 
@@ -44,11 +45,22 @@ public class RolRepository(ApplicationDbContext db) : IRolRepository
     {
         await EnsurePermisosAsync(cancellationToken);
 
-        return await db.Permisos.AsNoTracking()
-            .OrderBy(x => x.Modulo)
-            .ThenBy(x => x.Accion)
-            .Select(x => new PermisoDto(x.PermisoId, x.Modulo, x.Accion, x.Descripcion))
-            .ToListAsync(cancellationToken);
+        var permisos = await db.Permisos.AsNoTracking().ToListAsync(cancellationToken);
+        var orden = PermissionCatalog.All()
+            .Select((x, index) => new { Key = $"{x.Module}|{x.Action}", index })
+            .ToDictionary(x => x.Key, x => x.index, StringComparer.OrdinalIgnoreCase);
+
+        return permisos
+            .OrderBy(x => orden.GetValueOrDefault($"{x.Modulo}|{x.Accion}", int.MaxValue))
+            .Select(x => new PermisoDto(
+                x.PermisoId,
+                PermissionCatalog.GroupFor(x.Modulo),
+                x.Modulo,
+                PermissionCatalog.ModuleLabel(x.Modulo),
+                x.Accion,
+                PermissionCatalog.ActionLabel(x.Accion),
+                x.Descripcion))
+            .ToList();
     }
 
     public async Task GuardarAsync(RolEditDto dto, CancellationToken cancellationToken)
@@ -65,8 +77,14 @@ public class RolRepository(ApplicationDbContext db) : IRolRepository
 
         if (dto.RolId == 0) db.RolesNegocio.Add(rol);
 
+        var permisosValidos = await db.Permisos
+            .Where(x => x.Estado == EstadoRegistro.Activo)
+            .Select(x => x.PermisoId)
+            .ToListAsync(cancellationToken);
+        var permisosValidosSet = permisosValidos.ToHashSet();
+
         rol.RolPermisos.Clear();
-        foreach (var permisoId in dto.PermisoIds.Distinct())
+        foreach (var permisoId in dto.PermisoIds.Distinct().Where(permisosValidosSet.Contains))
         {
             rol.RolPermisos.Add(new RolPermiso { PermisoId = permisoId });
         }
@@ -82,49 +100,36 @@ public class RolRepository(ApplicationDbContext db) : IRolRepository
 
     private async Task EnsurePermisosAsync(CancellationToken cancellationToken)
     {
-        var modulos = new[]
-        {
-            "Cotizaciones",
-            "Comprobantes",
-            "NotasCredito",
-            "Categorias",
-            "Productos",
-            "Clientes",
-            "Proveedores",
-            "Compras",
-            "NotasPedido",
-            "CobrosClientes",
-            "Caja",
-            "EstadoCuentaClientes",
-            "Gastos",
-            "Ingresos",
-            "Empresas",
-            "Usuarios",
-            "Roles",
-            "Configuracion",
-            "NubefactLogs",
-            "Reportes"
-        };
-        var acciones = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Configurar", "Convertir", "RegistrarPago" };
+        var catalogo = PermissionCatalog.All().ToArray();
+        var catalogoSet = catalogo
+            .Select(x => $"{x.Module}|{x.Action}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var existentes = await db.Permisos
-            .Select(x => new { x.Modulo, x.Accion })
+            .Include(x => x.RolPermisos)
             .ToListAsync(cancellationToken);
-        var existentesSet = existentes.Select(x => $"{x.Modulo}|{x.Accion}").ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var modulo in modulos)
+        var obsoletos = existentes
+            .Where(x => !catalogoSet.Contains($"{x.Modulo}|{x.Accion}"))
+            .ToList();
+        if (obsoletos.Count > 0)
         {
-            foreach (var accion in acciones)
-            {
-                if (existentesSet.Contains($"{modulo}|{accion}")) continue;
+            db.RolPermisos.RemoveRange(obsoletos.SelectMany(x => x.RolPermisos));
+            db.Permisos.RemoveRange(obsoletos);
+        }
 
-                db.Permisos.Add(new Permiso
-                {
-                    Modulo = modulo,
-                    Accion = accion,
-                    Descripcion = $"{accion} {modulo}",
-                    Estado = EstadoRegistro.Activo
-                });
-            }
+        var existentesSet = existentes
+            .Except(obsoletos)
+            .Select(x => $"{x.Modulo}|{x.Accion}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var permiso in catalogo.Where(x => !existentesSet.Contains($"{x.Module}|{x.Action}")))
+        {
+            db.Permisos.Add(new Permiso
+            {
+                Modulo = permiso.Module,
+                Accion = permiso.Action,
+                Descripcion = $"{permiso.Action} {permiso.Module}",
+                Estado = EstadoRegistro.Activo
+            });
         }
 
         await db.SaveChangesAsync(cancellationToken);

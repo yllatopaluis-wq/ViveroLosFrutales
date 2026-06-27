@@ -62,26 +62,32 @@ Entidades principales:
 Los permisos se guardan por formulario/modulo tecnico en la tabla `Permiso`:
 
 - `Modulo`: nombre del formulario o recurso, por ejemplo `Comprobantes`, `Productos`, `Usuarios`.
-- `Accion`: `Ver`, `Crear`, `Editar`, `Anular`, `Imprimir`, `Configurar`.
+- `Accion`: operacion real habilitada para el formulario; no se genera el mismo conjunto para todos.
 
 La vista de roles agrupa esos permisos en 3 niveles funcionales:
 
-- Grupo funcional: Ventas, Maestros, Operacion, Administracion, Reportes.
+- Grupo funcional: Tablero, Ventas, Maestros, Operacion, Administracion o Reportes.
 - Formulario.
 - Accion.
 
-`RolRepository.ObtenerPermisosAsync` ejecuta `EnsurePermisosAsync` para completar permisos faltantes al cargar el formulario de roles.
+`RolRepository.ObtenerPermisosAsync` sincroniza la tabla con `PermissionCatalog`: agrega permisos faltantes y elimina permisos o asignaciones obsoletas al cargar el formulario de roles.
 
-`DatabaseSeeder.EnsurePermissionsAsync` tambien completa permisos al arrancar la aplicacion cuando `Seed:RunOnStartup` esta activo.
+`DatabaseSeeder.EnsurePermissionsAsync` realiza la misma sincronizacion al arrancar la aplicacion cuando `Seed:RunOnStartup` esta activo.
 
 ## 5. Modulos y formularios de permisos
 
 Agrupacion funcional usada por la vista:
 
 ```text
+Tablero
+  Home
+
 Ventas
   Cotizaciones
+  NotasPedido
   Comprobantes
+  NotasCredito
+  CobrosClientes
 
 Maestros
   Categorias
@@ -93,6 +99,8 @@ Operacion
   Compras
   Gastos
   Ingresos
+  Devoluciones
+  Caja
 
 Administracion
   Empresas
@@ -100,9 +108,11 @@ Administracion
   Roles
   Configuracion
   NubefactLogs
+  ErroresAplicacion
 
 Reportes
   Reportes
+  EstadoCuentaClientes
 ```
 
 ## 6. Entidades principales
@@ -381,6 +391,7 @@ Reglas tecnicas:
 - `MovimientoCaja.OrigenId` apunta a `DevolucionId`.
 - El repositorio de caja enriquece los movimientos desde `Devolucion` para mostrar tercero y documento.
 - Se evita duplicidad por nota de pedido, nota de credito, comprobante o compra.
+- `DevolucionNotificationsViewComponent` consulta `DevolucionRepository.ObtenerAlertasAsync` y presenta en la campana las devoluciones pendientes o parciales de la empresa activa.
 
 ## 14. Caja y MovimientoCaja
 
@@ -453,7 +464,7 @@ La busqueda textual se aplica sobre cliente/proveedor, documento, medio de pago 
 - `IngresoService.GuardarAsync` crea o actualiza `Ingreso` y su `MovimientoCaja` en una transaccion.
 - `GastoService.AnularAsync` e `IngresoService.AnularAsync` exigen motivo, guardan fecha de anulacion y anulan el movimiento de caja relacionado.
 - `Gasto.MovimientoCajaId` e `Ingreso.MovimientoCajaId` guardan la relacion principal; `MovimientoCaja.OrigenId` conserva la referencia funcional al registro origen.
-- `scripts/sql/001-create-database.sql` crea las tablas y relaciones finales; `002-cargar-categorias-financieras.sql` carga las categorias iniciales por empresa.
+- `scripts/sql/001-create-database.sql` crea las tablas y relaciones finales; `003-cargar-categorias-financieras.sql` carga las categorias iniciales por empresa despues de registrar empresas con `002-cargar-empresa-inicial.sql`.
 
 ## 15. Nubefact
 
@@ -491,6 +502,13 @@ Para `NCR`, el payload usa:
 
 El parseo de respuesta marca `EstadoSunat = Aceptado` cuando Nubefact devuelve aceptacion explicita, codigo SUNAT `0`, estado textual aceptado o descripcion SUNAT aceptada. Esta regla evita que comprobantes con PDF emitido y aceptado queden visualmente como no aceptados.
 
+### Registro de errores de aplicacion
+
+- `ApplicationErrorMiddleware` captura excepciones no controladas y conserva el log de Serilog.
+- La tabla `ErrorAplicacion` registra empresa opcional, fecha UTC, usuario, ruta, metodo HTTP, tipo, mensaje, detalle e identificador de seguimiento.
+- `ErroresAplicacionController` permite filtrar, revisar el detalle y marcar incidencias como revisadas.
+- Si la persistencia del error falla, el middleware no reemplaza la excepcion original y conserva el fallo en Serilog.
+
 ## 16. PDF local
 
 La generacion PDF esta en `PdfService` con QuestPDF.
@@ -508,6 +526,16 @@ Ajustes relevantes:
 - La columna de producto tiene mayor espacio para evitar saltos de linea.
 
 Los PDF locales se guardan en la ruta configurada por `PdfOptions`.
+
+### 16.1 Reporte general anual
+
+- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez años.
+- `ReporteRepository` agrega por empresa, año y mes las ventas, ingresos, gastos y compras.
+- Ventas incluye BOL/FAC activas y resta NCR activas.
+- Compras considera documentos con `EstadoDocumento = ACTIVO`.
+- Gastos e ingresos consideran `Estado = Activo`.
+- El resultado mensual y anual usa `Ventas + Ingresos - Gastos - Compras`.
+- La vista `Views/Reportes/Reporte.cshtml` contiene la matriz comparativa, indicadores y consolidado anual.
 
 ## 17. JavaScript de UI
 
@@ -551,13 +579,31 @@ Scripts principales:
 
 ```text
 scripts/sql/001-create-database.sql
-scripts/sql/002-cargar-categorias-financieras.sql
-scripts/sql/003-cargar-productos-catalogo.sql
+scripts/sql/002-cargar-empresa-inicial.sql
+scripts/sql/003-cargar-categorias-financieras.sql
+scripts/sql/004-cargar-productos-catalogo.sql
+scripts/sql/005-cargar-clientes-entidades.sql
+scripts/sql/006-cargar-productos-por-empresa.sql
+scripts/sql/007-cargar-usuario-admin.sql
 ```
 
-`001-create-database.sql` se genera desde el modelo EF vigente y crea desde cero todas las tablas, relaciones, indices, permisos, roles, moneda y motivos de nota de credito. No contiene migraciones, backfills ni alteraciones historicas.
+`001-create-database.sql` se genera desde el modelo EF vigente y crea desde cero el esquema `erp`, tablas, relaciones, indices, permisos, roles internos, moneda y motivos de nota de credito. No contiene migraciones, backfills ni alteraciones historicas.
 
-Los scripts `002` y `003` son cargas idempotentes. El segundo es especifico para la empresa con RUC `20615082997`.
+Los scripts `002` a `007` son cargas idempotentes para preparar una salida inicial:
+
+- `002-cargar-empresa-inicial.sql`: registra o actualiza las empresas Lima y Huaral.
+- `003-cargar-categorias-financieras.sql`: registra categorias iniciales de gasto e ingreso por empresa.
+- `004-cargar-productos-catalogo.sql`: carga el catalogo de productos desde el Excel Nubefact para las empresas filtradas.
+- `005-cargar-clientes-entidades.sql`: carga clientes globales en `erp.Cliente`; esta tabla no usa `EmpresaId`.
+- `006-cargar-productos-por-empresa.sql`: replica/verifica productos por empresa usando el mismo catalogo base.
+- `007-cargar-usuario-admin.sql`: crea o actualiza el usuario inicial `admin`, registra el rol Identity en `erp.AspNetRoles`, relaciona `erp.AspNetUserRoles`, asegura permisos del rol interno administrador y asocia el usuario con `erp.UsuarioEmpresa`.
+
+El sistema usa dos conceptos de rol:
+
+- `erp.Rol`: rol de negocio usado por permisos funcionales (`RolId = 1` Administrador, `RolId = 2` Vendedor).
+- `erp.AspNetRoles`: rol de ASP.NET Identity. El script `007` crea el rol Identity `Administrador` y vincula el usuario inicial para mantener consistencia con Identity.
+
+Para login multiempresa no basta con crear el usuario en `erp.AspNetUsers`; debe existir al menos una fila en `erp.UsuarioEmpresa` para la empresa seleccionada. El script `007` asocia el usuario inicial a las empresas con RUC `20615082997` y `20615619273` cuando están activas.
 
 ## 20. Build y pruebas
 

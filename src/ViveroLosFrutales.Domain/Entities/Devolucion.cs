@@ -14,7 +14,7 @@ public class Devolucion : EmpresaEntity
     public int? ComprobanteId { get; set; }
     public int? NotaCreditoId { get; set; }
     public int? CompraId { get; set; }
-    public DateTime FechaGeneracion { get; set; } = DateTime.Today;
+    public DateTime FechaGeneracion { get; set; } = PeruDateTime.Today;
     public decimal MontoOriginal { get; set; }
     public decimal MontoDevuelto { get; set; }
     public decimal MontoPendiente { get; set; }

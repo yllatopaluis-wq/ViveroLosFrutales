@@ -16,7 +16,7 @@ public class Comprobante : EmpresaEntity
     public int? MotivoNotaCreditoId { get; set; }
     public string MotivoNotaCredito { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
-    public DateTime FechaEmision { get; set; } = DateTime.Today;
+    public DateTime FechaEmision { get; set; } = PeruDateTime.Today;
     public FormaPago FormaPago { get; set; } = FormaPago.Contado;
 
     public string EmpresaRazonSocial { get; set; } = string.Empty;

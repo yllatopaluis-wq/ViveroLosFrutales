@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
@@ -85,7 +86,7 @@ public class ComprobantesController(
 
         ViewData["Referencia"] = $"{dto.TipoComprobante}-{dto.Serie}-{dto.Correlativo:000000}";
         ViewData["SaldoPendiente"] = dto.SaldoPendiente;
-        return View(new RegistrarCobroDto { ComprobanteId = id, FechaCobro = DateTime.Today, Monto = dto.SaldoPendiente, MedioPago = "EFECTIVO" });
+        return View(new RegistrarCobroDto { ComprobanteId = id, FechaCobro = PeruDateTime.Today, Monto = dto.SaldoPendiente, MedioPago = "EFECTIVO" });
     }
 
     public async Task<IActionResult> Numeracion(TipoComprobante tipoComprobante, CancellationToken cancellationToken) =>
@@ -162,7 +163,7 @@ public class ComprobantesController(
                     return PhysicalFile(result.PdfUrl, "application/pdf", Path.GetFileName(result.PdfUrl));
                 }
 
-                return Redirect(result.PdfUrl);
+                return AbrirPdfYActualizarListado(result.PdfUrl);
             }
 
             return Content(string.IsNullOrWhiteSpace(result.Mensaje)
@@ -173,6 +174,34 @@ public class ComprobantesController(
         {
             return Content(ErrorMessageHelper.ToSpanish(ex), "text/plain");
         }
+    }
+
+
+    private ContentResult AbrirPdfYActualizarListado(string pdfUrl)
+    {
+        var pdfJson = JsonSerializer.Serialize(pdfUrl);
+        var messageJson = JsonSerializer.Serialize(new { type = "comprobante-impreso" });
+        var html = $$"""
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Abriendo comprobante</title>
+</head>
+<body>
+    <p>Abriendo comprobante...</p>
+    <script>
+        try {
+            if (window.opener && !window.opener.closed) {
+                window.opener.postMessage({{messageJson}}, window.location.origin);
+            }
+        } catch (e) { }
+        window.location.replace({{pdfJson}});
+    </script>
+</body>
+</html>
+""";
+        return Content(html, "text/html; charset=utf-8");
     }
 
     [HttpPost]

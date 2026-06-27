@@ -1,23 +1,151 @@
+@model ReporteGeneralDto
 @{
-    var today = DateTime.Today;
-    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
-    var currentDay = today.ToString("yyyy-MM-dd");
+    string Dinero(decimal valor) => $"S/ {valor:N2}";
+    string Numero(decimal valor) => valor % 1 == 0 ? valor.ToString("N0") : valor.ToString("N2");
+    string ValorKpi(ReporteGeneralKpiDto kpi) => kpi.EsMoneda ? Dinero(kpi.Valor) : Numero(kpi.Valor);
+    string VariacionTexto(decimal? variacion) => variacion is decimal v ? $"{v:+0.0;-0.0;0.0}%" : "";
+    string VariacionClase(decimal? variacion) => variacion is null ? "neutral" : variacion >= 0 ? "up" : "down";
+    string ClaseMonto(decimal valor) => valor < 0 ? "report-negative" : valor > 0 ? "report-positive" : "";
+    var fechaDesde = new DateTime(Model.AnioDesde, 1, 1).ToString("dd/MM/yyyy");
+    var fechaHasta = new DateTime(Model.AnioHasta, 12, 31).ToString("dd/MM/yyyy");
+    var maxVentasGastos = Math.Max(1, Model.DashboardMeses.Select(x => Math.Max(x.Ventas, x.Gastos)).DefaultIfEmpty(1).Max());
+    var maxResultado = Math.Max(1, Model.DashboardMeses.Select(x => Math.Abs(x.Resultado)).DefaultIfEmpty(1).Max());
+    decimal TotalPorConcepto(string concepto) => concepto switch
+    {
+        "Ventas netas" => Model.ResumenAnual.Sum(x => x.Ventas),
+        "Ingresos" => Model.ResumenAnual.Sum(x => x.Ingresos),
+        "Gastos" => Model.ResumenAnual.Sum(x => x.Gastos),
+        "Compras" => Model.ResumenAnual.Sum(x => x.Compras),
+        _ => Model.ResumenAnual.Sum(x => x.Resultado)
+    };
+    decimal ValorAnual(ReporteGeneralAnualDto anual, string concepto) => concepto switch
+    {
+        "Ventas netas" => anual.Ventas,
+        "Ingresos" => anual.Ingresos,
+        "Gastos" => anual.Gastos,
+        "Compras" => anual.Compras,
+        _ => anual.Resultado
+    };
+    var conceptos = new[] { "Ventas netas", "Ingresos", "Gastos", "Compras", "Resultado neto" };
 }
 
-<form method="get" class="dense-form">
-    <div class="form-grid cols-4">
-        <label>Fecha Desde<input name="FechaDesde" class="form-control form-control-sm" type="date" value="@firstDay" /></label>
-        <label>Fecha Hasta<input name="FechaHasta" class="form-control form-control-sm" type="date" value="@currentDay" /></label>
-        <label>Filtro<input name="Filtro" class="form-control form-control-sm" placeholder="Cliente, producto o categoria" /></label>
-        <label>Formato<select name="Formato" class="form-select form-select-sm"><option>Vista</option><option>Excel</option><option>PDF</option></select></label>
-    </div>
-    <div class="form-actions">
-        <button class="btn btn-sm btn-primary">Consultar</button>
-        <button type="button" class="btn btn-sm btn-success">Exportar</button>
-    </div>
-</form>
+<section class="rg-dashboard">
+    <header class="rg-header">
+        <div>
+            <h1>Dashboard gerencial</h1>
+            <p>Resumen general del desempe&ntilde;o del negocio</p>
+        </div>
+        <form method="get" class="rg-filter">
+            <label class="rg-range">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4 8h16M5 5h14v16H5z" /></svg>
+                <span>@fechaDesde - @fechaHasta</span>
+            </label>
+            <label class="rg-year-field"><span>Desde</span><input name="anioDesde" type="number" min="2000" max="@(PeruDateTime.Today.Year + 1)" value="@Model.AnioDesde" /></label>
+            <label class="rg-year-field"><span>Hasta</span><input name="anioHasta" type="number" min="2000" max="@(PeruDateTime.Today.Year + 1)" value="@Model.AnioHasta" /></label>
+            <button type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7Z" /></svg>Filtros</button>
+        </form>
+    </header>
 
-<div class="data-grid empty-state mt-3">
-    <strong>@ViewData["Title"]</strong>
-    <span>Reporte preparado para consultar siempre con rango de fechas y sin cargar historico completo automaticamente.</span>
-</div>
+    <div class="rg-kpi-grid">
+        @foreach (var kpi in Model.Kpis.Take(5))
+        {
+            <article class="rg-kpi @kpi.Variante">
+                <span class="rg-kpi-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-8" /><path d="M4 19h16" /></svg></span>
+                <div>
+                    <small>@kpi.Titulo</small>
+                    <strong>@ValorKpi(kpi)</strong>
+                    @if (kpi.VariacionPorcentaje is not null)
+                    {
+                        <em class="@VariacionClase(kpi.VariacionPorcentaje)">@VariacionTexto(kpi.VariacionPorcentaje)</em>
+                    }
+                    <span>@kpi.Subtitulo</span>
+                </div>
+            </article>
+        }
+    </div>
+
+    <div class="rg-kpi-grid rg-kpi-secondary">
+        @foreach (var kpi in Model.Kpis.Skip(5))
+        {
+            <article class="rg-mini-kpi @kpi.Variante">
+                <span class="rg-mini-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></svg></span>
+                <div>
+                    <small>@kpi.Titulo</small>
+                    <strong>@ValorKpi(kpi)</strong>
+                    <span>@kpi.Subtitulo</span>
+                </div>
+            </article>
+        }
+    </div>
+
+    <div class="rg-charts">
+        <section class="rg-panel">
+            <h2>Ventas vs Gastos por mes</h2>
+            <div class="rg-legend"><span><i class="sales"></i>Ventas</span><span><i class="expense"></i>Gastos</span></div>
+            <div class="rg-bar-chart">
+                @foreach (var mes in Model.DashboardMeses)
+                {
+                    var ventaHeight = Math.Max(2, Math.Round(mes.Ventas / maxVentasGastos * 100, 1));
+                    var gastoHeight = Math.Max(2, Math.Round(mes.Gastos / maxVentasGastos * 100, 1));
+                    <div class="rg-bar-month">
+                        <div class="rg-bars">
+                            <span class="rg-bar sales" style="height:@ventaHeight%" title="@mes.Nombre: @Dinero(mes.Ventas)"></span>
+                            <span class="rg-bar expense" style="height:@gastoHeight%" title="@mes.Nombre: @Dinero(mes.Gastos)"></span>
+                        </div>
+                        <small>@mes.NombreCorto</small>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="rg-panel">
+            <h2>Resultado neto por mes</h2>
+            <div class="rg-line-chart">
+                @for (var i = 0; i < Model.DashboardMeses.Count; i++)
+                {
+                    var mes = Model.DashboardMeses[i];
+                    var bottom = 12 + Math.Round(Math.Abs(mes.Resultado) / maxResultado * 76, 1);
+                    <div class="rg-point-wrap">
+                        <span class="rg-point @(mes.Resultado < 0 ? "negative" : "")" style="bottom:@bottom%" title="@mes.Nombre: @Dinero(mes.Resultado)"></span>
+                        <small>@mes.NombreCorto</small>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+
+    <section class="rg-panel rg-annual-panel">
+        <h2>Resumen anual</h2>
+        <div class="rg-table-wrap">
+            <table class="rg-annual-table">
+                <thead>
+                    <tr>
+                        <th>Concepto</th>
+                        @foreach (var anio in Model.Anios)
+                        {
+                            <th class="text-end">@anio</th>
+                        }
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var concepto in conceptos)
+                    {
+                        <tr>
+                            <th>@concepto</th>
+                            @foreach (var anual in Model.ResumenAnual)
+                            {
+                                var valor = ValorAnual(anual, concepto);
+                                <td class="text-end @ClaseMonto(valor)">@Dinero(valor)</td>
+                            }
+                            @{ var total = TotalPorConcepto(concepto); }
+                            <td class="text-end fw-bold @ClaseMonto(total)">@Dinero(total)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <p class="rg-note">Las ventas consideran boletas y facturas activas, descontando notas de cr&eacute;dito activas. El resultado neto se calcula como ventas + ingresos - gastos - compras.</p>
+</section>

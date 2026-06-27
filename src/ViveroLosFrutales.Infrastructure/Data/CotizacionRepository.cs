@@ -68,8 +68,18 @@ public class CotizacionRepository(ApplicationDbContext db) : ICotizacionReposito
 
     public async Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await operacion();
-        await transaction.CommitAsync(cancellationToken);
+        if (db.Database.CurrentTransaction is not null)
+        {
+            await operacion();
+            return;
+        }
+
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await operacion();
+            await transaction.CommitAsync(cancellationToken);
+        });
     }
 }

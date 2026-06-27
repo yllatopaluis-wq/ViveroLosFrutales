@@ -13,4 +13,11 @@ public class RolEditDto
     public List<int> PermisoIds { get; set; } = new();
 }
 
-public record PermisoDto(int PermisoId, string Modulo, string Accion, string Descripcion);
+public record PermisoDto(
+    int PermisoId,
+    string Grupo,
+    string Modulo,
+    string Formulario,
+    string Accion,
+    string AccionEtiqueta,
+    string Descripcion);

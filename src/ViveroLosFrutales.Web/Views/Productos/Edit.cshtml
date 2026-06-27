@@ -5,7 +5,7 @@
     var categorias = ViewBag.Categorias as IReadOnlyList<CategoriaListDto> ?? Array.Empty<CategoriaListDto>();
 }
 
-<form method="post" class="dense-form">
+<form method="post" class="dense-form document-entry-form">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="ProductoId" type="hidden" />
     <fieldset disabled="@readOnly" class="form-grid cols-4">

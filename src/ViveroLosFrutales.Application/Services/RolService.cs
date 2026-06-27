@@ -16,6 +16,9 @@ public class RolService(IRolRepository repository)
     public Task<IReadOnlyList<PermisoDto>> ObtenerPermisosAsync(CancellationToken cancellationToken) =>
         repository.ObtenerPermisosAsync(cancellationToken);
 
+    public Task<bool> TienePermisoAsync(int rolId, string modulo, string accion, CancellationToken cancellationToken) =>
+        repository.TienePermisoAsync(rolId, modulo, accion, cancellationToken);
+
     public async Task GuardarAsync(RolEditDto dto, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(dto.Nombre)) throw new InvalidOperationException("El nombre del rol es obligatorio.");

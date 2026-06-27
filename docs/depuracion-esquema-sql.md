@@ -4,11 +4,15 @@
 
 El esquema de instalacion se genero desde `ApplicationDbContext`, por lo que las tablas, columnas, relaciones e indices coinciden con el modelo EF vigente.
 
-Los quince scripts incrementales se redujeron a:
+Los scripts vigentes de instalacion y carga inicial son:
 
-1. `001-create-database.sql`: base, esquema completo, Identity y datos maestros estaticos.
-2. `002-cargar-categorias-financieras.sql`: categorias iniciales de gastos e ingresos para las empresas existentes.
-3. `003-cargar-productos-catalogo.sql`: catalogo de productos para la empresa con RUC `20615082997`.
+1. `001-create-database.sql`: base, esquema completo, Identity, tablas ERP y datos maestros estaticos.
+2. `002-cargar-empresa-inicial.sql`: empresas Vivero Los Frutales Lima y Huaral.
+3. `003-cargar-categorias-financieras.sql`: categorias iniciales de gastos e ingresos por empresa.
+4. `004-cargar-productos-catalogo.sql`: catalogo base del Excel Nubefact para ambas empresas.
+5. `005-cargar-clientes-entidades.sql`: clientes y entidades historicas en `erp.Cliente`.
+6. `006-cargar-productos-por-empresa.sql`: version alternativa/idempotente de carga de productos por empresa.
+7. `007-cargar-usuario-admin.sql`: rol Identity, usuario administrador y relacion con `erp.UsuarioEmpresa`.
 
 ## Elementos retirados
 
@@ -29,5 +33,4 @@ Aunque algunos de estos campos no se editan directamente en formularios, partici
 
 ## Alcance
 
-`001-create-database.sql` esta destinado exclusivamente a instalaciones nuevas. No reemplaza una migracion de una base existente ni elimina automaticamente tablas antiguas de una base ya creada.
-
+`001-create-database.sql` esta destinado exclusivamente a instalaciones nuevas. No reemplaza una migracion de una base existente ni elimina automaticamente tablas antiguas de una base ya creada. Para una salida productiva nueva, ejecutar los scripts del `001` al `007` en orden.

@@ -2,7 +2,7 @@
 @using System.Text.Json
 @{
     var esEdicion = Model.Cotizacion.CotizacionId > 0;
-    ViewData["Title"] = esEdicion ? "Editar cotizacion" : "Nueva cotizacion";
+    ViewData["Title"] = esEdicion ? "Editar cotización" : "Nueva cotización";
     var formAction = esEdicion ? "Edit" : "Create";
     var clienteSeleccionado = Model.Clientes.FirstOrDefault(x => x.ClienteId == Model.Cotizacion.ClienteId);
     var clienteTexto = clienteSeleccionado is null ? string.Empty : $"{clienteSeleccionado.NombreCompleto} - {clienteSeleccionado.NumeroDocumento}";
@@ -54,111 +54,141 @@
     var totalCalculado = subtotalExonerado + subtotalGravado + igvCalculado;
 }
 
-<form asp-action="@formAction" method="post" class="dense-form comprobante-form">
+<form asp-action="@formAction" method="post" class="document-form comprobante-form">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger"></div>
     <input type="hidden" asp-for="Cotizacion.CotizacionId" name="CotizacionId" />
 
-    <div class="form-grid cols-4">
-        <label>
-            Tipo
-            <input class="form-control form-control-sm" value="Cotizacion" readonly />
-        </label>
-        <label>
-            Serie
-            <input name="Serie" class="form-control form-control-sm" value="@Model.Numeracion.Serie" readonly />
-        </label>
-        <label>
-            Correlativo
-            <input name="Correlativo" class="form-control form-control-sm text-end" value="@Model.Numeracion.Correlativo" readonly />
-        </label>
-        <label>
-            Fecha
-            <input asp-for="Cotizacion.FechaEmision" name="FechaEmision" class="form-control form-control-sm" type="date" />
-        </label>
-        <label class="span-2">
-            Condiciones de venta
-            <textarea asp-for="Cotizacion.CondicionesVenta" name="CondicionesVenta" class="form-control form-control-sm" rows="5"></textarea>
-        </label>
-        <label class="span-2">
-            Características técnicas
-            <textarea asp-for="Cotizacion.CaracteristicasTecnicas" name="CaracteristicasTecnicas" class="form-control form-control-sm" rows="5"></textarea>
-        </label>
-        <label class="span-2">
-            Cliente
-            <input class="form-control form-control-sm" id="clienteSearch" list="clientesOptions" value="@clienteTexto" placeholder="Buscar por nombre o numero de documento" autocomplete="off" />
-            <input asp-for="Cotizacion.ClienteId" name="ClienteId" type="hidden" id="clienteId" />
-        </label>
-        <label class="span-2">
-            Direccion
-            <input asp-for="Cotizacion.Direccion" name="Direccion" class="form-control form-control-sm" id="clienteDireccion" value="@clienteDireccion" readonly />
-        </label>
-        <label>
-            Forma Pago
-            <select asp-for="Cotizacion.FormaPago" name="FormaPago" asp-items="Html.GetEnumSelectList<FormaPago>()" class="form-select form-select-sm"></select>
-        </label>
-    </div>
+    <section class="document-section">
+        <div class="document-section-heading">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <h3>Información de la cotización</h3>
+        </div>
+        <fieldset class="document-grid quote-main-grid">
+            <label>
+                <span>Tipo</span>
+                <input class="form-control" value="Cotización" readonly />
+            </label>
+            <label>
+                <span>Serie</span>
+                <input name="Serie" class="form-control" value="@Model.Numeracion.Serie" readonly />
+            </label>
+            <label>
+                <span>Número</span>
+                <input name="Correlativo" class="form-control text-end" value="@Model.Numeracion.Correlativo" readonly />
+            </label>
+            <label>
+                <span>Fecha</span>
+                <input asp-for="Cotizacion.FechaEmision" name="FechaEmision" class="form-control" type="date" />
+            </label>
+            <label>
+                <span>Forma de pago</span>
+                <select asp-for="Cotizacion.FormaPago" name="FormaPago" asp-items="Html.GetEnumSelectList<FormaPago>()" class="form-select"></select>
+            </label>
+        </fieldset>
+    </section>
 
-    <div class="section-title">Detalle</div>
-    <table class="table table-sm data-grid detalle-grid" id="detalle" data-show-totals="true">
-        <colgroup>
-            <col class="detalle-producto" />
-            <col class="detalle-unidad" />
-            <col class="detalle-cantidad" />
-            <col class="detalle-precio" />
-            <col class="detalle-total" />
-            <col class="detalle-accion" />
-        </colgroup>
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Unidad</th>
-                <th class="text-end">Cantidad</th>
-                <th class="text-end">Precio</th>
-                <th class="text-end">Total</th>
-                <th class="text-center"></th>
-            </tr>
-        </thead>
-        <tbody>
-            @for (var i = 0; i < detalles.Count; i++)
-            {
-                <tr>
-                    <td>
-                        <select name="Detalles[@i].ProductoId" class="form-select form-select-sm producto-select">
-                            <option value="">Seleccione producto</option>
-                            @foreach (var producto in Model.Productos)
-                            {
-                                var selected = detalles[i].ProductoId == producto.ProductoId;
-                                <option value="@producto.ProductoId" data-precio="@producto.PrecioVentaConIgv" data-afecto-igv="@producto.AfectoIgv" selected="@selected">
-                                    @(string.IsNullOrWhiteSpace(producto.Categoria) ? producto.Nombre : $"{producto.Nombre} ({producto.Categoria})")
-                                </option>
-                            }
-                        </select>
-                    </td>
-                    <td><input value="UNIDAD" class="form-control form-control-sm" readonly /></td>
-                    <td><input name="Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
-                    <td><input name="Detalles[@i].PrecioUnitario" value="@detalles[i].PrecioUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
-                    <td><input value="@((detalles[i].Cantidad * detalles[i].PrecioUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
-                    <td class="text-center">
-                        <button type="button" class="icon-btn primary add-row" title="Agregar fila" aria-label="Agregar fila">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
-                        </button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <section class="document-section">
+        <div class="document-section-heading">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span>
+            <h3>Cliente</h3>
+        </div>
+        <fieldset class="document-grid client-document-grid">
+            <label>
+                <span>Buscar cliente</span>
+                <input class="form-control" id="clienteSearch" list="clientesOptions" value="@clienteTexto" placeholder="Buscar por nombre o número de documento..." autocomplete="off" />
+                <input asp-for="Cotizacion.ClienteId" name="ClienteId" type="hidden" id="clienteId" />
+            </label>
+            <label>
+                <span>Dirección</span>
+                <input asp-for="Cotizacion.Direccion" name="Direccion" class="form-control" id="clienteDireccion" value="@clienteDireccion" readonly />
+            </label>
+        </fieldset>
+    </section>
 
-    <div class="form-totals" aria-label="Totales de la cotizacion">
-        <div><span>Subtotal Exonerado</span><strong id="comprobanteSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div>
-        <div><span>Subtotal Gravado</span><strong id="comprobanteSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div>
-        <div><span>IGV</span><strong id="comprobanteIgv">S/ @igvCalculado.ToString("N2")</strong></div>
-        <div><span>Total</span><strong id="comprobanteTotal">S/ @totalCalculado.ToString("N2")</strong></div>
-    </div>
+    <section class="document-section">
+        <div class="document-section-heading">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z" /><path d="M8 9h8M8 13h8M8 17h5" /></svg></span>
+            <h3>Condiciones comerciales</h3>
+        </div>
+        <fieldset class="document-grid quote-extra-grid">
+            <label>
+                <span>Condiciones de venta</span>
+                <textarea asp-for="Cotizacion.CondicionesVenta" name="CondicionesVenta" class="form-control" rows="3"></textarea>
+            </label>
+            <label>
+                <span>Características técnicas</span>
+                <textarea asp-for="Cotizacion.CaracteristicasTecnicas" name="CaracteristicasTecnicas" class="form-control" rows="3"></textarea>
+            </label>
+        </fieldset>
+    </section>
 
-    <div class="form-actions">
-        <button type="submit" name="submit" value="guardar" class="btn btn-sm btn-primary">Guardar cotizacion</button>
-        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    <section class="document-section">
+        <div class="document-section-heading">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span>
+            <h3>Detalle de productos</h3>
+        </div>
+        <fieldset class="document-detail-fieldset">
+            <div class="document-detail-table-wrap">
+                <table class="table table-sm data-grid detalle-grid document-detail-table" id="detalle" data-show-totals="true">
+                    <colgroup>
+                        <col class="detalle-producto" />
+                        <col class="detalle-unidad" />
+                        <col class="detalle-cantidad" />
+                        <col class="detalle-precio" />
+                        <col class="detalle-total" />
+                        <col class="detalle-accion" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Unidad</th>
+                            <th class="text-end">Cantidad</th>
+                            <th class="text-end">Precio unitario</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < detalles.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <select name="Detalles[@i].ProductoId" class="form-select form-select-sm producto-select">
+                                        <option value="">Seleccione producto</option>
+                                        @foreach (var producto in Model.Productos)
+                                        {
+                                            var selected = detalles[i].ProductoId == producto.ProductoId;
+                                            <option value="@producto.ProductoId" data-precio="@producto.PrecioVentaConIgv" data-afecto-igv="@producto.AfectoIgv" selected="@selected">
+                                                @(string.IsNullOrWhiteSpace(producto.Categoria) ? producto.Nombre : $"{producto.Nombre} ({producto.Categoria})")
+                                            </option>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input value="UNIDAD" class="form-control form-control-sm" readonly /></td>
+                                <td><input name="Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+                                <td><input name="Detalles[@i].PrecioUnitario" value="@detalles[i].PrecioUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
+                                <td><input value="@((detalles[i].Cantidad * detalles[i].PrecioUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
+                                <td class="text-center">
+                                    <button type="button" class="icon-btn primary add-row" title="Agregar fila" aria-label="Agregar fila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </fieldset>
+        <div class="document-total-strip" aria-label="Totales de la cotización">
+            <div><span>Subtotal exonerado</span><strong id="comprobanteSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div>
+            <div><span>Subtotal gravado</span><strong id="comprobanteSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div>
+            <div><span>IGV</span><strong id="comprobanteIgv">S/ @igvCalculado.ToString("N2")</strong></div>
+            <div class="grand-total"><span>Total</span><strong id="comprobanteTotal">S/ @totalCalculado.ToString("N2")</strong></div>
+        </div>
+    </section>
+
+    <div class="document-bottom-actions">
+        <button type="submit" name="submit" value="guardar" class="document-save-btn">Guardar cotización</button>
+        <a class="document-more-btn" asp-action="Index">Volver</a>
     </div>
 </form>
 

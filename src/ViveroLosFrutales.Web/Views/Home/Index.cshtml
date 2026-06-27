@@ -1,227 +1,197 @@
 @model ViveroLosFrutales.Application.DTOs.DashboardDto
 @using System.Globalization
+@inject Microsoft.AspNetCore.Identity.UserManager<ViveroLosFrutales.Infrastructure.Identity.ApplicationUser> UserManager
 @{
-    ViewData["Title"] = "Tablero de Control";
+    ViewData["Title"] = "Inicio";
     var cultura = CultureInfo.GetCultureInfo("es-PE");
-    var resumen = Model.Resumen;
-    var maxVentaDia = Model.VentasPorDia.Count == 0 ? 0 : Model.VentasPorDia.Max(x => x.Importe);
-    var maxGasto = Model.GastosPorCategoria.Count == 0 ? 0 : Model.GastosPorCategoria.Max(x => x.Importe);
-    var maxProducto = Model.ProductosMasVendidos.Count == 0 ? 0 : Model.ProductosMasVendidos.Max(x => x.Importe);
-    var saldoClass = resumen.EstadoCuenta >= 0 ? "positive" : "negative";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var usuarioNombreCompleto = currentUser is null
+        ? User.Identity?.Name ?? "equipo"
+        : string.Join(" ", new[] { currentUser.Nombres, currentUser.Apellidos }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+    var usuarioCorto = string.IsNullOrWhiteSpace(usuarioNombreCompleto) ? "equipo" : usuarioNombreCompleto;
+    var fechaActual = PeruDateTime.Now.ToString("dd 'de' MMMM, yyyy", cultura);
+    var ventasChart = Model.VentasPorDia.OrderBy(x => x.Fecha).TakeLast(7).ToList();
+    var comprasChart = Model.ComprasPorDia.OrderBy(x => x.Fecha).TakeLast(7).ToList();
+    var maxChart = ventasChart.Concat(comprasChart).Select(x => x.Importe).DefaultIfEmpty(0).Max();
+    var ventasPoints = BuildChartPoints(ventasChart, maxChart);
+    var comprasPoints = BuildChartPoints(comprasChart, maxChart);
+    var diario = Model.Diario;
+    var ventasTrendClass = diario.Ventas.VariacionPorcentaje >= 0 ? "up" : "down";
+    var comprasTrendClass = diario.Compras.VariacionPorcentaje >= 0 ? "up" : "down";
+    var gastosTrendClass = diario.Gastos.VariacionPorcentaje >= 0 ? "up" : "down";
+    var devolucionesTrendClass = diario.DevolucionesPendientes.VariacionPorcentaje >= 0 ? "up" : "down";
 }
 
-<div class="dashboard-header">
-    <div>
-        <span class="dashboard-periodo">@Model.FechaDesde.ToString("dd MMM", cultura) - @Model.FechaHasta.ToString("dd MMM yyyy", cultura)</span>
-        <h1>Resumen ejecutivo del mes</h1>
+<section class="erp-dashboard">
+    <div class="dashboard-welcome dashboard-welcome-compact">
+        <div>
+            <h1>Bienvenido, @usuarioCorto <span aria-hidden="true">&#128075;</span></h1>
+        </div>
+        <div class="dashboard-date-pill" aria-label="Fecha actual">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v4M17 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z" /></svg>
+            <span>@fechaActual</span>
+        </div>
     </div>
-    <div class="dashboard-actions">
-        <a class="btn btn-outline-secondary btn-sm" asp-controller="Reportes" asp-action="Reporte">Reporte general</a>
-        <a class="btn btn-primary btn-sm" asp-controller="Comprobantes" asp-action="Create">Nueva venta</a>
-    </div>
-</div>
 
-<section class="dashboard-kpis" aria-label="Indicadores principales">
-    <a class="metric-card primary" asp-controller="Comprobantes" asp-action="Index">
-        <span>Total ventas</span>
-        <strong>@resumen.TotalVentas.ToString("C", cultura)</strong>
-        <small>@resumen.ComprobantesEmitidos comprobante(s) emitidos</small>
-    </a>
-    <a class="metric-card" asp-controller="Compras" asp-action="Index">
-        <span>Total compras</span>
-        <strong>@resumen.TotalCompras.ToString("C", cultura)</strong>
-        <small>Reposicion e insumos del mes</small>
-    </a>
-    <a class="metric-card" asp-controller="Gastos" asp-action="Index">
-        <span>Total gastos</span>
-        <strong>@resumen.TotalGastos.ToString("C", cultura)</strong>
-        <small>Gastos operativos registrados</small>
-    </a>
-    <a class="metric-card" asp-controller="Ingresos" asp-action="Index">
-        <span>Total ingresos</span>
-        <strong>@resumen.TotalIngresos.ToString("C", cultura)</strong>
-        <small>Ingresos no facturados</small>
-    </a>
-</section>
-
-<section class="dashboard-balance">
-    <div class="balance-main @saldoClass">
-        <span>Estado de cuenta del mes</span>
-        <strong>@resumen.EstadoCuenta.ToString("C", cultura)</strong>
-        <small>Ventas + ingresos - compras - gastos</small>
-    </div>
-    <div class="balance-strip">
-        <div>
-            <span>Clientes atendidos</span>
-            <strong>@resumen.ClientesAtendidos</strong>
-        </div>
-        <div>
-            <span>Cotizaciones</span>
-            <strong>@resumen.Cotizaciones</strong>
-        </div>
-        <div>
-            <span>SUNAT pendientes</span>
-            <strong>@resumen.ComprobantesPendientesSunat</strong>
-        </div>
-        <div>
-            <span>Stock bajo</span>
-            <strong>@resumen.ProductosBajoStock</strong>
-        </div>
-    </div>
-</section>
-
-<div class="dashboard-layout">
-    <section class="dashboard-panel sales-panel">
-        <div class="panel-heading">
-            <h2>Ventas por dia</h2>
-            <span>@Model.VentasPorDia.Count dia(s) con movimiento</span>
-        </div>
-        @if (Model.VentasPorDia.Count == 0)
-        {
-            <div class="empty-state">
-                <strong>Sin ventas registradas</strong>
-                <span>Cuando emitas comprobantes, aparecera aqui la tendencia diaria.</span>
-            </div>
-        }
-        else
-        {
-            <div class="bar-list">
-                @foreach (var item in Model.VentasPorDia)
-                {
-                    var width = maxVentaDia == 0 ? 0 : decimal.Round(item.Importe / maxVentaDia * 100, 0);
-                    <div class="bar-row">
-                        <span>@item.Fecha.ToString("dd MMM", cultura)</span>
-                        <div><i style="width:@width%"></i></div>
-                        <strong>@item.Importe.ToString("C", cultura)</strong>
-                    </div>
-                }
-            </div>
-        }
+    <section class="dashboard-kpis dashboard-kpis-modern daily-kpis" aria-label="Indicadores del dia">
+        <a class="metric-card metric-success" asp-controller="Comprobantes" asp-action="Index">
+            <span>Ventas del d&iacute;a</span>
+            <strong>@diario.Ventas.ValorHoy.ToString("C", cultura)</strong>
+            <small class="metric-trend @ventasTrendClass"><b>@Html.Raw(TrendIcon(diario.Ventas.VariacionPorcentaje)) @Math.Abs(diario.Ventas.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
+            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16l4-4 3 3 5-7M19 8v5h-5" /></svg></i>
+        </a>
+        <a class="metric-card metric-orange" asp-controller="Compras" asp-action="Index">
+            <span>Compras del d&iacute;a</span>
+            <strong>@diario.Compras.ValorHoy.ToString("C", cultura)</strong>
+            <small class="metric-trend @comprasTrendClass"><b>@Html.Raw(TrendIcon(diario.Compras.VariacionPorcentaje)) @Math.Abs(diario.Compras.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
+            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M7 7l2 12h8l2-12M9 11h6" /></svg></i>
+        </a>
+        <a class="metric-card metric-red" asp-controller="Gastos" asp-action="Index">
+            <span>Gastos del d&iacute;a</span>
+            <strong>@diario.Gastos.ValorHoy.ToString("C", cultura)</strong>
+            <small class="metric-trend @gastosTrendClass"><b>@Html.Raw(TrendIcon(diario.Gastos.VariacionPorcentaje)) @Math.Abs(diario.Gastos.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
+            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v12H5zM8 11h8M8 15h5" /></svg></i>
+        </a>
+        <a class="metric-card metric-purple" asp-controller="Devoluciones" asp-action="Index">
+            <span>Devoluciones pendientes</span>
+            <strong>@diario.DevolucionesPendientes.ValorHoy.ToString("N0", cultura)</strong>
+            <small class="metric-trend @devolucionesTrendClass"><b>@Html.Raw(TrendIcon(diario.DevolucionesPendientes.VariacionPorcentaje)) @Math.Abs(diario.DevolucionesPendientes.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
+            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7v10l-8 4-8-4V7l8-4ZM12 11v10M4 7l8 4 8-4" /></svg></i>
+        </a>
     </section>
 
-    <section class="dashboard-panel">
-        <div class="panel-heading">
-            <h2>Alertas de gestion</h2>
-            <span>Prioridades operativas</span>
-        </div>
-        <div class="alert-list">
-            @foreach (var alerta in Model.Alertas)
+    <div class="dashboard-main-grid">
+        <section class="dashboard-panel sales-panel sales-chart-panel">
+            <div class="panel-heading chart-heading">
+                <h2><span data-chart-title>Ventas</span> por los &uacute;ltimos 7 d&iacute;as</h2>
+                <label class="chart-selector">
+                    <span>Ver</span>
+                    <select id="dashboardChartType" aria-label="Cambiar grafica">
+                        <option value="ventas">Ventas</option>
+                        <option value="compras">Compras</option>
+                    </select>
+                </label>
+            </div>
+            @if (ventasChart.Count == 0 && comprasChart.Count == 0)
             {
-                <a class="alert-item @alerta.Nivel" href="@alerta.Url">
-                    <strong>@alerta.Titulo</strong>
-                    <span>@alerta.Detalle</span>
-                </a>
+                <div class="empty-state"><strong>Sin movimientos registrados</strong><span>Cuando registres ventas o compras aparecer&aacute; aqu&iacute; la tendencia diaria.</span></div>
             }
-        </div>
-    </section>
-
-    <section class="dashboard-panel">
-        <div class="panel-heading">
-            <h2>Productos mas vendidos</h2>
-            <span>Por importe facturado</span>
-        </div>
-        @if (Model.ProductosMasVendidos.Count == 0)
-        {
-            <div class="empty-state">
-                <strong>Sin productos vendidos</strong>
-                <span>El ranking se actualizara con las ventas del mes.</span>
-            </div>
-        }
-        else
-        {
-            <div class="ranking-list">
-                @foreach (var item in Model.ProductosMasVendidos)
-                {
-                    var width = maxProducto == 0 ? 0 : decimal.Round(item.Importe / maxProducto * 100, 0);
-                    <div class="ranking-row">
-                        <div>
-                            <strong>@item.Producto</strong>
-                            <span>@item.Cantidad.ToString("N2", cultura) unidades</span>
-                        </div>
-                        <em>@item.Importe.ToString("C", cultura)</em>
-                        <i style="width:@width%"></i>
+            else
+            {
+                <div class="sales-chart" role="img" aria-label="Tendencia de ventas y compras de los ultimos 7 dias">
+                    <svg viewBox="0 0 760 320" preserveAspectRatio="none" aria-hidden="true">
+                        <g class="chart-grid">
+                            <path d="M40 24H730M40 94H730M40 164H730M40 234H730M40 304H730" />
+                            <path d="M40 24V304M178 24V304M316 24V304M454 24V304M592 24V304M730 24V304" />
+                        </g>
+                        <g class="chart-series chart-series-ventas is-active" data-chart-series="ventas">
+                            <polyline class="chart-line" points="@ventasPoints" transform="translate(40 24)" />
+                            @foreach (var point in BuildChartDots(ventasChart, maxChart))
+                            {
+                                <circle class="chart-dot" cx="@point.X" cy="@point.Y" r="5" />
+                            }
+                        </g>
+                        <g class="chart-series chart-series-compras" data-chart-series="compras">
+                            <polyline class="chart-line chart-line-orange" points="@comprasPoints" transform="translate(40 24)" />
+                            @foreach (var point in BuildChartDots(comprasChart, maxChart))
+                            {
+                                <circle class="chart-dot chart-dot-orange" cx="@point.X" cy="@point.Y" r="5" />
+                            }
+                        </g>
+                    </svg>
+                    <div class="chart-labels">
+                        @foreach (var item in ventasChart.Count > 0 ? ventasChart : comprasChart)
+                        {
+                            <span>@item.Fecha.ToString("dd MMM", cultura)</span>
+                        }
                     </div>
-                }
-            </div>
-        }
-    </section>
+                </div>
+            }
+        </section>
 
-    <section class="dashboard-panel">
-        <div class="panel-heading">
-            <h2>Gastos por categoria</h2>
-            <span>Top 5 del mes</span>
-        </div>
-        @if (Model.GastosPorCategoria.Count == 0)
-        {
-            <div class="empty-state">
-                <strong>Sin gastos registrados</strong>
-                <span>Los gastos categorizados ayudaran a controlar la operacion.</span>
+        <section class="dashboard-panel movements-panel">
+            <div class="panel-heading">
+                <h2>&Uacute;ltimos movimientos</h2>
+                <a asp-controller="Comprobantes" asp-action="Index">Ver comprobantes</a>
             </div>
-        }
-        else
-        {
-            <div class="category-list">
-                @foreach (var item in Model.GastosPorCategoria)
-                {
-                    var width = maxGasto == 0 ? 0 : decimal.Round(item.Importe / maxGasto * 100, 0);
-                    <div class="category-row">
-                        <span>@item.Categoria</span>
-                        <strong>@item.Importe.ToString("C", cultura)</strong>
-                        <div><i style="width:@width%"></i></div>
-                    </div>
-                }
-            </div>
-        }
-    </section>
-</div>
-
-<section class="dashboard-panel">
-    <div class="panel-heading">
-        <h2>Ultimos comprobantes</h2>
-        <a asp-controller="Comprobantes" asp-action="Index">Ver todos</a>
-    </div>
-    @if (Model.UltimosComprobantes.Count == 0)
-    {
-        <div class="empty-state">
-            <strong>No hay comprobantes del mes</strong>
-            <span>Registra una venta para iniciar el seguimiento comercial.</span>
-        </div>
-    }
-    else
-    {
-        <div class="data-grid dashboard-table">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Numero</th>
-                        <th>Cliente</th>
-                        <th class="text-end">Total</th>
-                        <th>Estado SUNAT</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var comprobante in Model.UltimosComprobantes)
+            @if (Model.UltimosMovimientos.Count == 0)
+            {
+                <div class="empty-state"><strong>No hay movimientos recientes</strong><span>Registra una cotizaci&oacute;n, nota de pedido, comprobante o compra para iniciar el seguimiento.</span></div>
+            }
+            else
+            {
+                <div class="movement-list">
+                    @foreach (var movimiento in Model.UltimosMovimientos.Take(6))
                     {
-                        <tr>
-                            <td>@comprobante.Fecha.ToString("dd/MM/yyyy")</td>
-                            <td>@comprobante.Numero</td>
-                            <td>@comprobante.Cliente</td>
-                            <td class="text-end">@comprobante.Total.ToString("C", cultura)</td>
-                            <td><span class="status-badge">@comprobante.EstadoSunat</span></td>
-                        </tr>
+                        <a class="movement-item" href="@Url.Content("~" + movimiento.Url)">
+                            <span class="movement-icon @movimiento.Variante" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5zM9 12h6M9 16h4" /></svg></span>
+                            <span class="movement-copy"><strong>@movimiento.Tipo - @movimiento.Numero</strong><small>@movimiento.Tercero</small></span>
+                            <span class="movement-amount"><strong>@movimiento.Total.ToString("C", cultura)</strong><small>@movimiento.Fecha.ToString("dd/MM/yyyy")</small></span>
+                        </a>
                     }
-                </tbody>
-            </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <section class="dashboard-panel quick-actions-panel" aria-label="Accesos rapidos">
+        <div class="panel-heading"><h2>Accesos r&aacute;pidos</h2><span>Registros frecuentes</span></div>
+        <div class="quick-actions quick-actions-modern">
+            <a class="quick-action green" asp-controller="Cotizaciones" asp-action="Create"><span><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h4M18 17h3M19.5 15.5v3" /></svg></span>Nueva cotizaci&oacute;n</a>
+            <a class="quick-action orange" asp-controller="NotasPedido" asp-action="Create"><span><svg viewBox="0 0 24 24"><path d="M4 5h2l2.4 10.6A2 2 0 0 0 10.3 17H18" /><path d="M8 7h12l-2 7H9.5M10 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM18 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" /></svg></span>Nuevo pedido</a>
+            <a class="quick-action blue" asp-controller="Comprobantes" asp-action="Create"><span><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h3" /><circle cx="17" cy="17" r="2" /></svg></span>Nuevo comprobante</a>
+            <a class="quick-action green" asp-controller="CobrosClientes" asp-action="Create"><span><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" /><circle cx="12" cy="12" r="2.5" /><path d="M7 10V9h1M17 14v1h-1" /></svg></span>Registrar cobro</a>
+            <a class="quick-action red" asp-controller="Gastos" asp-action="Create"><span><svg viewBox="0 0 24 24"><path d="M5 7h14v12H5z" /><path d="M8 7V5h8v2M19 11H5" /><path d="M9 15h6" /></svg></span>Nuevo gasto</a>
+            <a class="quick-action green" asp-controller="Ingresos" asp-action="Create"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /><path d="M12 7v10M9 10.5c0-1.4 1.3-2 3-2s3 .6 3 2-1.3 2-3 2-3 .6-3 2 1.3 2 3 2 3-.6 3-2" /></svg></span>Nuevo ingreso</a>
+            <a class="quick-action purple" asp-controller="Clientes" asp-action="Index"><span><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-8 0v2" /><circle cx="12" cy="8" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.8M2 21v-2a4 4 0 0 1 3-3.8" /></svg></span>Listado de clientes</a>
+            <a class="quick-action amber" asp-controller="Productos" asp-action="Index"><span><svg viewBox="0 0 24 24"><path d="M4 10 12 4l8 6v10H4z" /><path d="M8 20v-7h8v7M4 10h16" /></svg></span>Listado de productos</a>
         </div>
-    }
+    </section>
 </section>
 
-<section class="quick-actions" aria-label="Accesos rapidos">
-    <a class="quick-action" asp-controller="Productos" asp-action="Index">Productos</a>
-    <a class="quick-action" asp-controller="Clientes" asp-action="Index">Clientes</a>
-    <a class="quick-action" asp-controller="Cotizaciones" asp-action="Create">Nueva cotizacion</a>
-    <a class="quick-action" asp-controller="Compras" asp-action="Create">Registrar compra</a>
-    <a class="quick-action" asp-controller="Gastos" asp-action="Create">Registrar gasto</a>
-    <a class="quick-action" asp-controller="Ingresos" asp-action="Create">Registrar ingreso</a>
-</section>
+@section Scripts {
+    <script>
+        (() => {
+            const select = document.getElementById('dashboardChartType');
+            const title = document.querySelector('[data-chart-title]');
+            const series = document.querySelectorAll('[data-chart-series]');
+            select?.addEventListener('change', () => {
+                const value = select.value;
+                series.forEach(item => item.classList.toggle('is-active', item.dataset.chartSeries === value));
+                if (title) title.textContent = value === 'compras' ? 'Compras' : 'Ventas';
+            });
+        })();
+    </script>
+}
+
+@functions {
+    private const decimal ChartWidth = 680m;
+    private const decimal ChartHeight = 260m;
+
+    private static string TrendIcon(decimal value) => value >= 0 ? "&#8593;" : "&#8595;";
+
+    private string BuildChartPoints(IReadOnlyList<ViveroLosFrutales.Application.DTOs.DashboardSerieDto> serie, decimal max)
+    {
+        if (serie.Count == 0) return string.Empty;
+        return string.Join(" ", serie.Select((item, index) =>
+        {
+            var x = serie.Count == 1 ? ChartWidth / 2 : index * (ChartWidth / (serie.Count - 1));
+            var ratio = max == 0 ? 0 : item.Importe / max;
+            var y = ChartHeight - (ratio * (ChartHeight - 38)) - 16;
+            return $"{x.ToString("0.##", CultureInfo.InvariantCulture)},{y.ToString("0.##", CultureInfo.InvariantCulture)}";
+        }));
+    }
+
+    private IReadOnlyList<(string X, string Y)> BuildChartDots(IReadOnlyList<ViveroLosFrutales.Application.DTOs.DashboardSerieDto> serie, decimal max)
+    {
+        return serie.Select((item, index) =>
+        {
+            var x = serie.Count == 1 ? ChartWidth / 2 : index * (ChartWidth / (serie.Count - 1));
+            var ratio = max == 0 ? 0 : item.Importe / max;
+            var y = ChartHeight - (ratio * (ChartHeight - 38)) - 16;
+            return (
+                (x + 40).ToString("0.##", CultureInfo.InvariantCulture),
+                (y + 24).ToString("0.##", CultureInfo.InvariantCulture));
+        }).ToList();
+    }
+}

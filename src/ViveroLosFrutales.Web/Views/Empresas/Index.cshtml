@@ -1,47 +1,16 @@
 @model PagedResult<EmpresaListDto>
-@{
-    ViewData["Title"] = "Empresas";
-}
+@{ ViewData["Title"] = "Empresas"; var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString(); }
+@functions { private static string EstadoRegistroTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado"; private static string EstadoRegistroClass(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "success" : "danger"; }
+<section class="comprobantes-page admin-docs-page"><form method="get" class="comprobantes-toolbar admin-docs-toolbar compact">
+<label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar RUC, razón social o nombre comercial..." autocomplete="off" />@if (!string.IsNullOrWhiteSpace(search)) { <a class="search-clear" asp-action="Index" asp-route-PageSize="@pageSize" aria-label="Limpiar búsqueda">&times;</a> }</label>
 
-<div class="toolbar">
-    <form method="get" class="search-form">
-        <input name="Search" class="form-control form-control-sm" placeholder="Buscar RUC, razon social o nombre comercial" />
-        <button class="btn btn-sm btn-primary">Buscar</button>
-    </form>
-    <a class="btn btn-sm btn-success" asp-action="Edit">Crear</a>
-</div>
-
-<table class="table table-sm table-striped data-grid">
-    <thead>
-        <tr><th>RUC</th><th>Razon Social</th><th>Nombre Comercial</th><th>Telefono</th><th>Estado</th><th class="text-end actions-heading">Acciones</th></tr>
-    </thead>
-    <tbody>
-    @foreach (var item in Model.Items)
-    {
-        <tr>
-            <td>@item.RUC</td>
-            <td>@item.RazonSocial</td>
-            <td>@item.NombreComercial</td>
-            <td>@item.Telefono</td>
-            <td>@item.Estado</td>
-            <td class="actions-cell">
-                <div class="quote-actions">
-                    <a class="icon-btn" asp-action="Visualizar" asp-route-id="@item.EmpresaId" title="Visualizar" aria-label="Visualizar">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg>
-                    </a>
-                    <a class="icon-btn" asp-action="Edit" asp-route-id="@item.EmpresaId" title="Editar" aria-label="Editar">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-                    </a>
-                    <form asp-action="Anular" method="post" class="icon-form" onsubmit="return confirm('Anular esta empresa?');">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@item.EmpresaId" />
-                        <button type="submit" class="icon-btn danger" title="Anular" aria-label="Anular">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                        </button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+<input type="hidden" name="PageSize" value="@pageSize" />
+<button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+<button class="btn-export" type="button" id="exportEmpresasCsv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M5 20h14" /></svg>Exportar</button>
+</form><div class="comprobantes-list admin-docs-list"><div class="comprobantes-head admin-docs-head"><span>Empresa</span><span>RUC</span><span>Comercial</span><span>Teléfono</span><span>Estado</span><span>Acciones</span></div>
+@if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay empresas</strong><span>Ajusta la búsqueda o registra una nueva empresa.</span></div> } else { @foreach (var item in Model.Items) { <article class="comprobante-row admin-docs-row" data-csv="@item.RazonSocial|@item.RUC|@item.NombreComercial|@item.Telefono|@EstadoRegistroTexto(item.Estado)"><div class="comprobante-main"><span class="comprobante-icon @(item.Estado == EstadoRegistro.Activo ? "success" : "danger")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.RazonSocial</strong><small>Empresa</small></span></div><div class="comprobante-client"><strong>@item.RUC</strong><small>RUC</small></div><div class="comprobante-client"><strong>@item.NombreComercial</strong><small>Nombre comercial</small></div><div class="comprobante-status"><span class="sunat-line muted">@item.Telefono</span></div><div class="comprobante-sunat"><span class="pill @EstadoRegistroClass(item.Estado)">@EstadoRegistroTexto(item.Estado)</span></div><div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Visualizar" asp-route-id="@item.EmpresaId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg> Ver empresa</a><a asp-action="Edit" asp-route-id="@item.EmpresaId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg> Editar</a><form asp-action="Anular" method="post" onsubmit="return confirm('Anular esta empresa?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.EmpresaId" /><button type="submit" class="danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v5M14 11v5" /></svg> Anular empresa</button></form></div></details></div></article> } }</div>@await Html.PartialAsync("_Pager", Model)</section><script>
+document.querySelectorAll('.row-actions-menu').forEach(menu => { menu.addEventListener('toggle', () => { if (!menu.open) return; document.querySelectorAll('.row-actions-menu[open]').forEach(other => { if (other !== menu) other.removeAttribute('open'); }); }); });
+document.addEventListener('click', event => { if (event.target.closest('.row-actions-menu')) return; document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open')); });
+document.getElementById('exportEmpresasCsv')?.addEventListener('click', () => { const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]')); const header = ["Empresa","RUC","Nombre comercial","Telefono","Estado"]; const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')); const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'empresas.csv'; link.click(); URL.revokeObjectURL(url); });
+</script>

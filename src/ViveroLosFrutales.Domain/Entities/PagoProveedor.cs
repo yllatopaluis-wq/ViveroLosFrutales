@@ -8,7 +8,7 @@ public class PagoProveedor : EmpresaEntity
     public int PagoProveedorId { get; set; }
     public int ProveedorId { get; set; }
     public int CompraId { get; set; }
-    public DateTime FechaPago { get; set; } = DateTime.Today;
+    public DateTime FechaPago { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
     public string Observacion { get; set; } = string.Empty;

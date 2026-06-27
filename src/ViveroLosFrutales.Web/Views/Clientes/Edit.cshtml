@@ -4,7 +4,7 @@
     ViewData["Title"] = readOnly ? "Visualizar cliente" : Model.ClienteId == 0 ? "Crear cliente" : "Editar cliente";
 }
 
-<form method="post" class="dense-form">
+<form method="post" class="dense-form document-entry-form">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="ClienteId" type="hidden" />
     <fieldset disabled="@readOnly" class="form-grid cols-3">

@@ -2,83 +2,65 @@
 @{
     ViewData["Title"] = Model.RolId == 0 ? "Crear rol" : "Editar rol";
     var permisos = ViewBag.Permisos as IReadOnlyList<PermisoDto> ?? Array.Empty<PermisoDto>();
-    var ordenModulos = new Dictionary<string, string[]>
-    {
-        ["Ventas"] = new[] { "Cotizaciones", "Comprobantes", "NotasCredito" },
-        ["Maestros"] = new[] { "Categorias", "Productos", "Clientes", "Proveedores" },
-        ["Operacion"] = new[] { "Compras", "Gastos", "Ingresos" },
-        ["Administracion"] = new[] { "Empresas", "Usuarios", "Roles", "Configuracion", "NubefactLogs" },
-        ["Reportes"] = new[] { "Reportes" }
-    };
-    var formulariosConocidos = ordenModulos.SelectMany(x => x.Value).ToHashSet();
-    var permisosPorFormulario = permisos.GroupBy(x => x.Modulo).ToDictionary(x => x.Key, x => x.OrderBy(p => p.Accion).ToList());
-    var formulariosSinModulo = permisosPorFormulario.Keys.Where(x => !formulariosConocidos.Contains(x)).OrderBy(x => x).ToArray();
+    var grupos = permisos.GroupBy(x => x.Grupo).ToArray();
+    var seleccionados = Model.PermisoIds.ToHashSet();
+    var totalSeleccionados = permisos.Count(x => seleccionados.Contains(x.PermisoId));
 }
 
-<form method="post" class="dense-form">
+<form method="post" class="dense-form document-entry-form role-entry-form">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="RolId" type="hidden" />
     <input asp-for="Estado" type="hidden" />
-    <div class="form-grid cols-2">
-        <label>Nombre<input asp-for="Nombre" class="form-control form-control-sm" /></label>
-        <label>Descripcion<input asp-for="Descripcion" class="form-control form-control-sm" /></label>
-    </div>
-    <div class="section-title">Permisos</div>
-    <div class="permission-tree">
-        @foreach (var modulo in ordenModulos)
-        {
-            var formularios = modulo.Value.Where(permisosPorFormulario.ContainsKey).ToArray();
-            if (formularios.Length == 0) continue;
 
+    <section class="form-grid cols-2">
+        <label>Nombre<input asp-for="Nombre" class="form-control form-control-sm" autocomplete="off" /></label>
+        <label>Descripción<input asp-for="Descripcion" class="form-control form-control-sm" autocomplete="off" /></label>
+    </section>
+
+    <section class="role-permission-summary">
+        <div>
+            <span>Formularios existentes</span>
+            <strong>@permisos.Select(x => x.Modulo).Distinct().Count()</strong>
+        </div>
+        <div>
+            <span>Accesos disponibles</span>
+            <strong>@permisos.Count</strong>
+        </div>
+        <div>
+            <span>Accesos seleccionados</span>
+            <strong id="selectedPermissionCount">@totalSeleccionados</strong>
+        </div>
+    </section>
+
+    <div class="section-title">Permisos por formulario</div>
+    <p class="role-help">Selecciona los accesos que tendrá el rol. Los módulos y formularios corresponden a las pantallas actuales del ERP.</p>
+
+    <div class="permission-tree role-permission-tree">
+        @foreach (var grupo in grupos)
+        {
+            var formularios = grupo.GroupBy(x => x.Modulo).ToArray();
             <section class="permission-module" data-permission-module>
                 <label class="checkline permission-title">
                     <input type="checkbox" data-permission-module-check />
-                    @modulo.Key
+                    <span>@grupo.Key</span>
+                    <small>@formularios.Length formularios</small>
                 </label>
                 <div class="permission-forms">
                     @foreach (var formulario in formularios)
                     {
+                        var items = formulario.ToArray();
                         <section class="permission-form" data-permission-form>
                             <label class="checkline permission-subtitle">
                                 <input type="checkbox" data-permission-form-check />
-                                @formulario
+                                <span>@items.First().Formulario</span>
+                                <small>@items.Length accesos</small>
                             </label>
                             <div class="permission-grid">
-                                @foreach (var permiso in permisosPorFormulario[formulario])
+                                @foreach (var permiso in items)
                                 {
                                     <label class="checkline compact">
-                                        <input class="permission-action" type="checkbox" name="PermisoIds" value="@permiso.PermisoId" checked="@Model.PermisoIds.Contains(permiso.PermisoId)" />
-                                        @permiso.Accion
-                                    </label>
-                                }
-                            </div>
-                        </section>
-                    }
-                </div>
-            </section>
-        }
-
-        @if (formulariosSinModulo.Length > 0)
-        {
-            <section class="permission-module" data-permission-module>
-                <label class="checkline permission-title">
-                    <input type="checkbox" data-permission-module-check />
-                    Otros
-                </label>
-                <div class="permission-forms">
-                    @foreach (var formulario in formulariosSinModulo)
-                    {
-                        <section class="permission-form" data-permission-form>
-                            <label class="checkline permission-subtitle">
-                                <input type="checkbox" data-permission-form-check />
-                                @formulario
-                            </label>
-                            <div class="permission-grid">
-                                @foreach (var permiso in permisosPorFormulario[formulario])
-                                {
-                                    <label class="checkline compact">
-                                        <input class="permission-action" type="checkbox" name="PermisoIds" value="@permiso.PermisoId" checked="@Model.PermisoIds.Contains(permiso.PermisoId)" />
-                                        @permiso.Accion
+                                        <input class="permission-action" type="checkbox" name="PermisoIds" value="@permiso.PermisoId" checked="@seleccionados.Contains(permiso.PermisoId)" />
+                                        @permiso.AccionEtiqueta
                                     </label>
                                 }
                             </div>
@@ -88,8 +70,22 @@
             </section>
         }
     </div>
+
     <div class="form-actions">
         <button class="btn btn-sm btn-primary">Guardar</button>
         <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
     </div>
 </form>
+
+@section Scripts {
+    <script>
+        (() => {
+            const counter = document.getElementById('selectedPermissionCount');
+            const tree = document.querySelector('.role-permission-tree');
+            if (!counter || !tree) return;
+            const update = () => counter.textContent = tree.querySelectorAll('.permission-action:checked').length.toString();
+            tree.addEventListener('change', update);
+            update();
+        })();
+    </script>
+}
