@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using ViveroLosFrutales.Application.Interfaces;
@@ -79,6 +79,8 @@ builder.Services.AddScoped<ErrorAplicacionService>();
 builder.Services.AddScoped<NotaPedidoService>();
 builder.Services.AddScoped<CobroClienteService>();
 builder.Services.AddScoped<MovimientoCajaService>();
+builder.Services.AddScoped<CuentaFinancieraService>();
+builder.Services.AddScoped<TransferenciaService>();
 builder.Services.AddScoped<EstadoCuentaClienteService>();
 builder.Services.AddScoped<DevolucionService>();
 builder.Services.AddScoped<IEmpresaContext, EmpresaContext>();
@@ -149,3 +151,4 @@ if (builder.Configuration.GetValue("Seed:RunOnStartup", true))
 }
 
 app.Run();
+

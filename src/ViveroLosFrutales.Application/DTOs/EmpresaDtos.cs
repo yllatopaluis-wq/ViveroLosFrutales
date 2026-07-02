@@ -4,6 +4,8 @@ namespace ViveroLosFrutales.Application.DTOs;
 
 public record EmpresaListDto(int EmpresaId, string RUC, string RazonSocial, string NombreComercial, string Telefono, EstadoRegistro Estado);
 
+public record EmpresaMarcaDto(int EmpresaId, string NombreComercial, string RazonSocial, bool TieneLogo);
+
 public class EmpresaEditDto
 {
     public int EmpresaId { get; set; }
@@ -20,6 +22,12 @@ public class EmpresaEditDto
     public byte[]? LogoContenido { get; set; }
     public string? LogoContentType { get; set; }
     public string? LogoNombre { get; set; }
+    public string? RepresentanteLegalNombre { get; set; }
+    public string? RepresentanteLegalDocumento { get; set; }
+    public string? RepresentanteLegalCargo { get; set; }
+    public byte[]? FirmaContenido { get; set; }
+    public string? FirmaContentType { get; set; }
+    public string? FirmaNombre { get; set; }
     public string SerieBoleta { get; set; } = "B001";
     public string SerieFactura { get; set; } = "F001";
     public string SerieNotaCredito { get; set; } = "NC001";

@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -6,13 +6,16 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.Services;
 
-public class GastoService(IGastoRepository repository, IEmpresaContext empresaContext)
+public class GastoService(IGastoRepository repository, CuentaFinancieraService cuentaFinancieraService, IEmpresaContext empresaContext)
 {
     public Task<PagedResult<GastoListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
 
     public Task<IReadOnlyList<CategoriaGastoOptionDto>> ListarCategoriasAsync(CancellationToken cancellationToken) =>
         repository.ListarCategoriasAsync(empresaContext.EmpresaId, cancellationToken);
+
+    public Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarCuentasFinancierasAsync(CancellationToken cancellationToken) =>
+        cuentaFinancieraService.ListarActivasAsync(cancellationToken);
 
     public async Task<GastoEditDto?> ObtenerAsync(int id, CancellationToken cancellationToken)
     {
@@ -46,7 +49,8 @@ public class GastoService(IGastoRepository repository, IEmpresaContext empresaCo
             gasto.Descripcion = dto.Descripcion.Trim();
             gasto.Importe = decimal.Round(dto.Importe, 2);
             gasto.MedioPago = dto.MedioPago.Trim().ToUpperInvariant();
-            gasto.Observacion = dto.Observacion.Trim();
+            gasto.CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken);
+            gasto.Observacion = dto.Observacion?.Trim() ?? string.Empty;
             gasto.Estado = EstadoRegistro.Activo;
 
             await repository.GuardarAsync(gasto, cancellationToken);
@@ -61,6 +65,7 @@ public class GastoService(IGastoRepository repository, IEmpresaContext empresaCo
             };
 
             movimiento.Fecha = gasto.Fecha;
+            movimiento.CuentaFinancieraId = gasto.CuentaFinancieraId;
             movimiento.Monto = gasto.Importe;
             movimiento.MedioPago = gasto.MedioPago;
             movimiento.Descripcion = gasto.Descripcion;
@@ -100,7 +105,13 @@ public class GastoService(IGastoRepository repository, IEmpresaContext empresaCo
         Descripcion = gasto.Descripcion,
         Importe = gasto.Importe,
         MedioPago = gasto.MedioPago,
+        CuentaFinancieraId = gasto.CuentaFinancieraId,
         Observacion = gasto.Observacion,
         Estado = gasto.Estado
     };
 }
+
+
+
+
+

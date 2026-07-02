@@ -1,0 +1,51 @@
+﻿@model PagedResult<CuentaFinancieraListDto>
+@{
+    ViewData["Title"] = "Cuentas financieras";
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+    var pageSize = Context.Request.Query["PageSize"].FirstOrDefault() ?? Model.PageSize.ToString();
+    var tipoActual = Context.Request.Query["tipo"].FirstOrDefault();
+    var activoActual = Context.Request.Query["activo"].FirstOrDefault();
+    static string Money(decimal value) => $"S/ {value:N2}";
+    static string TipoTexto(TipoCuentaFinanciera tipo) => tipo switch
+    {
+        TipoCuentaFinanciera.CAJA => "Caja",
+        TipoCuentaFinanciera.BANCO => "Banco",
+        TipoCuentaFinanciera.BILLETERA => "Billetera",
+        _ => tipo.ToString()
+    };
+}
+
+<section class="comprobantes-page ops-docs-page treasury-page">
+    <form method="get" class="comprobantes-toolbar sales-docs-toolbar">
+        <label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar cuenta, banco o numero..." autocomplete="off" /></label>
+        <label class="filter-field"><span>Tipo</span><select name="tipo"><option value="">Todos</option>@foreach (var tipo in Enum.GetValues<TipoCuentaFinanciera>()) { <option value="@tipo" selected="@(tipoActual == tipo.ToString())">@TipoTexto(tipo)</option> }</select></label>
+        <label class="filter-field"><span>Estado</span><select name="activo"><option value="">Todos</option><option value="true" selected="@(activoActual == "true")">Activas</option><option value="false" selected="@(activoActual == "false")">Inactivas</option></select></label>
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+        <a class="btn-export" asp-action="Create"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>Nueva</a>
+    </form>
+
+    <div class="comprobantes-list ops-docs-list">
+        <div class="comprobantes-head ops-docs-head"><span>Cuenta</span><span>Tipo</span><span>Banco</span><span>Saldo inicial</span><span>Estado</span><span>Acciones</span></div>
+        @if (!Model.Items.Any())
+        {
+            <div class="comprobantes-empty"><strong>No hay cuentas financieras</strong><span>Crea una caja, banco o billetera para ver el dinero real disponible.</span></div>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                <article class="comprobante-row ops-docs-row">
+                    <div class="comprobante-main"><span class="comprobante-icon @(item.Activo ? "success" : "muted")"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" /><path d="M7 10h4M15 14h2" /></svg></span><span class="comprobante-copy"><strong>@item.Nombre</strong><small>@item.NumeroCuenta</small></span></div>
+                    <div class="comprobante-client"><strong>@TipoTexto(item.Tipo)</strong><small>@item.Moneda</small></div>
+                    <div class="comprobante-client"><strong>@(string.IsNullOrWhiteSpace(item.Banco) ? "-" : item.Banco)</strong><small>Entidad</small></div>
+                    <div class="comprobante-total">@Money(item.SaldoInicial)</div>
+                    <div class="comprobante-sunat"><span class="pill @(item.Activo ? "success" : "danger")">@(item.Activo ? "Activa" : "Inactiva")</span></div>
+                    <div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Edit" asp-route-id="@item.CuentaFinancieraId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="m16.5 3.5 4 4L7 21H3v-4L16.5 3.5Z" /></svg> Editar</a><form asp-action="CambiarEstado" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@item.CuentaFinancieraId" /><input type="hidden" name="activo" value="@(!item.Activo)" /><button type="submit" class="@(item.Activo ? "danger" : null)">@(item.Activo ? "Anular" : "Activar")</button></form></div></details></div>
+                </article>
+            }
+        }
+    </div>
+    @await Html.PartialAsync("_Pager", Model)
+</section>
+

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,6 +59,8 @@ public static class DependencyInjection
         services.AddScoped<INotaPedidoRepository, NotaPedidoRepository>();
         services.AddScoped<ICobroClienteRepository, CobroClienteRepository>();
         services.AddScoped<IMovimientoCajaRepository, MovimientoCajaRepository>();
+        services.AddScoped<ICuentaFinancieraRepository, CuentaFinancieraRepository>();
+        services.AddScoped<ITransferenciaFinancieraRepository, TransferenciaFinancieraRepository>();
         services.AddScoped<IComprobanteCobroAplicadoRepository, ComprobanteCobroAplicadoRepository>();
         services.AddScoped<IEstadoCuentaClienteRepository, EstadoCuentaClienteRepository>();
         services.AddScoped<IDevolucionRepository, DevolucionRepository>();
@@ -74,3 +76,4 @@ public static class DependencyInjection
         return services;
     }
 }
+

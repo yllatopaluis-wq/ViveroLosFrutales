@@ -87,6 +87,22 @@ public static class DatabaseSeeder
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.CuentaFinanciera', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.CuentaFinanciera', 'FechaModificacion') IS NULL
+        ALTER TABLE erp.CuentaFinanciera ADD FechaModificacion datetime2 NULL;
+    IF COL_LENGTH('erp.CuentaFinanciera', 'UsuarioModificacion') IS NULL
+        ALTER TABLE erp.CuentaFinanciera ADD UsuarioModificacion nvarchar(120) NOT NULL CONSTRAINT DF_CuentaFinanciera_UsuarioModificacion DEFAULT N'';
+END;
+IF OBJECT_ID('erp.TransferenciaFinanciera', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.TransferenciaFinanciera', 'FechaAnulacion') IS NULL
+        ALTER TABLE erp.TransferenciaFinanciera ADD FechaAnulacion datetime2 NULL;
+    IF COL_LENGTH('erp.TransferenciaFinanciera', 'MotivoAnulacion') IS NULL
+        ALTER TABLE erp.TransferenciaFinanciera ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_TransferenciaFinanciera_MotivoAnulacion DEFAULT N'';
+    IF COL_LENGTH('erp.TransferenciaFinanciera', 'UsuarioAnulacion') IS NULL
+        ALTER TABLE erp.TransferenciaFinanciera ADD UsuarioAnulacion nvarchar(120) NOT NULL CONSTRAINT DF_TransferenciaFinanciera_UsuarioAnulacion DEFAULT N'';
+END;
 IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'Direccion') IS NULL
 BEGIN
     ALTER TABLE erp.Empresa ADD Direccion nvarchar(max) NOT NULL CONSTRAINT DF_Empresa_Direccion DEFAULT N'';
@@ -94,6 +110,30 @@ END;
 IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'LogoPath') IS NULL
 BEGIN
     ALTER TABLE erp.Empresa ADD LogoPath nvarchar(500) NOT NULL CONSTRAINT DF_Empresa_LogoPath DEFAULT N'';
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'RepresentanteLegalNombre') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD RepresentanteLegalNombre nvarchar(200) NOT NULL CONSTRAINT DF_Empresa_RepresentanteLegalNombre DEFAULT N'';
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'RepresentanteLegalDocumento') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD RepresentanteLegalDocumento nvarchar(20) NOT NULL CONSTRAINT DF_Empresa_RepresentanteLegalDocumento DEFAULT N'';
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'RepresentanteLegalCargo') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD RepresentanteLegalCargo nvarchar(120) NOT NULL CONSTRAINT DF_Empresa_RepresentanteLegalCargo DEFAULT N'';
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'FirmaContenido') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD FirmaContenido varbinary(max) NULL;
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'FirmaContentType') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD FirmaContentType nvarchar(120) NOT NULL CONSTRAINT DF_Empresa_FirmaContentType DEFAULT N'';
+END;
+IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'FirmaNombre') IS NULL
+BEGIN
+    ALTER TABLE erp.Empresa ADD FirmaNombre nvarchar(260) NOT NULL CONSTRAINT DF_Empresa_FirmaNombre DEFAULT N'';
 END;
 IF OBJECT_ID('erp.Empresa', 'U') IS NOT NULL AND COL_LENGTH('erp.Empresa', 'SerieNotaCredito') IS NULL
 BEGIN
@@ -234,6 +274,7 @@ END;");
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+
 IF OBJECT_ID('erp.Compra', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('erp.Compra', 'TipoDocumento') IS NULL ALTER TABLE erp.Compra ADD TipoDocumento int NOT NULL CONSTRAINT DF_Compra_TipoDocumento DEFAULT 1;
@@ -329,6 +370,7 @@ END;");
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+
 DECLARE @CategoriasGasto TABLE (Nombre nvarchar(100) NOT NULL);
 INSERT INTO @CategoriasGasto (Nombre) VALUES
 (N'MOVILIDAD'), (N'COMBUSTIBLE'), (N'LUZ'), (N'ALQUILER'), (N'INTERNET'), (N'MANTENIMIENTO'),
@@ -387,6 +429,7 @@ END;");
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+
 IF OBJECT_ID('erp.ErrorAplicacion', 'U') IS NULL
 BEGIN
     CREATE TABLE erp.ErrorAplicacion (
@@ -463,8 +506,8 @@ END;");
         var vendedor = await db.RolesNegocio.FirstOrDefaultAsync(x => x.RolId == 2);
         if (vendedor is not null)
         {
-            var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
-            var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "RegistrarPago" };
+            var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "TESORERIA", "TESORERIA_CAJA", "TESORERIA_CAJABANCOS", "TESORERIA_COBROS", "TESORERIA_TRANSFERENCIAS", "TESORERIA_CUENTASCLIENTES" };
+            var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "Registrar", "RegistrarPago" };
             var permisos = await db.Permisos
                 .Where(x => modulosVendedor.Contains(x.Modulo) && accionesVendedor.Contains(x.Accion))
                 .Select(x => x.PermisoId)
@@ -481,3 +524,8 @@ END;");
         await db.SaveChangesAsync();
     }
 }
+
+
+
+
+

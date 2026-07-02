@@ -531,7 +531,7 @@ public class NubefactService(
     private static bool EsValorVerdadero(string? value)
     {
         var normalizado = value?.Trim().ToUpperInvariant();
-        return normalizado is "TRUE" or "1" or "SI" or "SÍ" or "SÃ" or "S" or "YES" or "Y" or "ACEPTADO" or "ACEPTADA";
+        return normalizado is "TRUE" or "1" or "SI" or "SÍ" or "S" or "YES" or "Y" or "ACEPTADO" or "ACEPTADA";
     }
 
     private static bool EsValorFalso(string? value)

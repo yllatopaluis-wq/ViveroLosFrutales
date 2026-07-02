@@ -9,6 +9,7 @@ public class CobroCliente : EmpresaEntity
     public int ClienteId { get; set; }
     public int? NotaPedidoId { get; set; }
     public int? ComprobanteId { get; set; }
+    public int? CuentaFinancieraId { get; set; }
     public DateTime FechaCobro { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = string.Empty;
@@ -18,6 +19,7 @@ public class CobroCliente : EmpresaEntity
     public string UsuarioAnulacion { get; set; } = string.Empty;
     public string MotivoAnulacion { get; set; } = string.Empty;
     public Empresa? Empresa { get; set; }
+    public CuentaFinanciera? CuentaFinanciera { get; set; }
     public Cliente? Cliente { get; set; }
     public NotaPedido? NotaPedido { get; set; }
     public Comprobante? Comprobante { get; set; }

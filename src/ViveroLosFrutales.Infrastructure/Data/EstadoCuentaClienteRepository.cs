@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Enums;
@@ -10,7 +10,7 @@ public class EstadoCuentaClienteRepository(ApplicationDbContext db) : IEstadoCue
     public async Task<EstadoCuentaClienteDto?> ObtenerAsync(int empresaId, int clienteId, CancellationToken cancellationToken)
     {
         var cliente = await db.Clientes.AsNoTracking()
-            .Where(x => x.ClienteId == clienteId)
+            .Where(x => x.EmpresaId == empresaId && x.ClienteId == clienteId)
             .Select(x => new { x.ClienteId, x.NombreCompleto })
             .FirstOrDefaultAsync(cancellationToken);
         if (cliente is null) return null;
@@ -53,6 +53,7 @@ public class EstadoCuentaClienteRepository(ApplicationDbContext db) : IEstadoCue
                 x.NotaPedidoId != null ? x.NotaPedido!.Serie + "-" + x.NotaPedido.Correlativo : x.Comprobante!.Serie + "-" + x.Comprobante.Correlativo,
                 x.Monto,
                 x.MedioPago,
+                x.CuentaFinanciera == null ? string.Empty : x.CuentaFinanciera.Nombre,
                 x.Estado,
                 x.Observacion))
             .ToListAsync(cancellationToken);
@@ -110,3 +111,7 @@ public class EstadoCuentaClienteRepository(ApplicationDbContext db) : IEstadoCue
         };
     }
 }
+
+
+
+

@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Domain.Enums;
+﻿using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
@@ -72,6 +72,8 @@ public class RegistrarCobroDto
     public DateTime FechaCobro { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
+    public int? CuentaFinancieraId { get; set; }
+    public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
     public string Observacion { get; set; } = string.Empty;
 }
 
@@ -82,6 +84,7 @@ public record CobroClienteListDto(
     string Referencia,
     decimal Monto,
     string MedioPago,
+    string CuentaFinanciera,
     CobroClienteEstado Estado,
     string Observacion);
 
@@ -94,6 +97,7 @@ public record MovimientoCajaListDto(
     string ClienteProveedor,
     string Documento,
     string MedioPago,
+    string CuentaFinanciera,
     decimal Monto,
     EstadoRegistro Estado);
 
@@ -161,6 +165,9 @@ public class RegistrarDevolucionDto
     public decimal MontoPendiente { get; set; }
     public decimal MontoDevolver { get; set; }
     public string MedioDevolucion { get; set; } = "EFECTIVO";
+    public int? CuentaFinancieraId { get; set; }
+    public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public string Observacion { get; set; } = string.Empty;
 }
+

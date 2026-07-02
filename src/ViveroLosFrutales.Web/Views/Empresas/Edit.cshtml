@@ -5,6 +5,9 @@
     var logoSrc = Model.LogoContenido is { Length: > 0 } && !string.IsNullOrWhiteSpace(Model.LogoContentType)
         ? $"data:{Model.LogoContentType};base64,{Convert.ToBase64String(Model.LogoContenido)}"
         : null;
+    var firmaSrc = Model.FirmaContenido is { Length: > 0 } && !string.IsNullOrWhiteSpace(Model.FirmaContentType)
+        ? $"data:{Model.FirmaContentType};base64,{Convert.ToBase64String(Model.FirmaContenido)}"
+        : null;
 }
 
 <form asp-action="Edit" method="post" enctype="multipart/form-data" class="dense-form document-entry-form">
@@ -20,6 +23,9 @@
         <label>Direccion<input asp-for="Direccion" class="form-control form-control-sm" /></label>
         <label>Telefono<input asp-for="Telefono" class="form-control form-control-sm" /></label>
         <label>Email<input asp-for="Email" class="form-control form-control-sm" /></label>
+        <label>Representante legal<input asp-for="RepresentanteLegalNombre" class="form-control form-control-sm" /></label>
+        <label>Doc. representante<input asp-for="RepresentanteLegalDocumento" class="form-control form-control-sm" /></label>
+        <label>Cargo representante<input asp-for="RepresentanteLegalCargo" class="form-control form-control-sm" /></label>
         <label>URL Nubefact<input asp-for="UrlNubefact" class="form-control form-control-sm" /></label>
         <label>Token Nubefact<input asp-for="TokenNubefact" class="form-control form-control-sm" /></label>
         <label>
@@ -35,6 +41,21 @@
             else
             {
                 <span>Sin logo cargado</span>
+            }
+        </div>
+        <label>
+            Firma representante
+            <input name="firmaArchivo" class="form-control form-control-sm" type="file" accept="image/*" />
+        </label>
+        <div class="logo-preview">
+            @if (firmaSrc is not null)
+            {
+                <img src="@firmaSrc" alt="Firma del representante legal" />
+                <span>@(string.IsNullOrWhiteSpace(Model.FirmaNombre) ? "Firma guardada" : Model.FirmaNombre)</span>
+            }
+            else
+            {
+                <span>Sin firma cargada</span>
             }
         </div>
         <label>Moneda<input asp-for="MonedaPredeterminada" class="form-control form-control-sm" /></label>

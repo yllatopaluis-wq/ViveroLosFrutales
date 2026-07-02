@@ -66,6 +66,8 @@ El mantenimiento de empresas permite registrar:
 - Series de boleta, factura, nota de credito, nota de pedido y cotizacion.
 - Moneda predeterminada.
 - Logo de empresa.
+- Representante legal: nombre, documento y cargo.
+- Firma del representante legal en imagen.
 
 El logo se carga desde un archivo de imagen y se guarda en base de datos.
 
@@ -109,9 +111,11 @@ El precio con IGV se calcula automaticamente cuando corresponde.
 
 ## 9. Clientes y proveedores
 
-Los clientes son globales del sistema, no pertenecen a una empresa especifica y no usan `EmpresaId`. Esto permite reutilizar el mismo cliente en cotizaciones, notas de pedido, comprobantes, cobros y estados de cuenta de cualquier empresa activa.
+Los clientes se administran por empresa. Cada empresa tiene su propio padron de clientes y puede registrar el mismo DNI o RUC sin afectar a otra empresa.
 
-Los proveedores se administran por empresa, porque sus operaciones se relacionan con compras, gastos e inventario de una empresa especifica.
+Las cotizaciones, notas de pedido, comprobantes, cobros y estados de cuenta solo muestran clientes de la empresa activa.
+
+Los proveedores tambien se administran por empresa, porque sus operaciones se relacionan con compras, gastos e inventario de una empresa especifica.
 
 Datos principales:
 
@@ -487,6 +491,92 @@ Reglas:
 - Para cobros aplicados desde nota de pedido a comprobante, el documento se muestra como `NP002-000002 -> F002-000006`.
 - Para devoluciones de clientes, el egreso se muestra con el cliente y documento origen de la devolucion.
 
+## 18.1 TesorerÃ­a
+
+El mÃ³dulo TesorerÃ­a centraliza la informaciÃ³n de dinero real de la empresa.
+
+Opciones del menÃº:
+
+- Caja.
+- Caja y Bancos.
+- Cuentas financieras.
+- Cobros clientes.
+- Transferencias.
+- Estado de cuenta clientes.
+- Estado de cuenta proveedores.
+
+### Cuentas financieras
+
+Las cuentas financieras representan dÃ³nde estÃ¡ fÃ­sicamente o bancariamente el dinero:
+
+- Caja: efectivo interno.
+- Banco: cuenta bancaria.
+- Billetera: Yape, Plin u otro medio similar.
+
+Datos principales:
+
+- Nombre.
+- Tipo.
+- Banco.
+- NÃºmero de cuenta.
+- Moneda.
+- Saldo inicial.
+- Fecha de saldo inicial.
+- Estado activo/anulado.
+
+El sistema crea o usa una cuenta por defecto llamada `Caja principal` cuando una operaciÃ³n no indica cuenta financiera.
+
+### Caja y Bancos
+
+La pantalla responde la pregunta: Â¿cuÃ¡nto dinero real tiene la empresa?
+
+Muestra:
+
+- Dinero disponible de la empresa.
+- Total en efectivo.
+- Total en bancos.
+- Total en billeteras.
+- Ingresos del periodo.
+- Egresos del periodo.
+- Saldo por cuenta financiera.
+
+El saldo se calcula como:
+
+`Saldo inicial + ingresos activos - egresos activos`
+
+### Operaciones con cuenta financiera
+
+Registran cuenta financiera:
+
+- Cobros de clientes.
+- Comprobantes al contado.
+- Gastos.
+- Ingresos manuales.
+- Pagos a proveedores.
+- Devoluciones.
+
+Esto permite saber a quÃ© caja, banco o billetera ingresÃ³ o de dÃ³nde saliÃ³ el dinero.
+
+### Transferencias
+
+Permiten mover dinero entre cuentas financieras.
+
+Formulario:
+
+- Fecha.
+- Cuenta origen.
+- Cuenta destino.
+- Monto.
+- ObservaciÃ³n.
+
+Reglas:
+
+- La cuenta origen debe ser distinta de la cuenta destino.
+- Al registrar una transferencia se genera un egreso en la cuenta origen y un ingreso en la cuenta destino.
+- El origen del movimiento de caja es `TRANSFERENCIA`.
+- Las transferencias no afectan ventas, gastos, ingresos ni estados de cuenta.
+- Al anular una transferencia se anulan sus dos movimientos de caja relacionados.
+
 ## 19. Facturacion electronica y SUNAT
 
 Facturas:
@@ -543,7 +633,7 @@ No muestra el campo hash en la lista principal.
 
 ## 22. Reportes y filtros
 
-El Reporte General presenta un comparativo anual con meses en filas y años en columnas. Permite seleccionar hasta diez años y cambiar el indicador entre:
+El Reporte General presenta un comparativo anual con meses en filas y aÃ±os en columnas. Permite seleccionar hasta diez aÃ±os y cambiar el indicador entre:
 
 - Resultado neto.
 - Ventas netas.
@@ -551,7 +641,7 @@ El Reporte General presenta un comparativo anual con meses en filas y años en c
 - Gastos.
 - Compras.
 
-Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al año anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
 
 Los formularios de lista con informacion fechada usan rango de fechas:
 
@@ -582,27 +672,27 @@ Esto aplica a listas como comprobantes, cotizaciones, empresas, categorias y otr
 
 ## 24. Datos iniciales de salida
 
-La instalación inicial deja preparadas dos empresas activas:
+La instalaciÃ³n inicial deja preparadas dos empresas activas:
 
 - `20615082997`: VIVERO LOS FRUTALES LIMA SAC.
 - `20615619273`: VIVERO LOS FRUTALES HUARAL SAC.
 
-El usuario inicial para ingreso y configuración es:
+El usuario inicial para ingreso y configuraciÃ³n es:
 
 ```text
 Usuario: admin
 Password: Admin1234
 ```
 
-Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesión debe seleccionar una empresa. Después del primer ingreso se debe cambiar la contraseña desde el módulo de usuarios.
+Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesiÃ³n debe seleccionar una empresa. DespuÃ©s del primer ingreso se debe cambiar la contraseÃ±a desde el mÃ³dulo de usuarios.
 
-Los productos se cargan por empresa desde el catálogo Nubefact. El sistema mantiene stock, precios, unidad, afectación IGV y detracción por producto y empresa. Los clientes se cargan como catálogo global del sistema, por lo que pueden utilizarse desde cualquier empresa activa.
+Los productos se cargan por empresa desde el catalogo Nubefact. El sistema mantiene stock, precios, unidad, afectacion IGV y detraccion por producto y empresa. Los clientes tambien se cargan por empresa, por lo que cada empresa mantiene su propio padron comercial.
 
-## 25. Sitio público
+## 25. Sitio pÃºblico
 
-La solución incluye un sitio público separado del ERP.
+La soluciÃ³n incluye un sitio pÃºblico separado del ERP.
 
-El sitio público presenta contenido institucional y comercial:
+El sitio pÃºblico presenta contenido institucional y comercial:
 
 - Inicio.
 - Nosotros.
@@ -610,4 +700,5 @@ El sitio público presenta contenido institucional y comercial:
 - Servicios.
 - Contacto.
 
-El catálogo público se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuración. Es una aplicación web independiente para publicación externa.
+El catÃ¡logo pÃºblico se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuraciÃ³n. Es una aplicaciÃ³n web independiente para publicaciÃ³n externa.
+

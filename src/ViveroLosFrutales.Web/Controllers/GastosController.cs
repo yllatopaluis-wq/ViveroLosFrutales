@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -13,14 +13,14 @@ public class GastosController(GastoService service) : Controller
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
         ViewBag.CategoriasGasto = await service.ListarCategoriasAsync(cancellationToken);
-        return View(new GastoEditDto());
+        return View(await PrepararFormularioAsync(new GastoEditDto(), cancellationToken));
     }
 
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)
     {
         var dto = await service.ObtenerAsync(id, cancellationToken);
         ViewBag.CategoriasGasto = await service.ListarCategoriasAsync(cancellationToken);
-        return dto is null ? NotFound() : View("Create", dto);
+        return dto is null ? NotFound() : View("Create", await PrepararFormularioAsync(dto, cancellationToken));
     }
 
     public async Task<IActionResult> Visualizar(int id, CancellationToken cancellationToken)
@@ -29,7 +29,7 @@ public class GastosController(GastoService service) : Controller
         if (dto is null) return NotFound();
         ViewData["ReadOnly"] = true;
         ViewBag.CategoriasGasto = await service.ListarCategoriasAsync(cancellationToken);
-        return View("Create", dto);
+        return View("Create", await PrepararFormularioAsync(dto, cancellationToken));
     }
 
     [HttpPost]
@@ -46,7 +46,7 @@ public class GastosController(GastoService service) : Controller
         {
             ModelState.AddModelError(string.Empty, ErrorMessageHelper.ToSpanish(ex));
             ViewBag.CategoriasGasto = await service.ListarCategoriasAsync(cancellationToken);
-            return View(dto);
+            return View(await PrepararFormularioAsync(dto, cancellationToken));
         }
     }
 
@@ -65,5 +65,11 @@ public class GastosController(GastoService service) : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    private async Task<GastoEditDto> PrepararFormularioAsync(GastoEditDto dto, CancellationToken cancellationToken)
+    {
+        dto.CuentasFinancieras = await service.ListarCuentasFinancierasAsync(cancellationToken);
+        return dto;
     }
 }

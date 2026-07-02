@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -39,7 +39,7 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
         db.Compras
             .Include(x => x.Proveedor)
             .Include(x => x.Detalles).ThenInclude(x => x.Producto)
-            .Include(x => x.Pagos)
+            .Include(x => x.Pagos).ThenInclude(x => x.CuentaFinanciera)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.CompraId == id, cancellationToken);
 
     public Task<bool> ExisteDocumentoAsync(int empresaId, int proveedorId, TipoDocumentoCompra tipoDocumento, string serie, string numero, int? excluirCompraId, CancellationToken cancellationToken)
@@ -168,3 +168,4 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             ? (string.IsNullOrWhiteSpace(compra.Serie) || string.IsNullOrWhiteSpace(compra.Numero) ? compra.TipoDocumento.ToString() : $"{compra.Serie}-{compra.Numero}")
             : compra.Documento;
 }
+

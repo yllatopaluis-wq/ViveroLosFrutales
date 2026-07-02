@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
@@ -86,7 +86,7 @@ public class ComprobantesController(
 
         ViewData["Referencia"] = $"{dto.TipoComprobante}-{dto.Serie}-{dto.Correlativo:000000}";
         ViewData["SaldoPendiente"] = dto.SaldoPendiente;
-        return View(new RegistrarCobroDto { ComprobanteId = id, FechaCobro = PeruDateTime.Today, Monto = dto.SaldoPendiente, MedioPago = "EFECTIVO" });
+        return View(await cobroClienteService.PrepararFormularioAsync(new RegistrarCobroDto { ComprobanteId = id, FechaCobro = PeruDateTime.Today, Monto = dto.SaldoPendiente, MedioPago = "EFECTIVO" }, cancellationToken));
     }
 
     public async Task<IActionResult> Numeracion(TipoComprobante tipoComprobante, CancellationToken cancellationToken) =>
@@ -145,7 +145,7 @@ public class ComprobantesController(
                 var comprobante = await service.ObtenerComprobanteParaVisualizarAsync(comprobanteId, cancellationToken);
                 ViewData["SaldoPendiente"] = comprobante.SaldoPendiente;
             }
-            return View(dto);
+            return View(await cobroClienteService.PrepararFormularioAsync(dto, cancellationToken));
         }
     }
 
@@ -251,3 +251,4 @@ public class ComprobantesController(
         return RedirectToAction(nameof(Index));
     }
 }
+

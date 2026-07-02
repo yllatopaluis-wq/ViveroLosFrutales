@@ -9,12 +9,28 @@ GO
 -- Destino: tabla [erp].[Cliente]
 -- Mapeo TipoDocumentoCliente: DNI=1, RUC=2, CE=3, Otro=9
 -- Registros preparados: 1178. Filas omitidas por duplicado o datos incompletos: 2.
--- El script es idempotente: no inserta si ya existe el mismo TipoDocumento + NumeroDocumento.
+-- El script es idempotente por empresa: registra el mismo padron para EmpresaId 1 y 2 sin duplicar EmpresaId + TipoDocumento + NumeroDocumento.
 
 SET NOCOUNT ON;
 
 DECLARE @UsuarioRegistro nvarchar(max) = N'carga-clientes-entidades';
 DECLARE @FechaRegistro datetime2 = SYSUTCDATETIME();
+
+IF COL_LENGTH(N'erp.Cliente', N'EmpresaId') IS NULL
+BEGIN
+    THROW 51003, 'La tabla erp.Cliente no tiene EmpresaId. Ejecute primero el script 009-diferenciar-clientes-por-empresa.sql.', 1;
+END;
+
+DECLARE @Empresas TABLE (EmpresaId int NOT NULL PRIMARY KEY);
+INSERT INTO @Empresas (EmpresaId)
+SELECT v.EmpresaId
+FROM (VALUES (1), (2)) v(EmpresaId)
+WHERE EXISTS (SELECT 1 FROM [erp].[Empresa] e WHERE e.EmpresaId = v.EmpresaId);
+
+IF NOT EXISTS (SELECT 1 FROM @Empresas)
+BEGIN
+    THROW 51004, 'No existen las empresas 1 y 2 para cargar clientes.', 1;
+END;
 
 DECLARE @Clientes TABLE (
     TipoDocumento int NOT NULL,
@@ -1213,8 +1229,9 @@ VALUES
 (1, N'70613261', N'CALERO HUAMAN JUAN MARCOS', N'', N'CHANCAY -HUARAL-LIMA', N'');
 
 INSERT INTO [erp].[Cliente]
-    ([TipoDocumento], [NumeroDocumento], [NombreCompleto], [Email], [Direccion], [Telefono], [FechaModificacion], [UsuarioModificacion], [FechaRegistro], [UsuarioRegistro], [Estado])
+    ([EmpresaId], [TipoDocumento], [NumeroDocumento], [NombreCompleto], [Email], [Direccion], [Telefono], [FechaModificacion], [UsuarioModificacion], [FechaRegistro], [UsuarioRegistro], [Estado])
 SELECT
+    e.EmpresaId,
     c.TipoDocumento,
     c.NumeroDocumento,
     c.NombreCompleto,
@@ -1227,14 +1244,16 @@ SELECT
     @UsuarioRegistro,
     1
 FROM @Clientes c
+CROSS JOIN @Empresas e
 WHERE NOT EXISTS (
     SELECT 1
     FROM [erp].[Cliente] actual
-    WHERE actual.TipoDocumento = c.TipoDocumento
+    WHERE actual.EmpresaId = e.EmpresaId
+      AND actual.TipoDocumento = c.TipoDocumento
       AND actual.NumeroDocumento = c.NumeroDocumento
 );
 
-PRINT CONCAT(N'Clientes insertados: ', @@ROWCOUNT);
+PRINT CONCAT(N'Clientes insertados para empresas 1 y 2: ', @@ROWCOUNT);
 GO
 
 

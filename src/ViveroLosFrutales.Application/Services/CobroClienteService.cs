@@ -11,6 +11,7 @@ public class CobroClienteService(
     IMovimientoCajaRepository movimientoCajaRepository,
     INotaPedidoRepository notaPedidoRepository,
     IComprobanteRepository comprobanteRepository,
+    CuentaFinancieraService cuentaFinancieraService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<CobroClienteListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -25,6 +26,12 @@ public class CobroClienteService(
     public Task<IReadOnlyList<CobroClienteListDto>> ListarPorClienteAsync(int clienteId, CancellationToken cancellationToken) =>
         cobroRepository.ListarPorClienteAsync(empresaContext.EmpresaId, clienteId, cancellationToken);
 
+
+    public async Task<RegistrarCobroDto> PrepararFormularioAsync(RegistrarCobroDto dto, CancellationToken cancellationToken)
+    {
+        dto.CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken);
+        return dto;
+    }
     public async Task<CobroCliente> RegistrarAsync(RegistrarCobroDto dto, CancellationToken cancellationToken)
     {
         if (dto.Monto <= 0) throw new InvalidOperationException("El monto del cobro debe ser mayor a cero.");
@@ -55,7 +62,7 @@ public class CobroClienteService(
                     throw new InvalidOperationException("El monto no puede superar el saldo pendiente.");
                 }
 
-                cobro = CrearCobro(dto, notaPedido.ClienteId);
+                cobro = await CrearCobroAsync(dto, notaPedido.ClienteId, cancellationToken);
                 cobro.NotaPedidoId = notaPedido.NotaPedidoId;
                 await cobroRepository.GuardarAsync(cobro, cancellationToken);
                 await CrearMovimientoCajaAsync(cobro, $"Cobro nota de pedido {notaPedido.Serie}-{notaPedido.Correlativo:000000}", cancellationToken);
@@ -91,7 +98,7 @@ public class CobroClienteService(
 
                 if (dto.Monto > saldo) throw new InvalidOperationException("El monto no puede superar el saldo pendiente del comprobante.");
 
-                cobro = CrearCobro(dto, comprobante.ClienteId);
+                cobro = await CrearCobroAsync(dto, comprobante.ClienteId, cancellationToken);
                 cobro.ComprobanteId = comprobante.ComprobanteId;
                 await cobroRepository.GuardarAsync(cobro, cancellationToken);
                 await CrearMovimientoCajaAsync(cobro, $"Cobro comprobante {comprobante.Serie}-{comprobante.Correlativo:000000}", cancellationToken);
@@ -112,7 +119,7 @@ public class CobroClienteService(
         if (cobro.Estado == CobroClienteEstado.ANULADO) return;
         if (cobro.Aplicaciones.Count > 0 && cobro.Comprobante?.EstadoSunat == EstadoSunat.Aceptado)
         {
-            throw new InvalidOperationException("No se puede anular un cobro aplicado a un comprobante aceptado sin reversión controlada.");
+            throw new InvalidOperationException("No se puede anular un cobro aplicado a un comprobante aceptado sin reversiÃ³n controlada.");
         }
 
         await cobroRepository.EjecutarEnTransaccionAsync(async () =>
@@ -149,23 +156,24 @@ public class CobroClienteService(
         }, cancellationToken);
     }
 
-    private CobroCliente CrearCobro(RegistrarCobroDto dto, int clienteId) => new()
+    private async Task<CobroCliente> CrearCobroAsync(RegistrarCobroDto dto, int clienteId, CancellationToken cancellationToken) => new()
     {
         EmpresaId = empresaContext.EmpresaId,
         ClienteId = clienteId,
+        CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken),
         FechaCobro = dto.FechaCobro.Date,
         Monto = decimal.Round(dto.Monto, 2),
         MedioPago = dto.MedioPago.Trim(),
         Observacion = dto.Observacion.Trim(),
         UsuarioRegistro = empresaContext.UsuarioNombre
     };
-
     private async Task CrearMovimientoCajaAsync(CobroCliente cobro, string descripcion, CancellationToken cancellationToken)
     {
         await movimientoCajaRepository.GuardarAsync(new MovimientoCaja
         {
             EmpresaId = empresaContext.EmpresaId,
             ClienteId = cobro.ClienteId,
+            CuentaFinancieraId = cobro.CuentaFinancieraId,
             TipoMovimiento = TipoMovimientoCaja.INGRESO,
             Origen = OrigenMovimientoCaja.COBRO_CLIENTE,
             OrigenId = cobro.CobroClienteId,

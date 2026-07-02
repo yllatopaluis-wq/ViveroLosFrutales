@@ -15,6 +15,7 @@
         direccion = x.Direccion,
         texto = $"{x.NombreCompleto} - {x.NumeroDocumento}"
     }));
+    var cuentasFinancieras = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     var productosJson = JsonSerializer.Serialize(Model.Productos.Select(x => new
     {
         id = x.ProductoId,
@@ -97,13 +98,22 @@
             </label>
             <label id="medioPagoComprobanteWrap">
                 <span>Medio de pago <b>*</b></span>
-                <select asp-for="Comprobante.MedioPago" name="MedioPago" class="form-select">
+                <select asp-for="Comprobante.MedioPago" name="MedioPago" class="form-select" id="medioPagoComprobante">
                     <option value="EFECTIVO">Efectivo</option>
-                    <option value="YAPE">Yape</option>
-                    <option value="PLIN">Plin</option>
                     <option value="TRANSFERENCIA">Transferencia</option>
-                    <option value="TARJETA">Tarjeta</option>
-                    <option value="OTRO">Otro</option>
+                    <option value="YAPE">Yape</option>
+                    <option value="TARJETA DEBITO">Tarjeta débito</option>
+                    <option value="TARJETA CREDITO">Tarjeta crédito</option>
+</select>
+            </label>
+            <label id="cuentaFinancieraComprobanteWrap">
+                <span>Cuenta destino</span>
+                <select asp-for="Comprobante.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraComprobante">
+                    <option value="">Caja principal</option>
+                    @foreach (var cuenta in cuentasFinancieras)
+                    {
+                        <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Comprobante.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                    }
                 </select>
             </label>
         </fieldset>
@@ -227,14 +237,22 @@
         });
         const formaPago = document.getElementById('formaPagoComprobante');
         const medioPagoWrap = document.getElementById('medioPagoComprobanteWrap');
-        const medioPago = medioPagoWrap?.querySelector('select');
+        const medioPago = document.getElementById('medioPagoComprobante');
+        const cuentaFinancieraWrap = document.getElementById('cuentaFinancieraComprobanteWrap');
+        const cuentaFinanciera = document.getElementById('cuentaFinancieraComprobante');
         const syncMedioPago = () => {
             const esCredito = formaPago?.value === '@((int)FormaPago.Credito)';
             medioPagoWrap?.classList.toggle('d-none', esCredito);
             if (medioPago) medioPago.disabled = !!esCredito;
+            cuentaFinancieraWrap?.classList.toggle('d-none', esCredito);
+            if (cuentaFinanciera) cuentaFinanciera.disabled = !!esCredito;
         };
         formaPago?.addEventListener('change', syncMedioPago);
         syncMedioPago();
+        window.viveroFiltrarCuentasPorMedioPago?.({
+            medioPagoSelector: '#medioPagoComprobante',
+            cuentaSelector: '#cuentaFinancieraComprobante'
+        });
     </script>
     }
 }

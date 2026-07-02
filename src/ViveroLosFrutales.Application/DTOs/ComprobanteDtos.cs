@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
@@ -38,6 +38,7 @@ public class ComprobanteEditDto
     public FormaPago FormaPago { get; set; } = FormaPago.Contado;
     public EstadoPagoComprobante EstadoPago { get; set; } = EstadoPagoComprobante.PENDIENTE;
     public string MedioPago { get; set; } = "EFECTIVO";
+    public int? CuentaFinancieraId { get; set; }
 
     public string EmpresaRazonSocial { get; set; } = string.Empty;
     public string EmpresaNombreComercial { get; set; } = string.Empty;
@@ -129,4 +130,6 @@ public record ComprobanteFormDataDto(
     ComprobanteEditDto Comprobante,
     ComprobanteNumeracionDto Numeracion,
     IReadOnlyCollection<ComprobanteClienteOptionDto> Clientes,
-    IReadOnlyCollection<ComprobanteProductoOptionDto> Productos);
+    IReadOnlyCollection<ComprobanteProductoOptionDto> Productos,
+    IReadOnlyCollection<CuentaFinancieraOptionDto> CuentasFinancieras);
+

@@ -1,5 +1,6 @@
 @model RegistrarPagoProveedorDto
 @{
+    var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     ViewData["Title"] = "Registrar Pago Proveedor";
 }
 
@@ -18,13 +19,28 @@
 
     <div class="form-grid">
         <label>Fecha pago<input asp-for="FechaPago" type="date" class="form-control form-control-sm" /></label>
-        <label>Medio pago<input asp-for="MedioPago" class="form-control form-control-sm" /></label>
+        <label>
+            Medio pago
+            <select asp-for="MedioPago" class="form-select form-select-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="YAPE">Yape</option>
+                <option value="TARJETA DEBITO">Tarjeta débito</option>
+                <option value="TARJETA CREDITO">Tarjeta crédito</option>
+            </select>
+        </label>
         <label>Monto pago<input asp-for="MontoPago" class="form-control form-control-sm" /></label>
+        <label>Cuenta origen<select asp-for="CuentaFinancieraId" class="form-select form-select-sm"><option value="">Caja principal</option>@foreach (var cuenta in cuentas) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
     </div>
-    <label>Observacion<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
-    <p class="text-muted">Al confirmar se creara un MovimientoCaja de tipo EGRESO. La caja se calcula solo desde movimientos activos.</p>
+    <label>Observación<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
+    <p class="text-muted">Al confirmar se creará un MovimientoCaja de tipo EGRESO. La caja se calcula solo desde movimientos activos.</p>
     <div class="form-actions">
         <button type="submit" class="btn btn-sm btn-primary">Registrar pago</button>
         <a class="btn btn-sm btn-secondary" asp-action="Details" asp-route-id="@Model.CompraId">Volver</a>
     </div>
 </form>
+
+
+@section Scripts {
+    <script>window.viveroFiltrarCuentasPorMedioPago?.();</script>
+}

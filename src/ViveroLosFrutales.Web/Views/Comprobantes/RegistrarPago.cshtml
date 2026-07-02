@@ -1,5 +1,6 @@
 @model RegistrarCobroDto
 @{
+    var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     ViewData["Title"] = "Registrar Pago";
     var referencia = ViewData["Referencia"] as string ?? string.Empty;
     var saldoPendiente = ViewData["SaldoPendiente"] as decimal? ?? 0;
@@ -22,14 +23,23 @@
             Medio pago
             <select asp-for="MedioPago" class="form-select form-select-sm">
                 <option value="EFECTIVO">Efectivo</option>
-                <option value="YAPE">Yape</option>
-                <option value="PLIN">Plin</option>
                 <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="TARJETA">Tarjeta</option>
-                <option value="OTRO">Otro</option>
+                <option value="YAPE">Yape</option>
+                <option value="TARJETA DEBITO">Tarjeta débito</option>
+                <option value="TARJETA CREDITO">Tarjeta crédito</option>
+</select>
+        </label>
+        <label>
+            Cuenta destino
+            <select asp-for="CuentaFinancieraId" class="form-select form-select-sm">
+                <option value="">Caja principal</option>
+                @foreach (var cuenta in cuentas)
+                {
+                    <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                }
             </select>
         </label>
-        <label class="span-2">Observacion<input asp-for="Observacion" class="form-control form-control-sm" /></label>
+        <label class="span-2">Observación<input asp-for="Observacion" class="form-control form-control-sm" /></label>
     </div>
 
     <div class="form-actions">
@@ -37,3 +47,8 @@
         <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
     </div>
 </form>
+
+
+@section Scripts {
+    <script>window.viveroFiltrarCuentasPorMedioPago?.();</script>
+}

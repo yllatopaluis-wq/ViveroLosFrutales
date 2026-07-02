@@ -274,6 +274,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         var empresaDireccion = FirstNotEmpty(comprobante.EmpresaDireccion, comprobante.Empresa?.Direccion, string.Empty);
         var empresaTelefono = FirstNotEmpty(comprobante.EmpresaTelefono, comprobante.Empresa?.Telefono, string.Empty);
         var empresaEmail = FirstNotEmpty(comprobante.EmpresaEmail, comprobante.Empresa?.Email, string.Empty);
+        var firmaBytes = comprobante.Empresa?.FirmaContenido is { Length: > 0 } firma ? firma : null;
         var serie = FirstNotEmpty(comprobante.Serie, comprobante.Empresa?.SerieCotizacion);
         var clienteDocumentoLabel = comprobante.Cliente?.TipoDocumento == TipoDocumentoCliente.RUC ? "RUC" : "Documento";
         var clienteDocumento = comprobante.Cliente?.NumeroDocumento ?? string.Empty;
@@ -449,7 +450,17 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
 
                         row.ConstantItem(170).Height(86).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).AlignBottom().Column(signature =>
                         {
-                            signature.Item().Height(48).Text(" ");
+                            signature.Item().Height(48).AlignCenter().AlignMiddle().Element(firma =>
+                            {
+                                if (firmaBytes is not null)
+                                {
+                                    firma.Image(firmaBytes).FitArea();
+                                }
+                                else
+                                {
+                                    firma.Text(" ");
+                                }
+                            });
                             signature.Item().LineHorizontal(1).LineColor(Colors.Grey.Darken1);
                             signature.Item().PaddingTop(4).Text("Firma y Sello").FontSize(7).AlignCenter();
                         });

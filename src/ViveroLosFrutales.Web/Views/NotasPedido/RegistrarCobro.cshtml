@@ -1,5 +1,6 @@
 @model RegistrarCobroDto
 @{
+    var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     ViewData["Title"] = "Registrar Cobro";
     var saldo = ViewData["SaldoPendiente"] as decimal? ?? 0;
     var referencia = ViewData["Referencia"] as string ?? string.Empty;
@@ -24,11 +25,21 @@
                 <option value="EFECTIVO">Efectivo</option>
                 <option value="TRANSFERENCIA">Transferencia</option>
                 <option value="YAPE">Yape</option>
-                <option value="TARJETA DEBITO">Tarjeta debito</option>
-                <option value="TARJETA CREDITO">Tarjeta Credito</option>
+                <option value="TARJETA DEBITO">Tarjeta débito</option>
+                <option value="TARJETA CREDITO">Tarjeta crédito</option>
             </select>
         </label>
-        <label class="span-2">Observacion<input asp-for="Observacion" class="form-control form-control-sm" /></label>
+        <label>
+            Cuenta destino
+            <select asp-for="CuentaFinancieraId" class="form-select form-select-sm">
+                <option value="">Caja principal</option>
+                @foreach (var cuenta in cuentas)
+                {
+                    <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                }
+            </select>
+        </label>
+        <label class="span-2">Observación<input asp-for="Observacion" class="form-control form-control-sm" /></label>
     </div>
 
     <div class="form-actions">
@@ -38,5 +49,5 @@
 </form>
 
 @section Scripts {
-    <script>window.viveroCobroForm?.();</script>
+    <script>window.viveroCobroForm?.(); window.viveroFiltrarCuentasPorMedioPago?.();</script>
 }

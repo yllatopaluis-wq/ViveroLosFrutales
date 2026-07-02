@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -47,6 +47,7 @@ public class DevolucionesController(DevolucionService service) : Controller
                 var form = await service.ObtenerFormularioRegistroAsync(dto.DevolucionId, cancellationToken);
                 form.MontoDevolver = dto.MontoDevolver;
                 form.MedioDevolucion = dto.MedioDevolucion;
+                form.CuentaFinancieraId = dto.CuentaFinancieraId;
                 form.Fecha = dto.Fecha;
                 form.Observacion = dto.Observacion;
                 return View(form);
@@ -67,3 +68,4 @@ public class DevolucionesController(DevolucionService service) : Controller
         return RedirectToAction(nameof(Index));
     }
 }
+

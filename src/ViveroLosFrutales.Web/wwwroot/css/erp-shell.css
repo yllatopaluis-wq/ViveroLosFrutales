@@ -1282,7 +1282,7 @@
     align-items: start;
   }
 }
-/* Shared modern list style for administraciÃ³n and cobros */
+/* Shared modern list style for administración and cobros */
 .admin-docs-toolbar.compact {
   grid-template-columns: minmax(320px, 1fr) 116px 128px;
 }

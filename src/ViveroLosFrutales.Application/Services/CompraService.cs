@@ -13,6 +13,7 @@ public class CompraService(
     IMovimientoCajaRepository movimientoCajaRepository,
     IPagoProveedorRepository pagoProveedorRepository,
     DevolucionService devolucionService,
+    CuentaFinancieraService cuentaFinancieraService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<CompraListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -25,6 +26,7 @@ public class CompraService(
     {
         Proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
         Productos = await productoRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
+        CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken),
         Compra = new CompraEditDto { Fecha = PeruDateTime.Today, FormaPago = FormaPagoCompra.CREDITO }
     };
 
@@ -127,7 +129,7 @@ public class CompraService(
 
             if (compra.FormaPago == FormaPagoCompra.CONTADO)
             {
-                await CrearPagoProveedorAsync(compra, compra.Total, compra.Fecha, dto.MedioPago, "Compra al contado", cancellationToken);
+                await CrearPagoProveedorAsync(compra, compra.Total, compra.Fecha, dto.MedioPago, dto.CuentaFinancieraId, "Compra al contado", cancellationToken);
             }
 
             await repository.GuardarAsync(compra, cancellationToken);
@@ -148,7 +150,8 @@ public class CompraService(
             TotalPagado = compra.TotalPagado,
             SaldoPendiente = compra.SaldoPendiente,
             MontoPago = compra.SaldoPendiente,
-            FechaPago = PeruDateTime.Today
+            FechaPago = PeruDateTime.Today,
+            CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken)
         };
     }
 
@@ -168,7 +171,7 @@ public class CompraService(
                 throw new InvalidOperationException("El monto del pago no puede superar el saldo pendiente.");
             }
 
-            await CrearPagoProveedorAsync(compra, dto.MontoPago, dto.FechaPago, dto.MedioPago, dto.Observacion, cancellationToken);
+            await CrearPagoProveedorAsync(compra, dto.MontoPago, dto.FechaPago, dto.MedioPago, dto.CuentaFinancieraId, dto.Observacion, cancellationToken);
             RecalcularEstadoPagoCompra(compra);
             await repository.GuardarAsync(compra, cancellationToken);
         }, cancellationToken);
@@ -240,10 +243,11 @@ public class CompraService(
         return resultado;
     }
 
-    private async Task CrearPagoProveedorAsync(Compra compra, decimal monto, DateTime fechaPago, string medioPago, string observacion, CancellationToken cancellationToken)
+    private async Task CrearPagoProveedorAsync(Compra compra, decimal monto, DateTime fechaPago, string medioPago, int? cuentaFinancieraId, string observacion, CancellationToken cancellationToken)
     {
         medioPago = string.IsNullOrWhiteSpace(medioPago) ? "EFECTIVO" : medioPago.Trim();
         observacion = observacion?.Trim() ?? string.Empty;
+        var cuentaId = await cuentaFinancieraService.ResolverCuentaIdAsync(cuentaFinancieraId, cancellationToken);
         var pago = new PagoProveedor
         {
             EmpresaId = empresaContext.EmpresaId,
@@ -252,6 +256,7 @@ public class CompraService(
             FechaPago = fechaPago.Date,
             Monto = decimal.Round(monto, 2),
             MedioPago = medioPago.ToUpperInvariant(),
+            CuentaFinancieraId = cuentaId,
             Observacion = observacion,
             UsuarioRegistro = empresaContext.UsuarioNombre
         };
@@ -262,6 +267,7 @@ public class CompraService(
         {
             EmpresaId = empresaContext.EmpresaId,
             ProveedorId = compra.ProveedorId,
+            CuentaFinancieraId = cuentaId,
             TipoMovimiento = TipoMovimientoCaja.EGRESO,
             Origen = OrigenMovimientoCaja.PAGO_PROVEEDOR,
             OrigenId = pago.PagoProveedorId,
@@ -336,8 +342,10 @@ public class CompraService(
             Documento(compra),
             x.Monto,
             x.MedioPago,
+            x.CuentaFinanciera?.Nombre ?? string.Empty,
             x.EstadoPago,
             x.Observacion,
             x.EstadoPago == PagoProveedorEstado.ACTIVO && compra.EstadoDocumento == EstadoDocumentoCompra.ACTIVO)).ToList()
     };
 }
+

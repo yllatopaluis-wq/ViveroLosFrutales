@@ -13,9 +13,11 @@ public class Gasto : EmpresaEntity
     public string MedioPago { get; set; } = string.Empty;
     public string Observacion { get; set; } = string.Empty;
     public int? MovimientoCajaId { get; set; }
+    public int? CuentaFinancieraId { get; set; }
     public string MotivoAnulacion { get; set; } = string.Empty;
     public DateTime? FechaAnulacion { get; set; }
     public Empresa? Empresa { get; set; }
     public CategoriaGasto? CategoriaGasto { get; set; }
     public MovimientoCaja? MovimientoCaja { get; set; }
+    public CuentaFinanciera? CuentaFinanciera { get; set; }
 }

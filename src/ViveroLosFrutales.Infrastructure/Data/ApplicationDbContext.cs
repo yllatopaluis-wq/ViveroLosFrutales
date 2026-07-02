@@ -37,6 +37,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<NotaPedidoDetalle> NotaPedidoDetalles => Set<NotaPedidoDetalle>();
     public DbSet<CobroCliente> CobrosCliente => Set<CobroCliente>();
     public DbSet<MovimientoCaja> MovimientosCaja => Set<MovimientoCaja>();
+    public DbSet<CuentaFinanciera> CuentasFinancieras => Set<CuentaFinanciera>();
+    public DbSet<TransferenciaFinanciera> TransferenciasFinancieras => Set<TransferenciaFinanciera>();
     public DbSet<ComprobanteCobroAplicado> ComprobanteCobrosAplicados => Set<ComprobanteCobroAplicado>();
     public DbSet<Cotizacion> Cotizaciones => Set<Cotizacion>();
     public DbSet<CotizacionDetalle> CotizacionDetalles => Set<CotizacionDetalle>();
@@ -69,6 +71,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.LogoContenido).HasColumnType("varbinary(max)");
             entity.Property(x => x.LogoContentType).HasMaxLength(120);
             entity.Property(x => x.LogoNombre).HasMaxLength(260);
+            entity.Property(x => x.RepresentanteLegalNombre).HasMaxLength(200);
+            entity.Property(x => x.RepresentanteLegalDocumento).HasMaxLength(20);
+            entity.Property(x => x.RepresentanteLegalCargo).HasMaxLength(120);
+            entity.Property(x => x.FirmaContenido).HasColumnType("varbinary(max)");
+            entity.Property(x => x.FirmaContentType).HasMaxLength(120);
+            entity.Property(x => x.FirmaNombre).HasMaxLength(260);
             entity.Property(x => x.SerieNotaCredito).HasMaxLength(10);
             entity.Property(x => x.SerieNotaCreditoFactura).HasMaxLength(10);
             entity.Property(x => x.SerieNotaCreditoBoleta).HasMaxLength(10);
@@ -307,6 +315,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.UsuarioAnulacion).HasMaxLength(120);
             entity.HasIndex(x => new { x.EmpresaId, x.ProveedorId, x.FechaPago });
             entity.HasIndex(x => new { x.EmpresaId, x.CompraId });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
+            entity.HasOne(x => x.CuentaFinanciera).WithMany().HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.ProveedorId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Compra).WithMany(x => x.Pagos).HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -324,6 +334,40 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Producto).WithMany().HasForeignKey(x => x.ProductoId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        builder.Entity<CuentaFinanciera>(entity =>
+        {
+            entity.ToTable("CuentaFinanciera");
+            entity.HasKey(x => x.CuentaFinancieraId);
+            entity.Property(x => x.Nombre).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Banco).HasMaxLength(120);
+            entity.Property(x => x.NumeroCuenta).HasMaxLength(80);
+            entity.Property(x => x.Moneda).HasMaxLength(3).IsRequired();
+            entity.Property(x => x.SaldoInicial).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.Activo).HasDefaultValue(true);
+            entity.Property(x => x.UsuarioModificacion).HasMaxLength(120);
+            entity.HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+            entity.HasIndex(x => new { x.EmpresaId, x.Tipo });
+            entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId);
+        });
+
+        builder.Entity<TransferenciaFinanciera>(entity =>
+        {
+            entity.ToTable("TransferenciaFinanciera");
+            entity.HasKey(x => x.TransferenciaFinancieraId);
+            entity.Property(x => x.Monto).HasColumnType("decimal(18,2)");
+            entity.Property(x => x.Observacion).HasMaxLength(500);
+            entity.Property(x => x.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(x => x.UsuarioAnulacion).HasMaxLength(120);
+            entity.HasIndex(x => new { x.EmpresaId, x.Fecha });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaOrigenId });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaDestinoId });
+            entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId);
+            entity.HasOne(x => x.CuentaOrigen).WithMany().HasForeignKey(x => x.CuentaOrigenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CuentaDestino).WithMany().HasForeignKey(x => x.CuentaDestinoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.MovimientoEgreso).WithMany().HasForeignKey(x => x.MovimientoEgresoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.MovimientoIngreso).WithMany().HasForeignKey(x => x.MovimientoIngresoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         builder.Entity<Gasto>(entity =>
         {
             entity.ToTable("Gasto");
@@ -336,9 +380,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.MotivoAnulacion).HasMaxLength(500);
             entity.HasIndex(x => x.EmpresaId);
             entity.HasIndex(x => new { x.EmpresaId, x.Fecha });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
             entity.HasOne(x => x.Empresa).WithMany(x => x.Gastos).HasForeignKey(x => x.EmpresaId);
             entity.HasOne(x => x.CategoriaGasto).WithMany().HasForeignKey(x => x.CategoriaGastoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.MovimientoCaja).WithMany().HasForeignKey(x => x.MovimientoCajaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CuentaFinanciera).WithMany().HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<Ingreso>(entity =>
@@ -353,9 +399,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.MotivoAnulacion).HasMaxLength(500);
             entity.HasIndex(x => x.EmpresaId);
             entity.HasIndex(x => new { x.EmpresaId, x.Fecha });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
             entity.HasOne(x => x.Empresa).WithMany(x => x.Ingresos).HasForeignKey(x => x.EmpresaId);
             entity.HasOne(x => x.CategoriaIngreso).WithMany().HasForeignKey(x => x.CategoriaIngresoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.MovimientoCaja).WithMany().HasForeignKey(x => x.MovimientoCajaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CuentaFinanciera).WithMany().HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<CategoriaGasto>(entity =>
@@ -422,10 +470,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => new { x.EmpresaId, x.ClienteId, x.FechaCobro });
             entity.HasIndex(x => new { x.EmpresaId, x.NotaPedidoId });
             entity.HasIndex(x => new { x.EmpresaId, x.ComprobanteId });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
             entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId);
             entity.HasOne(x => x.Cliente).WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.NotaPedido).WithMany(x => x.Cobros).HasForeignKey(x => x.NotaPedidoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Comprobante).WithMany(x => x.Cobros).HasForeignKey(x => x.ComprobanteId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.CuentaFinanciera).WithMany().HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<MovimientoCaja>(entity =>
@@ -439,7 +489,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => new { x.EmpresaId, x.Origen, x.OrigenId });
             entity.HasIndex(x => new { x.EmpresaId, x.ClienteId });
             entity.HasIndex(x => new { x.EmpresaId, x.ProveedorId });
+            entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
             entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId);
+            entity.HasOne(x => x.CuentaFinanciera).WithMany(x => x.MovimientosCaja).HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<ComprobanteCobroAplicado>(entity =>
@@ -559,8 +611,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             PermisoId = permiso.PermisoId
         });
 
-        var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones" };
-        var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "RegistrarPago" };
+        var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "TESORERIA", "TESORERIA_CAJA", "TESORERIA_CAJABANCOS", "TESORERIA_COBROS", "TESORERIA_TRANSFERENCIAS", "TESORERIA_CUENTASCLIENTES" };
+        var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "Registrar", "RegistrarPago" };
         var permisos = permisosBase
             .Where(x => modulosVendedor.Contains(x.Modulo) && accionesVendedor.Contains(x.Accion))
             .Select((permiso, index) => new RolPermiso
@@ -573,3 +625,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         return permisosAdmin.Concat(permisos).ToArray();
     }
 }
+
+
+
+

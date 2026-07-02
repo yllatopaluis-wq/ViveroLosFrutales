@@ -10,11 +10,11 @@ namespace ViveroLosFrutales.Application.Services;
 public class ClienteService(IClienteRepository repository, IEmpresaContext empresaContext)
 {
     public Task<PagedResult<ClienteListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
-        repository.BuscarAsync(request, cancellationToken);
+        repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
 
     public async Task<ClienteEditDto?> ObtenerAsync(int id, CancellationToken cancellationToken)
     {
-        var cliente = await repository.ObtenerAsync(id, cancellationToken);
+        var cliente = await repository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken);
         return cliente is null ? null : ToDto(cliente);
     }
 
@@ -22,9 +22,15 @@ public class ClienteService(IClienteRepository repository, IEmpresaContext empre
     {
         Validar(dto);
         var esNuevo = dto.ClienteId == 0;
-        var cliente = esNuevo ? new Cliente() : await repository.ObtenerAsync(dto.ClienteId, cancellationToken);
+        var cliente = esNuevo ? new Cliente { EmpresaId = empresaContext.EmpresaId } : await repository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken);
         if (cliente is null) throw new InvalidOperationException("Cliente no encontrado.");
 
+        if (await repository.ExisteDocumentoAsync(empresaContext.EmpresaId, dto.TipoDocumento, dto.NumeroDocumento.Trim(), esNuevo ? null : dto.ClienteId, cancellationToken))
+        {
+            throw new InvalidOperationException("Ya existe un cliente con el mismo tipo y numero de documento en esta empresa.");
+        }
+
+        cliente.EmpresaId = empresaContext.EmpresaId;
         cliente.TipoDocumento = dto.TipoDocumento;
         cliente.NumeroDocumento = dto.NumeroDocumento.Trim();
         cliente.NombreCompleto = dto.NombreCompleto.Trim();
@@ -47,7 +53,7 @@ public class ClienteService(IClienteRepository repository, IEmpresaContext empre
 
     public async Task AnularAsync(int id, CancellationToken cancellationToken)
     {
-        var cliente = await repository.ObtenerAsync(id, cancellationToken) ?? throw new InvalidOperationException("Cliente no encontrado.");
+        var cliente = await repository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken) ?? throw new InvalidOperationException("Cliente no encontrado.");
         cliente.Estado = EstadoRegistro.Anulado;
         cliente.FechaModificacion = DateTime.UtcNow;
         cliente.UsuarioModificacion = empresaContext.UsuarioNombre;

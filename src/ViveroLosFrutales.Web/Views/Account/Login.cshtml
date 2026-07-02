@@ -1,34 +1,47 @@
 @model LoginDto
 @{
-    ViewData["Title"] = "Iniciar sesion";
+    ViewData["Title"] = "Iniciar sesión";
     ViewData["AuthPage"] = true;
     Layout = "_Layout";
     var empresas = ViewBag.Empresas as IReadOnlyList<EmpresaListDto> ?? Array.Empty<EmpresaListDto>();
+    var modulos = new[]
+    {
+        ("Clientes", "M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-5-5.8M7 11a3 3 0 1 1 0-6M2 21a6 6 0 0 1 5-5.8"),
+        ("Ventas", "M6 6h15l-2 8H8L6 6ZM6 6 5 3H2M9 19a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM18 19a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"),
+        ("Compras", "M9 3h6l1 3h3v15H5V6h3l1-3ZM9 11h6M9 15h6M9 19h4"),
+        ("Tesorería", "M4 7h16v10H4zM7 10h4M15 14h2M9 17v3M15 17v3"),
+        ("Proveedores", "M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM18 8h4M20 6v4"),
+        ("Productos", "M12 2 3 7l9 5 9-5-9-5ZM3 12l9 5 9-5M3 17l9 5 9-5"),
+        ("Pagos", "M3 7h18v10H3zM3 10h18M7 15h4"),
+        ("Reportes", "M4 20V10M10 20V4M16 20v-7M22 20H2"),
+        ("Operaciones", "M4 7h16M4 17h16M7 4v6M17 14v6M7 15a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM17 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"),
+        ("Administración", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z")
+    };
 }
 
-<main class="login-page">
-    <section class="login-visual" aria-hidden="true">
-        <div class="login-visual-copy">
-            <span>Vivero Los Frutales</span>
-            <h1>Cultiva tu gestion con claridad.</h1>
-            <p>Ventas, cotizaciones y comprobantes en un solo entorno de trabajo.</p>
+<main class="login-page sigevi-login">
+    <section class="login-visual" aria-label="SIGEVI Sistema de Gestión Empresarial">
+        <div class="login-line-art" aria-hidden="true"></div>
+        <div class="login-visual-brand">
+            <img src="~/images/sigevi-logo-left.png" asp-append-version="true" alt="SIGEVI" />
+        </div>
+        <div class="login-module-grid" aria-label="Módulos del sistema">
+            @foreach (var modulo in modulos)
+            {
+                <div class="login-module-tile">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="@modulo.Item2" /></svg>
+                    <span>@modulo.Item1</span>
+                </div>
+            }
         </div>
     </section>
 
     <section class="login-panel">
+        <div class="login-panel-pattern" aria-hidden="true"></div>
         <form method="post" class="login-card">
             @Html.AntiForgeryToken()
             <div class="login-brand">
-                <span class="login-brand-mark">VF</span>
-                <div>
-                    <strong>Vivero Los Frutales</strong>
-                    <small>Gestion comercial</small>
-                </div>
-            </div>
-
-            <div class="login-heading">
-                <h2>Iniciar sesion</h2>
-                <p>Ingrese sus credenciales para continuar.</p>
+                <img src="~/images/sigevi-logo.png" asp-append-version="true" alt="SIGEVI" />
             </div>
 
             <div asp-validation-summary="ModelOnly" class="login-error"></div>
@@ -37,15 +50,15 @@
                 <span>Usuario</span>
                 <span class="login-input-wrap">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg>
-                    <input asp-for="Usuario" autocomplete="username" placeholder="Ingrese su usuario" autofocus />
+                    <input asp-for="Usuario" autocomplete="username" placeholder="Ingresa tu usuario" autofocus />
                 </span>
             </label>
 
             <label class="login-field">
-                <span>Contrasena</span>
+                <span>Contraseña</span>
                 <span class="login-input-wrap">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3" /><path d="M5 11h14v10H5Z" /></svg>
-                    <input asp-for="Password" type="password" autocomplete="current-password" placeholder="Ingrese su contrasena" />
+                    <input asp-for="Password" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" />
                 </span>
             </label>
 
@@ -54,7 +67,7 @@
                 <span class="login-input-wrap">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18" /><path d="M5 21V5a2 2 0 0 1 2-2h7v18" /><path d="M14 8h3a2 2 0 0 1 2 2v11" /><path d="M9 7h1" /><path d="M9 11h1" /><path d="M9 15h1" /></svg>
                     <select asp-for="EmpresaId">
-                        <option value="">Seleccione una empresa</option>
+                        <option value="">Selecciona una empresa</option>
                         @foreach (var empresa in empresas)
                         {
                             <option value="@empresa.EmpresaId">@empresa.RazonSocial</option>
@@ -63,17 +76,24 @@
                 </span>
             </label>
 
-            <label class="login-remember">
-                <input asp-for="Recordarme" />
-                <span>Recordarme</span>
-            </label>
+            <div class="login-options">
+                <label class="login-remember">
+                    <input asp-for="Recordarme" />
+                    <span>Recordarme</span>
+                </label>
+                <a href="#" aria-disabled="true">¿Olvidó su contraseña?</a>
+            </div>
 
             <button class="login-submit" type="submit">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /><path d="m10 17 5-5-5-5" /><path d="M15 12H3" /></svg>
                 Ingresar
             </button>
 
-            <p class="login-footer">Web Los Frutales &copy; 2026</p>
+            <div class="login-secure">
+                <span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></svg></span>
+                Conexión segura
+            </div>
         </form>
+        <p class="login-copyright">© 2026 SIGEVI. Todos los derechos reservados.</p>
     </section>
 </main>

@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -9,6 +9,7 @@ namespace ViveroLosFrutales.Application.Services;
 public class DevolucionService(
     IDevolucionRepository devolucionRepository,
     IMovimientoCajaRepository movimientoCajaRepository,
+    CuentaFinancieraService cuentaFinancieraService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<DevolucionListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -39,7 +40,8 @@ public class DevolucionService(
             DocumentoOrigen = Documento(devolucion),
             MontoPendiente = devolucion.MontoPendiente,
             MontoDevolver = devolucion.MontoPendiente,
-            Fecha = PeruDateTime.Today
+            Fecha = PeruDateTime.Today,
+            CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken)
         };
     }
 
@@ -75,6 +77,7 @@ public class DevolucionService(
                 EmpresaId = empresaContext.EmpresaId,
                 ClienteId = devolucion.TipoTercero == TipoTerceroDevolucion.CLIENTE ? devolucion.ClienteId : null,
                 ProveedorId = devolucion.TipoTercero == TipoTerceroDevolucion.PROVEEDOR ? devolucion.ProveedorId : null,
+                CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken),
                 TipoMovimiento = devolucion.TipoTercero == TipoTerceroDevolucion.CLIENTE
                     ? TipoMovimientoCaja.EGRESO
                     : TipoMovimientoCaja.INGRESO,
@@ -289,3 +292,4 @@ public class DevolucionService(
         _ => origen.ToString()
     };
 }
+

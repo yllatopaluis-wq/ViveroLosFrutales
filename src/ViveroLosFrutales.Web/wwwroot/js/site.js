@@ -20,6 +20,46 @@ window.viveroDetalleRows = function () {
   });
 };
 
+
+window.viveroFiltrarCuentasPorMedioPago = function (config) {
+  const root = config?.rootSelector ? document.querySelector(config.rootSelector) : document;
+  if (!root) return;
+
+  const medioPago = root.querySelector(config?.medioPagoSelector || '[name="MedioPago"]');
+  const cuenta = root.querySelector(config?.cuentaSelector || '[name="CuentaFinancieraId"]');
+  if (!medioPago || !cuenta) return;
+
+  function normalizar(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function seleccionarPrimeraCuentaVisible() {
+    const primera = Array.from(cuenta.options).find((option) => !option.disabled && !option.hidden);
+    if (primera) cuenta.value = primera.value;
+  }
+
+  function sincronizar() {
+    const esEfectivo = normalizar(medioPago.value) === 'EFECTIVO';
+    let seleccionOculta = false;
+
+    Array.from(cuenta.options).forEach((option) => {
+      const tipo = normalizar(option.dataset.tipo);
+      const visible = esEfectivo
+        ? option.value === '' || tipo === 'CAJA'
+        : tipo === 'BANCO';
+      option.hidden = !visible;
+      option.disabled = !visible;
+      if (!visible && option.selected) seleccionOculta = true;
+    });
+
+    if (seleccionOculta) seleccionarPrimeraCuentaVisible();
+  }
+
+  medioPago.addEventListener('change', sincronizar);
+  medioPago.addEventListener('input', sincronizar);
+  sincronizar();
+};
+
 window.viveroComprobanteForm = function (config) {
   const clienteSearch = document.querySelector("#clienteSearch");
   const clienteId = document.querySelector("#clienteId");

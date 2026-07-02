@@ -11,7 +11,7 @@ public class EstadoCuentaClienteService(
 {
     public async Task<IReadOnlyList<ClienteListDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
-        var result = await clienteRepository.BuscarAsync(new SearchRequest { Search = search, PageSize = 100 }, cancellationToken);
+        var result = await clienteRepository.BuscarAsync(empresaContext.EmpresaId, new SearchRequest { Search = search, PageSize = 100 }, cancellationToken);
         return result.Items;
     }
 

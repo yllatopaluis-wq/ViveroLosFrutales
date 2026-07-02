@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -112,3 +112,4 @@ public class ComprasController(CompraService service) : Controller
         return RedirectToAction(nameof(Details), new { id = compraId });
     }
 }
+

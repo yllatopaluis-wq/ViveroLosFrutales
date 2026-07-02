@@ -17,6 +17,7 @@ public class ComprobanteService(
     IPdfService pdfService,
     CobroClienteService cobroClienteService,
     DevolucionService devolucionService,
+    CuentaFinancieraService cuentaFinancieraService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<ComprobanteListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -76,7 +77,7 @@ public class ComprobanteService(
             ? await ObtenerNumeracionAsync(dto.TipoComprobante, cancellationToken)
             : new ComprobanteNumeracionDto(dto.Serie, dto.Correlativo);
         var clienteSeleccionado = dto.ClienteId > 0
-            ? await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+            ? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             : null;
         var productos = (await productoRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         foreach (var producto in await ProductosSeleccionadosAsync(dto.Detalles.Select(x => x.ProductoId), cancellationToken))
@@ -84,7 +85,7 @@ public class ComprobanteService(
             if (productos.All(x => x.ProductoId != producto.ProductoId)) productos.Add(producto);
         }
 
-        var clientes = (await clienteRepository.BuscarActivosAsync(null, 50, cancellationToken)).ToList();
+        var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
             clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Estado));
@@ -100,13 +101,14 @@ public class ComprobanteService(
             productos
                 .OrderBy(x => x.Nombre)
                 .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
-                .ToArray());
+                .ToArray(),
+            await cuentaFinancieraService.ListarActivasAsync(cancellationToken));
     }
 
     public async Task<ComprobanteFormDataDto> ObtenerFormularioLecturaAsync(ComprobanteEditDto dto, CancellationToken cancellationToken)
     {
         var clienteSeleccionado = dto.ClienteId > 0
-            ? await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+            ? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             : null;
         var clientes = clienteSeleccionado is null
             ? Array.Empty<ComprobanteClienteOptionDto>()
@@ -127,12 +129,13 @@ public class ComprobanteService(
             dto,
             new ComprobanteNumeracionDto(dto.Serie, dto.Correlativo),
             clientes,
-            productos);
+            productos,
+            await cuentaFinancieraService.ListarActivasAsync(cancellationToken));
     }
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
-        var clientes = await clienteRepository.BuscarActivosAsync(search, 20, cancellationToken);
+        var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
         return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion)).ToArray();
     }
 
@@ -254,7 +257,7 @@ public class ComprobanteService(
             .ToArray();
         if (detallesValidos.Length == 0) throw new InvalidOperationException("Agregue al menos un producto.");
 
-        var cliente = await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+        var cliente = await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
 
         ValidarTipoComprobantePorDocumento(cliente.TipoDocumento, dto.TipoComprobante);
@@ -378,6 +381,7 @@ public class ComprobanteService(
                     FechaCobro = comprobante.FechaEmision,
                     Monto = comprobante.Total,
                     MedioPago = NormalizarMedioPago(dto.MedioPago),
+                    CuentaFinancieraId = dto.CuentaFinancieraId,
                     Observacion = "Venta directa al contado"
                 }, cancellationToken);
             }
@@ -907,4 +911,5 @@ public class ComprobanteService(
         return decimal.Round(saldo < 0 ? 0 : saldo, 2);
     }
 }
+
 

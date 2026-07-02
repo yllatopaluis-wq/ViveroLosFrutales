@@ -1,4 +1,4 @@
-namespace ViveroLosFrutales.Domain.Enums;
+﻿namespace ViveroLosFrutales.Domain.Enums;
 
 public enum OrigenMovimientoCaja
 {
@@ -8,5 +8,6 @@ public enum OrigenMovimientoCaja
     OTRO = 4,
     DEVOLUCION_CLIENTE = 5,
     INGRESO_MANUAL = 6,
-    DEVOLUCION_PROVEEDOR = 7
+    DEVOLUCION_PROVEEDOR = 7,
+    TRANSFERENCIA = 8
 }

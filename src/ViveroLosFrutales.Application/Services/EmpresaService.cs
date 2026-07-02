@@ -17,6 +17,15 @@ public class EmpresaService(IEmpresaRepository repository)
         return empresa is null ? null : ToDto(empresa);
     }
 
+    public Task<EmpresaMarcaDto?> ObtenerMarcaActivaAsync(int empresaId, string usuarioId, CancellationToken cancellationToken) =>
+        repository.ObtenerMarcaActivaAsync(empresaId, usuarioId, cancellationToken);
+
+    public async Task<EmpresaEditDto?> ObtenerLogoActivaAsync(int empresaId, string usuarioId, CancellationToken cancellationToken)
+    {
+        var empresa = await repository.ObtenerLogoActivaAsync(empresaId, usuarioId, cancellationToken);
+        return empresa is null ? null : ToDto(empresa);
+    }
+
     public async Task GuardarAsync(EmpresaEditDto dto, CancellationToken cancellationToken)
     {
         Validar(dto);
@@ -37,11 +46,20 @@ public class EmpresaService(IEmpresaRepository repository)
             empresa.TokenNubefact = tokenNubefact;
         }
         empresa.LogoPath = dto.LogoPath?.Trim() ?? string.Empty;
+        empresa.RepresentanteLegalNombre = dto.RepresentanteLegalNombre?.Trim() ?? string.Empty;
+        empresa.RepresentanteLegalDocumento = dto.RepresentanteLegalDocumento?.Trim() ?? string.Empty;
+        empresa.RepresentanteLegalCargo = dto.RepresentanteLegalCargo?.Trim() ?? string.Empty;
         if (dto.LogoContenido is { Length: > 0 })
         {
             empresa.LogoContenido = dto.LogoContenido;
             empresa.LogoContentType = dto.LogoContentType?.Trim() ?? string.Empty;
             empresa.LogoNombre = dto.LogoNombre?.Trim() ?? string.Empty;
+        }
+        if (dto.FirmaContenido is { Length: > 0 })
+        {
+            empresa.FirmaContenido = dto.FirmaContenido;
+            empresa.FirmaContentType = dto.FirmaContentType?.Trim() ?? string.Empty;
+            empresa.FirmaNombre = dto.FirmaNombre?.Trim() ?? string.Empty;
         }
         empresa.SerieBoleta = dto.SerieBoleta.Trim();
         empresa.SerieFactura = dto.SerieFactura.Trim();
@@ -84,6 +102,12 @@ public class EmpresaService(IEmpresaRepository repository)
         LogoContenido = empresa.LogoContenido,
         LogoContentType = empresa.LogoContentType,
         LogoNombre = empresa.LogoNombre,
+        RepresentanteLegalNombre = empresa.RepresentanteLegalNombre,
+        RepresentanteLegalDocumento = empresa.RepresentanteLegalDocumento,
+        RepresentanteLegalCargo = empresa.RepresentanteLegalCargo,
+        FirmaContenido = empresa.FirmaContenido,
+        FirmaContentType = empresa.FirmaContentType,
+        FirmaNombre = empresa.FirmaNombre,
         SerieBoleta = empresa.SerieBoleta,
         SerieFactura = empresa.SerieFactura,
         SerieNotaCredito = empresa.SerieNotaCredito,

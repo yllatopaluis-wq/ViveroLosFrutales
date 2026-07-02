@@ -55,10 +55,10 @@ Remove-DeploymentOutput -Path $erpOutput
 Push-Location $root
 try {
     dotnet publish "src/ViveroLosFrutales.PublicWeb/ViveroLosFrutales.PublicWeb.csproj" -c Release -o $publicOutput
-    if ($LASTEXITCODE -ne 0) { throw "Fallo la publicaciÃ³n de PublicWeb." }
+    if ($LASTEXITCODE -ne 0) { throw "Fallo la publicación de PublicWeb." }
 
     dotnet publish "src/ViveroLosFrutales.Web/ViveroLosFrutales.Web.csproj" -c Release -o $erpOutput
-    if ($LASTEXITCODE -ne 0) { throw "Fallo la publicaciÃ³n del ERP." }
+    if ($LASTEXITCODE -ne 0) { throw "Fallo la publicación del ERP." }
     Set-ErpHostingDefaults -Path $erpOutput
 
     Compress-Archive -Path "$publicOutput/*" -DestinationPath (Join-Path $deployRoot "ViveroLosFrutales-PublicWeb.zip") -CompressionLevel Optimal -Force
@@ -68,5 +68,5 @@ finally {
     Pop-Location
 }
 
-Write-Host "Release generado Ãºnicamente en: $deployRoot" -ForegroundColor Green
+Write-Host "Release generado únicamente en: $deployRoot" -ForegroundColor Green
 

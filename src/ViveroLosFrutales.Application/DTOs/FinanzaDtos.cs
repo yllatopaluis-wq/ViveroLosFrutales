@@ -1,8 +1,8 @@
-using ViveroLosFrutales.Domain.Enums;
+﻿using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
-public record GastoListDto(int GastoId, DateTime Fecha, string Categoria, string Descripcion, decimal Importe, string MedioPago, EstadoRegistro Estado);
+public record GastoListDto(int GastoId, DateTime Fecha, string Categoria, string Descripcion, decimal Importe, string MedioPago, string CuentaFinanciera, EstadoRegistro Estado);
 
 public class GastoEditDto
 {
@@ -13,11 +13,13 @@ public class GastoEditDto
     public string Descripcion { get; set; } = string.Empty;
     public decimal Importe { get; set; }
     public string MedioPago { get; set; } = string.Empty;
-    public string Observacion { get; set; } = string.Empty;
+    public int? CuentaFinancieraId { get; set; }
+    public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
+    public string? Observacion { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
 }
 
-public record IngresoListDto(int IngresoId, DateTime Fecha, string TipoIngreso, string Descripcion, string MedioPago, decimal Importe, EstadoRegistro Estado);
+public record IngresoListDto(int IngresoId, DateTime Fecha, string TipoIngreso, string Descripcion, string MedioPago, string CuentaFinanciera, decimal Importe, EstadoRegistro Estado);
 
 public class IngresoEditDto
 {
@@ -28,9 +30,12 @@ public class IngresoEditDto
     public string Descripcion { get; set; } = string.Empty;
     public decimal Importe { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
-    public string Observacion { get; set; } = string.Empty;
+    public int? CuentaFinancieraId { get; set; }
+    public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
+    public string? Observacion { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
 }
 
 public record CategoriaGastoOptionDto(int CategoriaGastoId, string Nombre);
 public record CategoriaIngresoOptionDto(int CategoriaIngresoId, string Nombre);
+

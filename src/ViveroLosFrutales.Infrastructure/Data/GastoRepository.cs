@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -11,7 +11,7 @@ public class GastoRepository(ApplicationDbContext db) : IGastoRepository
 {
     public Task<PagedResult<GastoListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken)
     {
-        var query = db.Gastos.AsNoTracking().Where(x => x.EmpresaId == empresaId);
+        var query = db.Gastos.AsNoTracking().Include(x => x.CuentaFinanciera).Where(x => x.EmpresaId == empresaId);
         if (request.FechaDesde is not null) query = query.Where(x => x.Fecha.Date >= request.FechaDesde.Value.Date);
         if (request.FechaHasta is not null) query = query.Where(x => x.Fecha.Date <= request.FechaHasta.Value.Date);
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -21,7 +21,7 @@ public class GastoRepository(ApplicationDbContext db) : IGastoRepository
         }
 
         return query.OrderByDescending(x => x.Fecha)
-            .Select(x => new GastoListDto(x.GastoId, x.Fecha, x.Categoria, x.Descripcion, x.Importe, x.MedioPago, x.Estado))
+            .Select(x => new GastoListDto(x.GastoId, x.Fecha, x.Categoria, x.Descripcion, x.Importe, x.MedioPago, x.CuentaFinanciera == null ? string.Empty : x.CuentaFinanciera.Nombre, x.Estado))
             .ToPagedAsync(request, cancellationToken);
     }
 
@@ -58,3 +58,4 @@ public class GastoRepository(ApplicationDbContext db) : IGastoRepository
         await db.SaveChangesAsync(cancellationToken);
     }
 }
+

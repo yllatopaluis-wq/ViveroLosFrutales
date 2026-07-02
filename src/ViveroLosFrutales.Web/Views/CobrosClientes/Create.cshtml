@@ -1,5 +1,6 @@
 @model RegistrarCobroDto
 @{
+    var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     ViewData["Title"] = "Registrar Cobro";
 }
 
@@ -17,14 +18,29 @@
                 <option value="EFECTIVO">Efectivo</option>
                 <option value="TRANSFERENCIA">Transferencia</option>
                 <option value="YAPE">Yape</option>
-                <option value="TARJETA DEBITO">Tarjeta debito</option>
-                <option value="TARJETA CREDITO">Tarjeta Credito</option>
+                <option value="TARJETA DEBITO">Tarjeta débito</option>
+                <option value="TARJETA CREDITO">Tarjeta crédito</option>
             </select>
         </label>
-        <label class="span-2">Observacion<input asp-for="Observacion" class="form-control form-control-sm" /></label>
+        <label>
+            Cuenta destino
+            <select asp-for="CuentaFinancieraId" class="form-select form-select-sm">
+                <option value="">Caja principal</option>
+                @foreach (var cuenta in cuentas)
+                {
+                    <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                }
+            </select>
+        </label>
+        <label class="span-2">Observación<input asp-for="Observacion" class="form-control form-control-sm" /></label>
     </div>
     <div class="form-actions">
         <button class="btn btn-sm btn-primary">Guardar</button>
         <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
     </div>
 </form>
+
+
+@section Scripts {
+    <script>window.viveroFiltrarCuentasPorMedioPago?.();</script>
+}

@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -10,7 +10,7 @@ public class CobrosClientesController(CobroClienteService service) : Controller
     public async Task<IActionResult> Index([FromQuery] SearchRequest request, CancellationToken cancellationToken) =>
         View(await service.BuscarAsync(request, cancellationToken));
 
-    public IActionResult Create() => View(new RegistrarCobroDto());
+    public async Task<IActionResult> Create(CancellationToken cancellationToken) => View(await service.PrepararFormularioAsync(new RegistrarCobroDto(), cancellationToken));
 
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -48,3 +48,4 @@ public class CobrosClientesController(CobroClienteService service) : Controller
         return RedirectToAction(nameof(Index));
     }
 }
+

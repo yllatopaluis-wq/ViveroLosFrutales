@@ -36,7 +36,7 @@ public class CotizacionService(
     public async Task<CotizacionFormDataDto> ObtenerFormularioAsync(CotizacionEditDto dto, CancellationToken cancellationToken)
     {
         var clienteSeleccionado = dto.ClienteId > 0
-            ? await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+            ? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             : null;
         var productoIds = dto.Detalles.Where(x => x.ProductoId > 0).Select(x => x.ProductoId).Distinct().ToArray();
         var productos = (await productoRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
@@ -48,7 +48,7 @@ public class CotizacionService(
             productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, producto.PrecioVentaConIgv, producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
-        var clientes = (await clienteRepository.BuscarActivosAsync(null, 50, cancellationToken)).ToList();
+        var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
             clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Estado));
@@ -66,7 +66,7 @@ public class CotizacionService(
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
-        var clientes = await clienteRepository.BuscarActivosAsync(search, 20, cancellationToken);
+        var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
         return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion)).ToArray();
     }
 
@@ -122,7 +122,7 @@ public class CotizacionService(
         if (dto.ClienteId <= 0) throw new InvalidOperationException("Seleccione un cliente.");
         var detalles = dto.Detalles.Where(x => x.ProductoId > 0 && x.Cantidad > 0 && x.PrecioUnitario > 0).ToArray();
         if (detalles.Length == 0) throw new InvalidOperationException("Agregue al menos un producto.");
-        var cliente = await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+        var cliente = await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
         var empresa = await empresaRepository.ObtenerAsync(empresaContext.EmpresaId, cancellationToken)
             ?? throw new InvalidOperationException("Empresa activa no encontrada.");

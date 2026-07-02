@@ -1,9 +1,11 @@
 @using Microsoft.Extensions.Caching.Memory
 @inject Microsoft.AspNetCore.Identity.UserManager<ViveroLosFrutales.Infrastructure.Identity.ApplicationUser> UserManager
 @inject ViveroLosFrutales.Application.Services.RolService RolService
+@inject ViveroLosFrutales.Application.Services.EmpresaService EmpresaService
 @inject Microsoft.Extensions.Caching.Memory.IMemoryCache LayoutCache
 @{
-    var title = ViewData["Title"] as string ?? "Vivero Los Frutales";
+    var title = ViewData["Title"] as string ?? "ERP";
+    var empresaId = Context.Session.GetInt32("EmpresaId");
     var empresaNombre = Context.Session.GetString("EmpresaNombre");
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
 
@@ -58,7 +60,30 @@
     Func<string, string, bool> puede = (modulo, accion) => permisosRol.Contains($"{modulo}|{accion}");
     Func<string, bool> puedeVer = modulo => puede(modulo, "Ver");
     Func<string, bool> puedeCrear = modulo => puede(modulo, "Crear") || puede(modulo, "Registrar");
-    var usuarioSubtitulo = string.Join(" - ", new[] { rolUsuario, empresaNombre }.Where(x => !string.IsNullOrWhiteSpace(x)));
+    var empresaMarca = isAuthenticated && empresaId is int empresaActivaId && !string.IsNullOrWhiteSpace(authenticatedUserId)
+        ? await LayoutCache.GetOrCreateAsync($"layout-empresa-marca:{empresaActivaId}:{authenticatedUserId}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2);
+            entry.Size = 1;
+            return await EmpresaService.ObtenerMarcaActivaAsync(empresaActivaId, authenticatedUserId, Context.RequestAborted);
+        })
+        : null;
+    var empresaMarcaNombre = !string.IsNullOrWhiteSpace(empresaMarca?.NombreComercial)
+        ? empresaMarca.NombreComercial
+        : !string.IsNullOrWhiteSpace(empresaMarca?.RazonSocial)
+            ? empresaMarca.RazonSocial
+            : !string.IsNullOrWhiteSpace(empresaNombre)
+                ? empresaNombre
+                : "Empresa";
+    Func<string, string> obtenerInicialesEmpresa = valor =>
+    {
+        var palabras = (valor ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var iniciales = string.Concat(palabras.Take(2).Select(x => char.ToUpperInvariant(x[0])));
+        return string.IsNullOrWhiteSpace(iniciales) ? "E" : iniciales;
+    };
+    var empresaMarcaIniciales = obtenerInicialesEmpresa(empresaMarcaNombre);
+    var empresaMarcaTieneLogo = empresaMarca?.TieneLogo == true;
+    var usuarioSubtitulo = string.Join(" - ", new[] { rolUsuario, empresaMarcaNombre }.Where(x => !string.IsNullOrWhiteSpace(x)));
     var isAuthPage = ViewData["AuthPage"] as bool? == true;
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
@@ -67,8 +92,9 @@
     var canNotasPedido = puedeVer("NotasPedido");
     var canComprobantes = puedeVer("Comprobantes");
     var canNotasCredito = puedeVer("NotasCredito");
-    var canCobrosClientes = puedeVer("CobrosClientes");
-    var ventasVisible = canCotizaciones || canNotasPedido || canComprobantes || canNotasCredito || canCobrosClientes;
+    var canTesoreria = puedeVer("TESORERIA");
+    var canCobrosClientes = puedeVer("CobrosClientes") || puedeVer("TESORERIA_COBROS");
+    var ventasVisible = canCotizaciones || canNotasPedido || canComprobantes || canNotasCredito;
 
     var canProductos = puedeVer("Productos");
     var canClientes = puedeVer("Clientes");
@@ -80,8 +106,8 @@
     var canGastos = puedeVer("Gastos");
     var canIngresos = puedeVer("Ingresos");
     var canDevoluciones = puedeVer("Devoluciones");
-    var canCaja = puedeVer("Caja");
-    var operacionesVisible = canCompras || canGastos || canIngresos || canDevoluciones || canCaja;
+    var canCaja = puedeVer("Caja") || puedeVer("TESORERIA_CAJA");
+    var operacionesVisible = canCompras || canGastos || canIngresos || canDevoluciones;
 
     var canReporteGeneral = puedeVer("ReporteGeneral");
     var canPropuestasComerciales = puedeVer("PropuestasComerciales");
@@ -89,7 +115,14 @@
     var canDevolucionesProveedor = puedeVer("DevolucionesProveedor");
     var canReporteCaja = puedeVer("ReporteCaja");
     var canEstadoCuentaClientes = puedeVer("EstadoCuentaClientes");
-    var reportesVisible = canReporteGeneral || canPropuestasComerciales || canCuentasPorPagar || canDevolucionesProveedor || canReporteCaja || canEstadoCuentaClientes;
+    var reportesVisible = canReporteGeneral || canPropuestasComerciales || canCuentasPorPagar || canDevolucionesProveedor || canReporteCaja;
+
+    var canCajaBancos = puedeVer("TESORERIA_CAJABANCOS");
+    var canTransferencias = puedeVer("TESORERIA_TRANSFERENCIAS");
+    var canCuentasFinancieras = puedeVer("TESORERIA_CUENTASFINANCIERAS");
+    var canEstadoCuentaClientesTesoreria = canEstadoCuentaClientes || puedeVer("TESORERIA_CUENTASCLIENTES");
+    var canEstadoCuentaProveedores = canCuentasPorPagar || puedeVer("TESORERIA_CUENTASPROVEEDORES");
+    var tesoreriaVisible = canTesoreria || canCaja || canCajaBancos || canCuentasFinancieras || canCobrosClientes || canTransferencias || canEstadoCuentaClientesTesoreria || canEstadoCuentaProveedores;
 
     var canEmpresas = puedeVer("Empresas");
     var canUsuarios = puedeVer("Usuarios");
@@ -99,10 +132,11 @@
     var canErroresAplicacion = puedeVer("ErroresAplicacion");
     var administracionVisible = canEmpresas || canUsuarios || canRoles || canConfiguracion || canNubefactLogs || canErroresAplicacion;
 
-    var ventasOpen = ventasVisible && (controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito" or "CobrosClientes");
+    var ventasOpen = ventasVisible && (controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito");
     var maestrosOpen = maestrosVisible && (controller is "Categorias" or "Productos" or "Clientes" or "Proveedores");
-    var operacionesOpen = operacionesVisible && (controller is "Compras" or "Gastos" or "Ingresos" or "Caja" or "Devoluciones");
-    var reportesOpen = reportesVisible && (controller is "Reportes" or "EstadoCuentaClientes");
+    var operacionesOpen = operacionesVisible && (controller is "Compras" or "Gastos" or "Ingresos" or "Devoluciones");
+    var tesoreriaOpen = tesoreriaVisible && (controller is "Caja" or "CajaBancos" or "CuentasFinancieras" or "CobrosClientes" or "Transferencias" or "EstadoCuentaClientes" || (controller == "Reportes" && action == "CuentasPorPagar"));
+    var reportesOpen = reportesVisible && controller == "Reportes" && action != "CuentasPorPagar";
     var administracionOpen = administracionVisible && (controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "NubefactLogs" or "ErroresAplicacion");
     var mostrarAccionPrincipal = action is "Index";
 }
@@ -111,7 +145,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@title - Vivero Los Frutales</title>
+    <title>@title - @empresaMarcaNombre</title>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/erp-shell.css" asp-append-version="true" />
 </head>
@@ -127,12 +161,19 @@
     <div class="app-shell">
         <aside class="app-sidebar" id="appSidebar" aria-label="Navegaci&oacute;n principal">
             <div class="sidebar-header">
-                <a class="sidebar-logo" asp-controller="Home" asp-action="Index" title="Vivero Los Frutales">
-                    <img src="~/images/logo-erp.png" asp-append-version="true" alt="Logo Vivero Los Frutales" />
+                <a class="sidebar-logo" asp-controller="Home" asp-action="Index" title="@empresaMarcaNombre">
+                    @if (empresaMarcaTieneLogo && empresaMarca is not null)
+                    {
+                        <img src="@Url.Action("Logo", "Empresas", new { id = empresaMarca.EmpresaId })" alt="Logo @empresaMarcaNombre" />
+                    }
+                    else
+                    {
+                        <span class="sidebar-logo-placeholder" aria-hidden="true">@empresaMarcaIniciales</span>
+                    }
                 </a>
                 <a class="sidebar-brand-copy" asp-controller="Home" asp-action="Index">
-                    <strong>Vivero Los Frutales</strong>
-                    <small>Gesti&oacute;n comercial</small>
+                    <strong>@empresaMarcaNombre</strong>
+                    <small>Gesti&oacute;n empresarial</small>
                 </a>
                 <button type="button" class="sidebar-close" id="mobileSidebarClose" aria-label="Cerrar men&uacute;">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
@@ -164,7 +205,6 @@
                                 @if (canNotasPedido) { <a asp-controller="NotasPedido" asp-action="Index" class="sidebar-item @(controller == "NotasPedido" ? "active" : null)"><span class="sidebar-item-label">Notas de pedido</span></a> }
                                 @if (canComprobantes) { <a asp-controller="Comprobantes" asp-action="Index" class="sidebar-item @(controller == "Comprobantes" ? "active" : null)"><span class="sidebar-item-label">Comprobantes</span></a> }
                                 @if (canNotasCredito) { <a asp-controller="NotasCredito" asp-action="Index" class="sidebar-item @(controller == "NotasCredito" ? "active" : null)"><span class="sidebar-item-label">Notas de cr&eacute;dito</span></a> }
-                                @if (canCobrosClientes) { <a asp-controller="CobrosClientes" asp-action="Index" class="sidebar-item @(controller == "CobrosClientes" ? "active" : null)"><span class="sidebar-item-label">Cobros clientes</span></a> }
                             </div>
                         </details>
                     }
@@ -199,11 +239,29 @@
                                 @if (canGastos) { <a asp-controller="Gastos" asp-action="Index" class="sidebar-item @(controller == "Gastos" ? "active" : null)"><span class="sidebar-item-label">Gastos</span></a> }
                                 @if (canIngresos) { <a asp-controller="Ingresos" asp-action="Index" class="sidebar-item @(controller == "Ingresos" ? "active" : null)"><span class="sidebar-item-label">Ingresos</span></a> }
                                 @if (canDevoluciones) { <a asp-controller="Devoluciones" asp-action="Index" class="sidebar-item @(controller == "Devoluciones" ? "active" : null)"><span class="sidebar-item-label">Devoluciones</span></a> }
-                                @if (canCaja) { <a asp-controller="Caja" asp-action="Index" class="sidebar-item @(controller == "Caja" ? "active" : null)"><span class="sidebar-item-label">Caja</span></a> }
                             </div>
                         </details>
                     }
 
+                    @if (tesoreriaVisible)
+                    {
+                        <details class="sidebar-section" open="@tesoreriaOpen">
+                            <summary title="Tesorer&iacute;a">
+                                <span class="sidebar-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v10H4z" /><path d="M7 10h4M15 14h2" /><circle cx="12" cy="12" r="2" /></svg></span>
+                                <span class="sidebar-item-label">Tesorer&iacute;a</span>
+                                <span class="sidebar-chevron"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg></span>
+                            </summary>
+                            <div class="sidebar-submenu">
+                                @if (canCaja) { <a asp-controller="Caja" asp-action="Index" class="sidebar-item @(controller == "Caja" ? "active" : null)"><span class="sidebar-item-label">Caja</span></a> }
+                                @if (canCajaBancos) { <a asp-controller="CajaBancos" asp-action="Index" class="sidebar-item @(controller == "CajaBancos" ? "active" : null)"><span class="sidebar-item-label">Caja y bancos</span></a> }
+                                @if (canCuentasFinancieras) { <a asp-controller="CuentasFinancieras" asp-action="Index" class="sidebar-item @(controller == "CuentasFinancieras" ? "active" : null)"><span class="sidebar-item-label">Cuentas financieras</span></a> }
+                                @if (canCobrosClientes) { <a asp-controller="CobrosClientes" asp-action="Index" class="sidebar-item @(controller == "CobrosClientes" ? "active" : null)"><span class="sidebar-item-label">Cobros clientes</span></a> }
+                                @if (canTransferencias) { <a asp-controller="Transferencias" asp-action="Index" class="sidebar-item @(controller == "Transferencias" ? "active" : null)"><span class="sidebar-item-label">Transferencias</span></a> }
+                                @if (canEstadoCuentaClientesTesoreria) { <a asp-controller="EstadoCuentaClientes" asp-action="Index" class="sidebar-item @(controller == "EstadoCuentaClientes" ? "active" : null)"><span class="sidebar-item-label">Estado de cuenta clientes</span></a> }
+                                @if (canEstadoCuentaProveedores) { <a asp-controller="Reportes" asp-action="CuentasPorPagar" class="sidebar-item @(controller == "Reportes" && action == "CuentasPorPagar" ? "active" : null)"><span class="sidebar-item-label">Estado de cuenta proveedores</span></a> }
+                            </div>
+                        </details>
+                    }
                     @if (reportesVisible)
                     {
                         <details class="sidebar-section" open="@reportesOpen">
@@ -218,7 +276,6 @@
                                 @if (canCuentasPorPagar) { <a asp-controller="Reportes" asp-action="CuentasPorPagar" class="sidebar-item @(controller == "Reportes" && action == "CuentasPorPagar" ? "active" : null)"><span class="sidebar-item-label">Cuentas por pagar</span></a> }
                                 @if (canDevolucionesProveedor) { <a asp-controller="Reportes" asp-action="DevolucionesProveedor" class="sidebar-item @(controller == "Reportes" && action == "DevolucionesProveedor" ? "active" : null)"><span class="sidebar-item-label">Devoluciones proveedor</span></a> }
                                 @if (canReporteCaja) { <a asp-controller="Reportes" asp-action="FlujoCaja" class="sidebar-item @(controller == "Reportes" && action == "FlujoCaja" ? "active" : null)"><span class="sidebar-item-label">Reporte caja</span></a> }
-                                @if (canEstadoCuentaClientes) { <a asp-controller="EstadoCuentaClientes" asp-action="Index" class="sidebar-item @(controller == "EstadoCuentaClientes" ? "active" : null)"><span class="sidebar-item-label">Estado cuenta clientes</span></a> }
                             </div>
                         </details>
                     }
@@ -375,4 +432,7 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
+
+
 

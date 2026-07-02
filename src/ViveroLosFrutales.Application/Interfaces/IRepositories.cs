@@ -9,6 +9,8 @@ public interface IEmpresaRepository
 {
     Task<PagedResult<EmpresaListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken);
     Task<Empresa?> ObtenerAsync(int id, CancellationToken cancellationToken);
+    Task<EmpresaMarcaDto?> ObtenerMarcaActivaAsync(int empresaId, string usuarioId, CancellationToken cancellationToken);
+    Task<Empresa?> ObtenerLogoActivaAsync(int empresaId, string usuarioId, CancellationToken cancellationToken);
     Task GuardarAsync(Empresa empresa, CancellationToken cancellationToken);
 }
 
@@ -32,10 +34,11 @@ public interface ICategoriaRepository
 
 public interface IClienteRepository
 {
-    Task<PagedResult<ClienteListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken);
-    Task<IReadOnlyList<ClienteListDto>> ListarActivosAsync(CancellationToken cancellationToken);
-    Task<IReadOnlyList<ClienteListDto>> BuscarActivosAsync(string? search, int take, CancellationToken cancellationToken);
-    Task<Cliente?> ObtenerAsync(int id, CancellationToken cancellationToken);
+    Task<PagedResult<ClienteListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ClienteListDto>> ListarActivosAsync(int empresaId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ClienteListDto>> BuscarActivosAsync(int empresaId, string? search, int take, CancellationToken cancellationToken);
+    Task<Cliente?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task<bool> ExisteDocumentoAsync(int empresaId, TipoDocumentoCliente tipoDocumento, string numeroDocumento, int? excluirClienteId, CancellationToken cancellationToken);
     Task GuardarAsync(Cliente cliente, CancellationToken cancellationToken);
 }
 
@@ -121,6 +124,29 @@ public interface IIngresoRepository
     Task GuardarAsync(Ingreso ingreso, CancellationToken cancellationToken);
 }
 
+public interface ICuentaFinancieraRepository
+{
+    Task<CuentaFinanciera> EnsureCuentaPrincipalAsync(int empresaId, CancellationToken cancellationToken);
+    Task<PagedResult<CuentaFinancieraListDto>> BuscarAsync(int empresaId, SearchRequest request, TipoCuentaFinanciera? tipo, bool? activo, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarActivasAsync(int empresaId, CancellationToken cancellationToken);
+    Task<CuentaFinanciera?> ObtenerAsync(int empresaId, int cuentaFinancieraId, CancellationToken cancellationToken);
+    Task<CuentaFinanciera?> ObtenerActivaAsync(int empresaId, int cuentaFinancieraId, CancellationToken cancellationToken);
+    Task<bool> TieneMovimientosAsync(int empresaId, int cuentaFinancieraId, CancellationToken cancellationToken);
+    Task GuardarAsync(CuentaFinanciera cuenta, CancellationToken cancellationToken);
+    Task<CajaBancosDto> ObtenerCajaBancosAsync(int empresaId, DateTime? fechaDesde, DateTime? fechaHasta, TipoCuentaFinanciera? tipo, string? search, CancellationToken cancellationToken);
+}
+
+public interface ITransferenciaFinancieraRepository
+{
+    Task<PagedResult<TransferenciaListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
+    Task<TransferenciaFinanciera?> ObtenerAsync(int empresaId, int transferenciaFinancieraId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarCuentasActivasAsync(int empresaId, CancellationToken cancellationToken);
+    Task<CuentaFinanciera?> ObtenerCuentaActivaAsync(int empresaId, int cuentaFinancieraId, CancellationToken cancellationToken);
+    Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
+    Task GuardarAsync(TransferenciaFinanciera transferencia, CancellationToken cancellationToken);
+    Task GuardarMovimientoAsync(MovimientoCaja movimiento, CancellationToken cancellationToken);
+}
+
 public interface IDashboardRepository
 {
     Task<DashboardDto> ObtenerAsync(int empresaId, DateTime fechaDesde, DateTime fechaHasta, CancellationToken cancellationToken);
@@ -187,3 +213,7 @@ public interface IDevolucionRepository
     Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
     Task GuardarAsync(Devolucion devolucion, CancellationToken cancellationToken);
 }
+
+
+
+

@@ -155,6 +155,14 @@ LogoNombre nvarchar(260)
 
 El formulario recibe `IFormFile logoArchivo`, valida que sea imagen y que no supere 2 MB. El contenido se guarda en `LogoContenido`.
 
+### 7.1 Marca activa en layout
+
+El layout principal muestra la marca de la empresa activa desde sesion y base de datos:
+
+- Nombre: `Empresa.NombreComercial`; si esta vacio usa `Empresa.RazonSocial`; si no existe usa `EmpresaNombre` de sesion.
+- Logo: `GET /Empresas/Logo/{id}` devuelve `LogoContenido` y `LogoContentType` solo si el `id` coincide con la empresa activa y el usuario tiene acceso por `UsuarioEmpresa`.
+- Si la empresa no tiene logo, el menu lateral muestra iniciales como placeholder.
+
 ## 8. Categorias
 
 La entidad `Categoria` es multiempresa.
@@ -466,6 +474,69 @@ La busqueda textual se aplica sobre cliente/proveedor, documento, medio de pago 
 - `Gasto.MovimientoCajaId` e `Ingreso.MovimientoCajaId` guardan la relacion principal; `MovimientoCaja.OrigenId` conserva la referencia funcional al registro origen.
 - `scripts/sql/001-create-database.sql` crea las tablas y relaciones finales; `003-cargar-categorias-financieras.sql` carga las categorias iniciales por empresa despues de registrar empresas con `002-cargar-empresa-inicial.sql`.
 
+## 14.2 TesorerÃƒÂ­a, Caja y Bancos
+
+Componentes principales:
+
+- Entidad `CuentaFinanciera`.
+- Entidad `TransferenciaFinanciera`.
+- Enum `TipoCuentaFinanciera`: `CAJA`, `BANCO`, `BILLETERA`.
+- Enum `OrigenMovimientoCaja.TRANSFERENCIA`.
+- Servicio `CuentaFinancieraService`.
+- Servicio `TransferenciaService`.
+- Repositorios `CuentaFinancieraRepository` y `TransferenciaFinancieraRepository`.
+- Controladores `CajaBancosController`, `CuentasFinancierasController` y `TransferenciasController`.
+
+Tabla principal:
+
+- `erp.CuentaFinanciera`: almacena las cuentas donde estÃƒÂ¡ el dinero de la empresa.
+
+Campos funcionales:
+
+- `EmpresaId`.
+- `Nombre`.
+- `Tipo`.
+- `Banco`.
+- `NumeroCuenta`.
+- `Moneda`.
+- `SaldoInicial`.
+- `FechaSaldoInicial`.
+- `Activo`.
+
+Relaciones con dinero:
+
+- `MovimientoCaja.CuentaFinancieraId`.
+- `CobroCliente.CuentaFinancieraId`.
+- `Gasto.CuentaFinancieraId`.
+- `Ingreso.CuentaFinancieraId`.
+- `PagoProveedor.CuentaFinancieraId`.
+
+Regla de compatibilidad:
+
+- `CuentaFinancieraService.ResolverCuentaIdAsync` usa la cuenta seleccionada si existe y estÃƒÂ¡ activa.
+- Si no se envÃƒÂ­a cuenta, asegura y usa `Caja principal` por empresa.
+
+CÃƒÂ¡lculo de Caja y Bancos:
+
+- `CuentaFinancieraRepository.ObtenerCajaBancosAsync` agrupa movimientos activos por cuenta.
+- Los movimientos sin cuenta se imputan a `Caja principal` para compatibilidad histÃƒÂ³rica.
+- El saldo por cuenta usa `SaldoInicial + Ingresos activos - Egresos activos`.
+- El resumen separa efectivo, bancos y billeteras segÃƒÂºn `TipoCuentaFinanciera`.
+
+Transferencias:
+
+- `TransferenciaService.RegistrarAsync` valida cuenta origen, cuenta destino y monto.
+- Registra `TransferenciaFinanciera`.
+- Genera dos `MovimientoCaja`: egreso en origen e ingreso en destino.
+- Ambos movimientos usan `OrigenMovimientoCaja.TRANSFERENCIA` y `OrigenId = TransferenciaFinancieraId`.
+- `TransferenciaService.AnularAsync` marca la transferencia como anulada y anula los dos movimientos relacionados.
+
+Migraciones y scripts:
+
+- `20260627090000_AddCuentaFinancieraCajaBancos`: crea `CuentaFinanciera`, agrega `CuentaFinancieraId` y hace backfill a `Caja principal`.
+- `20260627103000_AddTransferenciasFinancieras`: crea `TransferenciaFinanciera`.
+- `scripts/sql/008-fix-tesoreria-cuentas-financieras.sql`: parche idempotente para bases que ya tenÃƒÂ­an la tabla antes de las columnas de auditorÃƒÂ­a/anulaciÃƒÂ³n.
+
 ## 15. Nubefact
 
 La integracion esta en `ViveroLosFrutales.Infrastructure.Nubefact`.
@@ -529,8 +600,8 @@ Los PDF locales se guardan en la ruta configurada por `PdfOptions`.
 
 ### 16.1 Reporte general anual
 
-- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez años.
-- `ReporteRepository` agrega por empresa, año y mes las ventas, ingresos, gastos y compras.
+- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez aÃƒÂ±os.
+- `ReporteRepository` agrega por empresa, aÃƒÂ±o y mes las ventas, ingresos, gastos y compras.
 - Ventas incluye BOL/FAC activas y resta NCR activas.
 - Compras considera documentos con `EstadoDocumento = ACTIVO`.
 - Gastos e ingresos consideran `Estado = Activo`.
@@ -594,16 +665,25 @@ Los scripts `002` a `007` son cargas idempotentes para preparar una salida inici
 - `002-cargar-empresa-inicial.sql`: registra o actualiza las empresas Lima y Huaral.
 - `003-cargar-categorias-financieras.sql`: registra categorias iniciales de gasto e ingreso por empresa.
 - `004-cargar-productos-catalogo.sql`: carga el catalogo de productos desde el Excel Nubefact para las empresas filtradas.
-- `005-cargar-clientes-entidades.sql`: carga clientes globales en `erp.Cliente`; esta tabla no usa `EmpresaId`.
+- `005-cargar-clientes-entidades.sql`: carga clientes en `erp.Cliente` por empresa; la unicidad es por `EmpresaId`, tipo y numero de documento.
 - `006-cargar-productos-por-empresa.sql`: replica/verifica productos por empresa usando el mismo catalogo base.
 - `007-cargar-usuario-admin.sql`: crea o actualiza el usuario inicial `admin`, registra el rol Identity en `erp.AspNetRoles`, relaciona `erp.AspNetUserRoles`, asegura permisos del rol interno administrador y asocia el usuario con `erp.UsuarioEmpresa`.
+
+Parches para bases existentes:
+
+- `008-fix-tesoreria-cuentas-financieras.sql`: crea o completa el esquema de Tesoreria para bases existentes, incluyendo cuentas financieras, transferencias y columnas `CuentaFinancieraId`.
+- `009-diferenciar-clientes-por-empresa.sql`: migra bases existentes para agregar `Cliente.EmpresaId`, duplicar clientes usados por mas de una empresa y actualizar los documentos relacionados.
+- `010-add-representante-legal-empresa.sql`: agrega datos del representante legal y firma en imagen a `erp.Empresa`.
+- `011-validar-esquema-publicado.sql`: valida que PRE/produccion tenga las tablas, columnas e indices esperados por el codigo publicado.
+- `012-sync-roles-permisos.sql`: sincroniza permisos del catalogo y asigna todos al rol Administrador.
+- `013-reparar-cuenta-cobros-movimiento-caja.sql`: repara movimientos de caja de cobros para copiar `CobroCliente.CuentaFinancieraId` a `MovimientoCaja.CuentaFinancieraId`.
 
 El sistema usa dos conceptos de rol:
 
 - `erp.Rol`: rol de negocio usado por permisos funcionales (`RolId = 1` Administrador, `RolId = 2` Vendedor).
 - `erp.AspNetRoles`: rol de ASP.NET Identity. El script `007` crea el rol Identity `Administrador` y vincula el usuario inicial para mantener consistencia con Identity.
 
-Para login multiempresa no basta con crear el usuario en `erp.AspNetUsers`; debe existir al menos una fila en `erp.UsuarioEmpresa` para la empresa seleccionada. El script `007` asocia el usuario inicial a las empresas con RUC `20615082997` y `20615619273` cuando están activas.
+Para login multiempresa no basta con crear el usuario en `erp.AspNetUsers`; debe existir al menos una fila en `erp.UsuarioEmpresa` para la empresa seleccionada. El script `007` asocia el usuario inicial a las empresas con RUC `20615082997` y `20615619273` cuando estan activas.
 
 ## 20. Build y pruebas
 

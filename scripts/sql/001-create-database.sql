@@ -50,6 +50,7 @@ GO
 
 CREATE TABLE [erp].[Cliente] (
     [ClienteId] int NOT NULL IDENTITY,
+    [EmpresaId] int NOT NULL,
     [TipoDocumento] int NOT NULL,
     [NumeroDocumento] nvarchar(20) NOT NULL,
     [NombreCompleto] nvarchar(250) NOT NULL,
@@ -80,6 +81,12 @@ CREATE TABLE [erp].[Empresa] (
     [LogoContenido] varbinary(max) NULL,
     [LogoContentType] nvarchar(120) NOT NULL,
     [LogoNombre] nvarchar(260) NOT NULL,
+    [RepresentanteLegalNombre] nvarchar(200) NOT NULL DEFAULT N'',
+    [RepresentanteLegalDocumento] nvarchar(20) NOT NULL DEFAULT N'',
+    [RepresentanteLegalCargo] nvarchar(120) NOT NULL DEFAULT N'',
+    [FirmaContenido] varbinary(max) NULL,
+    [FirmaContentType] nvarchar(120) NOT NULL DEFAULT N'',
+    [FirmaNombre] nvarchar(260) NOT NULL DEFAULT N'',
     [SerieBoleta] nvarchar(max) NOT NULL,
     [SerieFactura] nvarchar(max) NOT NULL,
     [SerieNotaCredito] nvarchar(10) NOT NULL,
@@ -91,6 +98,28 @@ CREATE TABLE [erp].[Empresa] (
     [UsuarioRegistro] nvarchar(max) NOT NULL,
     [Estado] int NOT NULL,
     CONSTRAINT [PK_Empresa] PRIMARY KEY ([EmpresaId])
+);
+GO
+
+
+CREATE TABLE [erp].[CuentaFinanciera] (
+    [CuentaFinancieraId] int NOT NULL IDENTITY,
+    [Nombre] nvarchar(120) NOT NULL,
+    [Tipo] int NOT NULL,
+    [Banco] nvarchar(120) NOT NULL,
+    [NumeroCuenta] nvarchar(80) NOT NULL,
+    [Moneda] nvarchar(3) NOT NULL,
+    [SaldoInicial] decimal(18,2) NOT NULL,
+    [FechaSaldoInicial] datetime2 NOT NULL,
+    [Activo] bit NOT NULL DEFAULT CAST(1 AS bit),
+    [FechaModificacion] datetime2 NULL,
+    [UsuarioModificacion] nvarchar(120) NOT NULL,
+    [FechaRegistro] datetime2 NOT NULL,
+    [UsuarioRegistro] nvarchar(max) NOT NULL,
+    [Estado] int NOT NULL,
+    [EmpresaId] int NOT NULL,
+    CONSTRAINT [PK_CuentaFinanciera] PRIMARY KEY ([CuentaFinancieraId]),
+    CONSTRAINT [FK_CuentaFinanciera_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
 GO
 
@@ -288,6 +317,7 @@ GO
 
 CREATE TABLE [erp].[MovimientoCaja] (
     [MovimientoCajaId] int NOT NULL IDENTITY,
+    [CuentaFinancieraId] int NULL,
     [ClienteId] int NULL,
     [ProveedorId] int NULL,
     [TipoMovimiento] int NOT NULL,
@@ -302,7 +332,34 @@ CREATE TABLE [erp].[MovimientoCaja] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_MovimientoCaja] PRIMARY KEY ([MovimientoCajaId]),
+    CONSTRAINT [FK_MovimientoCaja_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_MovimientoCaja_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
+);
+GO
+
+
+CREATE TABLE [erp].[TransferenciaFinanciera] (
+    [TransferenciaFinancieraId] int NOT NULL IDENTITY,
+    [Fecha] datetime2 NOT NULL,
+    [CuentaOrigenId] int NOT NULL,
+    [CuentaDestinoId] int NOT NULL,
+    [Monto] decimal(18,2) NOT NULL,
+    [Observacion] nvarchar(500) NOT NULL,
+    [MovimientoEgresoId] int NULL,
+    [MovimientoIngresoId] int NULL,
+    [FechaAnulacion] datetime2 NULL,
+    [MotivoAnulacion] nvarchar(500) NOT NULL,
+    [UsuarioAnulacion] nvarchar(120) NOT NULL,
+    [FechaRegistro] datetime2 NOT NULL,
+    [UsuarioRegistro] nvarchar(max) NOT NULL,
+    [Estado] int NOT NULL,
+    [EmpresaId] int NOT NULL,
+    CONSTRAINT [PK_TransferenciaFinanciera] PRIMARY KEY ([TransferenciaFinancieraId]),
+    CONSTRAINT [FK_TransferenciaFinanciera_CuentaFinanciera_CuentaDestinoId] FOREIGN KEY ([CuentaDestinoId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_TransferenciaFinanciera_CuentaFinanciera_CuentaOrigenId] FOREIGN KEY ([CuentaOrigenId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_TransferenciaFinanciera_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
+    CONSTRAINT [FK_TransferenciaFinanciera_MovimientoCaja_MovimientoEgresoId] FOREIGN KEY ([MovimientoEgresoId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_TransferenciaFinanciera_MovimientoCaja_MovimientoIngresoId] FOREIGN KEY ([MovimientoIngresoId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
 );
 GO
 
@@ -342,6 +399,9 @@ CREATE TABLE [erp].[Proveedor] (
     CONSTRAINT [PK_Proveedor] PRIMARY KEY ([ProveedorId]),
     CONSTRAINT [FK_Proveedor_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE
 );
+GO
+
+ALTER TABLE [erp].[Cliente] ADD CONSTRAINT [FK_Cliente_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE NO ACTION;
 GO
 
 CREATE TABLE [erp].[UsuarioEmpresa] (
@@ -393,6 +453,7 @@ GO
 
 CREATE TABLE [erp].[Gasto] (
     [GastoId] int NOT NULL IDENTITY,
+    [CuentaFinancieraId] int NULL,
     [Fecha] datetime2 NOT NULL,
     [CategoriaGastoId] int NULL,
     [Categoria] nvarchar(100) NOT NULL,
@@ -408,6 +469,7 @@ CREATE TABLE [erp].[Gasto] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Gasto] PRIMARY KEY ([GastoId]),
+    CONSTRAINT [FK_Gasto_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Gasto_CategoriaGasto_CategoriaGastoId] FOREIGN KEY ([CategoriaGastoId]) REFERENCES [erp].[CategoriaGasto] ([CategoriaGastoId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Gasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
     CONSTRAINT [FK_Gasto_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
@@ -416,6 +478,7 @@ GO
 
 CREATE TABLE [erp].[Ingreso] (
     [IngresoId] int NOT NULL IDENTITY,
+    [CuentaFinancieraId] int NULL,
     [Fecha] datetime2 NOT NULL,
     [CategoriaIngresoId] int NULL,
     [TipoIngreso] nvarchar(100) NOT NULL,
@@ -431,6 +494,7 @@ CREATE TABLE [erp].[Ingreso] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Ingreso] PRIMARY KEY ([IngresoId]),
+    CONSTRAINT [FK_Ingreso_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Ingreso_CategoriaIngreso_CategoriaIngresoId] FOREIGN KEY ([CategoriaIngresoId]) REFERENCES [erp].[CategoriaIngreso] ([CategoriaIngresoId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Ingreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
     CONSTRAINT [FK_Ingreso_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
@@ -582,6 +646,7 @@ GO
 
 CREATE TABLE [erp].[PagoProveedor] (
     [PagoProveedorId] int NOT NULL IDENTITY,
+    [CuentaFinancieraId] int NULL,
     [ProveedorId] int NOT NULL,
     [CompraId] int NOT NULL,
     [FechaPago] datetime2 NOT NULL,
@@ -597,6 +662,7 @@ CREATE TABLE [erp].[PagoProveedor] (
     [Estado] int NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_PagoProveedor] PRIMARY KEY ([PagoProveedorId]),
+    CONSTRAINT [FK_PagoProveedor_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_PagoProveedor_Compra_CompraId] FOREIGN KEY ([CompraId]) REFERENCES [erp].[Compra] ([CompraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_PagoProveedor_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [erp].[Proveedor] ([ProveedorId]) ON DELETE NO ACTION
 );
@@ -604,6 +670,7 @@ GO
 
 CREATE TABLE [erp].[CobroCliente] (
     [CobroClienteId] int NOT NULL IDENTITY,
+    [CuentaFinancieraId] int NULL,
     [ClienteId] int NOT NULL,
     [NotaPedidoId] int NULL,
     [ComprobanteId] int NULL,
@@ -619,6 +686,7 @@ CREATE TABLE [erp].[CobroCliente] (
     [UsuarioRegistro] nvarchar(max) NOT NULL,
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_CobroCliente] PRIMARY KEY ([CobroClienteId]),
+    CONSTRAINT [FK_CobroCliente_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_CobroCliente_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_CobroCliente_Comprobante_ComprobanteId] FOREIGN KEY ([ComprobanteId]) REFERENCES [erp].[Comprobante] ([ComprobanteId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_CobroCliente_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
@@ -758,6 +826,17 @@ VALUES (1, N'Ver', N'Ver Home', 1, N'Home'),
 (26, N'Ver', N'Ver CobrosClientes', 1, N'CobrosClientes'),
 (27, N'Crear', N'Crear CobrosClientes', 1, N'CobrosClientes'),
 (28, N'Anular', N'Anular CobrosClientes', 1, N'CobrosClientes'),
+(85, N'Ver', N'Ver TESORERIA', 1, N'TESORERIA'),
+(86, N'Ver', N'Ver TESORERIA_CAJA', 1, N'TESORERIA_CAJA'),
+(87, N'Ver', N'Ver TESORERIA_CAJABANCOS', 1, N'TESORERIA_CAJABANCOS'),
+(88, N'Ver', N'Ver TESORERIA_CUENTASFINANCIERAS', 1, N'TESORERIA_CUENTASFINANCIERAS'),
+(89, N'Crear', N'Crear TESORERIA_CUENTASFINANCIERAS', 1, N'TESORERIA_CUENTASFINANCIERAS'),
+(90, N'Editar', N'Editar TESORERIA_CUENTASFINANCIERAS', 1, N'TESORERIA_CUENTASFINANCIERAS'),
+(91, N'Anular', N'Anular TESORERIA_CUENTASFINANCIERAS', 1, N'TESORERIA_CUENTASFINANCIERAS'),
+(92, N'Ver', N'Ver TESORERIA_COBROS', 1, N'TESORERIA_COBROS'),
+(93, N'Ver', N'Ver TESORERIA_TRANSFERENCIAS', 1, N'TESORERIA_TRANSFERENCIAS'),
+(94, N'Ver', N'Ver TESORERIA_CUENTASCLIENTES', 1, N'TESORERIA_CUENTASCLIENTES'),
+(95, N'Ver', N'Ver TESORERIA_CUENTASPROVEEDORES', 1, N'TESORERIA_CUENTASPROVEEDORES'),
 (29, N'Ver', N'Ver Productos', 1, N'Productos'),
 (30, N'Crear', N'Crear Productos', 1, N'Productos'),
 (31, N'Editar', N'Editar Productos', 1, N'Productos'),
@@ -915,7 +994,18 @@ VALUES (43, 43, 1),
 (81, 81, 1),
 (82, 82, 1),
 (83, 83, 1),
-(84, 84, 1);
+(84, 84, 1),
+(125, 85, 1),
+(126, 86, 1),
+(127, 87, 1),
+(128, 88, 1),
+(129, 89, 1),
+(130, 90, 1),
+(131, 91, 1),
+(132, 92, 1),
+(133, 93, 1),
+(134, 94, 1),
+(135, 95, 1);
 INSERT INTO [erp].[RolPermiso] ([RolPermisoId], [PermisoId], [RolId])
 VALUES (85, 1, 2),
 (86, 2, 2),
@@ -956,7 +1046,12 @@ VALUES (85, 1, 2),
 (121, 42, 2),
 (122, 43, 2),
 (123, 44, 2),
-(124, 58, 2);
+(124, 58, 2),
+(136, 85, 2),
+(137, 86, 2),
+(138, 92, 2),
+(139, 93, 2),
+(140, 94, 2);
 IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'RolPermisoId', N'PermisoId', N'RolId') AND [object_id] = OBJECT_ID(N'[erp].[RolPermiso]'))
     SET IDENTITY_INSERT [erp].[RolPermiso] OFF;
 GO
@@ -994,10 +1089,10 @@ GO
 CREATE UNIQUE INDEX [IX_CategoriaIngreso_EmpresaId_Nombre] ON [erp].[CategoriaIngreso] ([EmpresaId], [Nombre]);
 GO
 
-CREATE INDEX [IX_Cliente_NombreCompleto] ON [erp].[Cliente] ([NombreCompleto]);
+CREATE INDEX [IX_Cliente_EmpresaId_NombreCompleto] ON [erp].[Cliente] ([EmpresaId], [NombreCompleto]);
 GO
 
-CREATE UNIQUE INDEX [UX_Cliente_Tipo_Numero] ON [erp].[Cliente] ([TipoDocumento], [NumeroDocumento]);
+CREATE UNIQUE INDEX [UX_Cliente_Empresa_Tipo_Numero] ON [erp].[Cliente] ([EmpresaId], [TipoDocumento], [NumeroDocumento]);
 GO
 
 CREATE INDEX [IX_CobroCliente_ClienteId] ON [erp].[CobroCliente] ([ClienteId]);
@@ -1010,6 +1105,9 @@ CREATE INDEX [IX_CobroCliente_EmpresaId_ClienteId_FechaCobro] ON [erp].[CobroCli
 GO
 
 CREATE INDEX [IX_CobroCliente_EmpresaId_ComprobanteId] ON [erp].[CobroCliente] ([EmpresaId], [ComprobanteId]);
+GO
+
+CREATE INDEX [IX_CobroCliente_EmpresaId_CuentaFinancieraId] ON [erp].[CobroCliente] ([EmpresaId], [CuentaFinancieraId]);
 GO
 
 CREATE INDEX [IX_CobroCliente_EmpresaId_NotaPedidoId] ON [erp].[CobroCliente] ([EmpresaId], [NotaPedidoId]);
@@ -1159,6 +1257,13 @@ GO
 CREATE INDEX [IX_Devolucion_ProveedorId] ON [erp].[Devolucion] ([ProveedorId]);
 GO
 
+
+CREATE INDEX [IX_CuentaFinanciera_EmpresaId_Nombre] ON [erp].[CuentaFinanciera] ([EmpresaId], [Nombre]);
+GO
+
+CREATE INDEX [IX_CuentaFinanciera_EmpresaId_Tipo] ON [erp].[CuentaFinanciera] ([EmpresaId], [Tipo]);
+GO
+
 CREATE UNIQUE INDEX [IX_Empresa_RUC] ON [erp].[Empresa] ([RUC]);
 GO
 
@@ -1174,6 +1279,9 @@ GO
 CREATE INDEX [IX_Gasto_EmpresaId] ON [erp].[Gasto] ([EmpresaId]);
 GO
 
+CREATE INDEX [IX_Gasto_EmpresaId_CuentaFinancieraId] ON [erp].[Gasto] ([EmpresaId], [CuentaFinancieraId]);
+GO
+
 CREATE INDEX [IX_Gasto_EmpresaId_Fecha] ON [erp].[Gasto] ([EmpresaId], [Fecha]);
 GO
 
@@ -1184,6 +1292,9 @@ CREATE INDEX [IX_Ingreso_CategoriaIngresoId] ON [erp].[Ingreso] ([CategoriaIngre
 GO
 
 CREATE INDEX [IX_Ingreso_EmpresaId] ON [erp].[Ingreso] ([EmpresaId]);
+GO
+
+CREATE INDEX [IX_Ingreso_EmpresaId_CuentaFinancieraId] ON [erp].[Ingreso] ([EmpresaId], [CuentaFinancieraId]);
 GO
 
 CREATE INDEX [IX_Ingreso_EmpresaId_Fecha] ON [erp].[Ingreso] ([EmpresaId], [Fecha]);
@@ -1199,6 +1310,9 @@ CREATE UNIQUE INDEX [IX_MotivoNotaCredito_Nombre] ON [erp].[MotivoNotaCredito] (
 GO
 
 CREATE INDEX [IX_MovimientoCaja_EmpresaId_ClienteId] ON [erp].[MovimientoCaja] ([EmpresaId], [ClienteId]);
+GO
+
+CREATE INDEX [IX_MovimientoCaja_EmpresaId_CuentaFinancieraId] ON [erp].[MovimientoCaja] ([EmpresaId], [CuentaFinancieraId]);
 GO
 
 CREATE INDEX [IX_MovimientoCaja_EmpresaId_Fecha] ON [erp].[MovimientoCaja] ([EmpresaId], [Fecha]);
@@ -1258,6 +1372,9 @@ GO
 CREATE INDEX [IX_PagoProveedor_EmpresaId_CompraId] ON [erp].[PagoProveedor] ([EmpresaId], [CompraId]);
 GO
 
+CREATE INDEX [IX_PagoProveedor_EmpresaId_CuentaFinancieraId] ON [erp].[PagoProveedor] ([EmpresaId], [CuentaFinancieraId]);
+GO
+
 CREATE INDEX [IX_PagoProveedor_EmpresaId_ProveedorId_FechaPago] ON [erp].[PagoProveedor] ([EmpresaId], [ProveedorId], [FechaPago]);
 GO
 
@@ -1288,6 +1405,28 @@ GO
 CREATE INDEX [IX_RolPermiso_RolId] ON [erp].[RolPermiso] ([RolId]);
 GO
 
+
+CREATE INDEX [IX_TransferenciaFinanciera_CuentaDestinoId] ON [erp].[TransferenciaFinanciera] ([CuentaDestinoId]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_CuentaOrigenId] ON [erp].[TransferenciaFinanciera] ([CuentaOrigenId]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_EmpresaId_CuentaDestinoId] ON [erp].[TransferenciaFinanciera] ([EmpresaId], [CuentaDestinoId]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_EmpresaId_CuentaOrigenId] ON [erp].[TransferenciaFinanciera] ([EmpresaId], [CuentaOrigenId]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_EmpresaId_Fecha] ON [erp].[TransferenciaFinanciera] ([EmpresaId], [Fecha]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_MovimientoEgresoId] ON [erp].[TransferenciaFinanciera] ([MovimientoEgresoId]);
+GO
+
+CREATE INDEX [IX_TransferenciaFinanciera_MovimientoIngresoId] ON [erp].[TransferenciaFinanciera] ([MovimientoIngresoId]);
+GO
+
 CREATE INDEX [IX_UsuarioEmpresa_EmpresaId] ON [erp].[UsuarioEmpresa] ([EmpresaId]);
 GO
 
@@ -1295,9 +1434,12 @@ CREATE UNIQUE INDEX [IX_UsuarioEmpresa_UsuarioId_EmpresaId] ON [erp].[UsuarioEmp
 GO
 
 INSERT INTO [erp].[__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-VALUES (N'20260624175549_InitialCreateErpSchema', N'8.0.6');
+VALUES (N'20260624175549_InitialCreateErpSchema', N'8.0.6'),
+(N'20260627090000_AddCuentaFinancieraCajaBancos', N'8.0.6'),
+(N'20260627103000_AddTransferenciasFinancieras', N'8.0.6');
 GO
 
 COMMIT;
 GO
+
 

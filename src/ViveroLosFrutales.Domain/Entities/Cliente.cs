@@ -6,6 +6,8 @@ namespace ViveroLosFrutales.Domain.Entities;
 public class Cliente : AuditableEntity
 {
     public int ClienteId { get; set; }
+    public int EmpresaId { get; set; }
+    public Empresa? Empresa { get; set; }
     public TipoDocumentoCliente TipoDocumento { get; set; }
     public string NumeroDocumento { get; set; } = string.Empty;
     public string NombreCompleto { get; set; } = string.Empty;

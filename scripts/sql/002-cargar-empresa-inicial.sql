@@ -36,7 +36,12 @@ DECLARE @Empresas TABLE (
     SerieNotaCreditoFactura nvarchar(20) NOT NULL,
     SerieNotaCreditoBoleta nvarchar(20) NOT NULL,
     SerieNotaPedido nvarchar(20) NOT NULL,
-    SerieCotizacion nvarchar(20) NOT NULL
+    SerieCotizacion nvarchar(20) NOT NULL,
+    RepresentanteLegalNombre nvarchar(200) NOT NULL,
+    RepresentanteLegalDocumento nvarchar(20) NOT NULL,
+    RepresentanteLegalCargo nvarchar(120) NOT NULL,
+    FirmaContentType nvarchar(120) NOT NULL,
+    FirmaNombre nvarchar(260) NOT NULL
 );
 
 INSERT INTO @Empresas (
@@ -52,7 +57,12 @@ INSERT INTO @Empresas (
     SerieNotaCreditoFactura,
     SerieNotaCreditoBoleta,
     SerieNotaPedido,
-    SerieCotizacion
+    SerieCotizacion,
+    RepresentanteLegalNombre,
+    RepresentanteLegalDocumento,
+    RepresentanteLegalCargo,
+    FirmaContentType,
+    FirmaNombre
 )
 VALUES
     (
@@ -68,7 +78,12 @@ VALUES
         N'F101',
         N'B101',
         N'NP001',
-        N'C001'
+        N'C001',
+        N'',
+        N'',
+        N'',
+        N'',
+        N''
     ),
     (
         N'20615082997',
@@ -83,7 +98,12 @@ VALUES
         N'F202',
         N'B202',
         N'NP002',
-        N'C002'
+        N'C002',
+        N'',
+        N'',
+        N'',
+        N'',
+        N''
     );
 
 MERGE erp.Empresa WITH (HOLDLOCK) AS target
@@ -104,6 +124,11 @@ WHEN MATCHED THEN
         SerieNotaCreditoBoleta = source.SerieNotaCreditoBoleta,
         SerieNotaPedido = source.SerieNotaPedido,
         SerieCotizacion = source.SerieCotizacion,
+        RepresentanteLegalNombre = COALESCE(NULLIF(target.RepresentanteLegalNombre, N''), source.RepresentanteLegalNombre),
+        RepresentanteLegalDocumento = COALESCE(NULLIF(target.RepresentanteLegalDocumento, N''), source.RepresentanteLegalDocumento),
+        RepresentanteLegalCargo = COALESCE(NULLIF(target.RepresentanteLegalCargo, N''), source.RepresentanteLegalCargo),
+        FirmaContentType = COALESCE(target.FirmaContentType, source.FirmaContentType),
+        FirmaNombre = COALESCE(target.FirmaNombre, source.FirmaNombre),
         Estado = 1
 WHEN NOT MATCHED BY TARGET THEN
     INSERT (
@@ -120,6 +145,12 @@ WHEN NOT MATCHED BY TARGET THEN
         LogoContenido,
         LogoContentType,
         LogoNombre,
+        RepresentanteLegalNombre,
+        RepresentanteLegalDocumento,
+        RepresentanteLegalCargo,
+        FirmaContenido,
+        FirmaContentType,
+        FirmaNombre,
         SerieBoleta,
         SerieFactura,
         SerieNotaCredito,
@@ -145,6 +176,12 @@ WHEN NOT MATCHED BY TARGET THEN
         NULL,
         N'',
         N'',
+        source.RepresentanteLegalNombre,
+        source.RepresentanteLegalDocumento,
+        source.RepresentanteLegalCargo,
+        NULL,
+        source.FirmaContentType,
+        source.FirmaNombre,
         source.SerieBoleta,
         source.SerieFactura,
         source.SerieNotaCredito,

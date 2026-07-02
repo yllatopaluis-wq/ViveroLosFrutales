@@ -1,0 +1,91 @@
+﻿@model CajaBancosDto
+@{
+    ViewData["Title"] = "Caja y Bancos";
+    var today = PeruDateTime.Today;
+    var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+    var currentDay = today.ToString("yyyy-MM-dd");
+    var fechaDesde = Context.Request.Query["FechaDesde"].FirstOrDefault() ?? firstDay;
+    var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
+    var search = Context.Request.Query["Search"].FirstOrDefault();
+    var tipoActual = Context.Request.Query["tipo"].FirstOrDefault();
+    static string Money(decimal value) => $"S/ {value:N2}";
+    static string TipoTexto(TipoCuentaFinanciera tipo) => tipo switch
+    {
+        TipoCuentaFinanciera.CAJA => "Caja",
+        TipoCuentaFinanciera.BANCO => "Banco",
+        TipoCuentaFinanciera.BILLETERA => "Billetera",
+        _ => tipo.ToString()
+    };
+}
+
+<section class="cash-page treasury-page">
+    <form method="get" class="comprobantes-toolbar sales-docs-toolbar">
+        <label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Buscar cuenta, banco o numero..." autocomplete="off" /></label>
+        <label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label>
+        <label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label>
+        <label class="filter-field"><span>Tipo</span><select name="tipo"><option value="">Todos</option>@foreach (var tipo in Enum.GetValues<TipoCuentaFinanciera>()) { <option value="@tipo" selected="@(tipoActual == tipo.ToString())">@TipoTexto(tipo)</option> }</select></label>
+        <button class="btn-search" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>Buscar</button>
+    </form>
+
+    <div class="cash-summary-grid treasury-summary-grid">
+        <article class="cash-summary-card balance treasury-balance-card">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" /><path d="M7 10h4M15 14h2" /><circle cx="12" cy="12" r="2" /></svg></span>
+            <div><small>Dinero disponible de la empresa</small><strong>@Money(Model.DineroDisponible)</strong><span>Suma de saldos por cuenta</span></div>
+        </article>
+        <article class="cash-summary-card income">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7" /><path d="M9 7h8v8" /></svg></span>
+            <div><small>Ingresos del periodo</small><strong>@Money(Model.IngresosPeriodo)</strong><span>Movimientos activos</span></div>
+        </article>
+        <article class="cash-summary-card expense">
+            <span class="cash-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 7 17 17" /><path d="M17 9v8H9" /></svg></span>
+            <div><small>Egresos del periodo</small><strong>@Money(Model.EgresosPeriodo)</strong><span>Movimientos activos</span></div>
+        </article>
+    </div>
+
+    <div class="cash-summary-grid treasury-summary-grid">
+        <article class="cash-summary-card"><div><small>Efectivo</small><strong>@Money(Model.TotalEfectivo)</strong><span>Cajas</span></div></article>
+        <article class="cash-summary-card"><div><small>Bancos</small><strong>@Money(Model.TotalBancos)</strong><span>Cuentas bancarias</span></div></article>
+        <article class="cash-summary-card"><div><small>Billeteras</small><strong>@Money(Model.TotalBilleteras)</strong><span>Yape, Plin u otras</span></div></article>
+    </div>
+
+    <section class="cash-history-card">
+        <h2>Cuentas financieras</h2>
+        <div class="cash-table-wrap">
+            <table class="table table-sm cash-table">
+                <thead>
+                    <tr>
+                        <th>Cuenta</th>
+                        <th>Tipo</th>
+                        <th>Banco</th>
+                        <th>Moneda</th>
+                        <th class="text-end">Ingresos</th>
+                        <th class="text-end">Egresos</th>
+                        <th class="text-end">Saldo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!Model.Cuentas.Any())
+                {
+                    <tr><td colspan="7" class="cash-empty">No hay cuentas financieras para el filtro seleccionado.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in Model.Cuentas)
+                    {
+                        <tr>
+                            <td><strong>@item.Cuenta</strong><small>@(string.IsNullOrWhiteSpace(item.NumeroCuenta) ? "-" : item.NumeroCuenta)</small></td>
+                            <td>@TipoTexto(item.Tipo)</td>
+                            <td>@(string.IsNullOrWhiteSpace(item.Banco) ? "-" : item.Banco)</td>
+                            <td>@item.Moneda</td>
+                            <td class="text-end"><span class="cash-amount income">@Money(item.Ingresos)</span></td>
+                            <td class="text-end"><span class="cash-amount expense">@Money(item.Egresos)</span></td>
+                            <td class="text-end"><strong>@Money(item.Saldo)</strong></td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+

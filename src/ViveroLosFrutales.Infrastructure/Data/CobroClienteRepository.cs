@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -41,6 +41,7 @@ public class CobroClienteRepository(ApplicationDbContext db) : ICobroClienteRepo
     public Task<CobroCliente?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken) =>
         db.CobrosCliente.Include(x => x.NotaPedido)
             .Include(x => x.Comprobante)
+            .Include(x => x.CuentaFinanciera)
             .Include(x => x.Aplicaciones)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.CobroClienteId == id, cancellationToken);
 
@@ -100,6 +101,9 @@ public class CobroClienteRepository(ApplicationDbContext db) : ICobroClienteRepo
                     : "Sin referencia",
             x.Monto,
             x.MedioPago,
+            x.CuentaFinanciera == null ? string.Empty : x.CuentaFinanciera.Nombre,
             x.Estado,
             x.Observacion));
 }
+
+

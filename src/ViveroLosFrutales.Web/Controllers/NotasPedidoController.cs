@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
@@ -7,7 +7,7 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Web.Controllers;
 
-public class NotasPedidoController(NotaPedidoService service) : Controller
+public class NotasPedidoController(NotaPedidoService service, CobroClienteService cobroClienteService) : Controller
 {
     public async Task<IActionResult> Index([FromQuery] SearchRequest request, CancellationToken cancellationToken) =>
         View(await service.BuscarAsync(request, cancellationToken));
@@ -67,7 +67,7 @@ public class NotasPedidoController(NotaPedidoService service) : Controller
         var nota = await service.ObtenerDetalleAsync(id, cancellationToken);
         ViewData["SaldoPendiente"] = nota.SaldoPendiente;
         ViewData["Referencia"] = nota.Numero;
-        return View(new RegistrarCobroDto { NotaPedidoId = id, Monto = nota.SaldoPendiente });
+        return View(await cobroClienteService.PrepararFormularioAsync(new RegistrarCobroDto { NotaPedidoId = id, Monto = nota.SaldoPendiente }, cancellationToken));
     }
 
     public IActionResult VerCobros(int id) =>
@@ -123,7 +123,7 @@ public class NotasPedidoController(NotaPedidoService service) : Controller
             var nota = await service.ObtenerDetalleAsync(notaId, cancellationToken);
             ViewData["SaldoPendiente"] = nota.SaldoPendiente;
             ViewData["Referencia"] = nota.Numero;
-            return View(dto);
+            return View(await cobroClienteService.PrepararFormularioAsync(dto, cancellationToken));
         }
     }
 
@@ -188,3 +188,4 @@ public class NotasPedidoController(NotaPedidoService service) : Controller
         return RedirectToAction(nameof(Index));
     }
 }
+

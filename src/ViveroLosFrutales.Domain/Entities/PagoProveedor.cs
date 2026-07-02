@@ -8,6 +8,7 @@ public class PagoProveedor : EmpresaEntity
     public int PagoProveedorId { get; set; }
     public int ProveedorId { get; set; }
     public int CompraId { get; set; }
+    public int? CuentaFinancieraId { get; set; }
     public DateTime FechaPago { get; set; } = PeruDateTime.Today;
     public decimal Monto { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
@@ -17,6 +18,7 @@ public class PagoProveedor : EmpresaEntity
     public string MotivoAnulacion { get; set; } = string.Empty;
     public string UsuarioAnulacion { get; set; } = string.Empty;
 
+    public CuentaFinanciera? CuentaFinanciera { get; set; }
     public Proveedor? Proveedor { get; set; }
     public Compra? Compra { get; set; }
 }

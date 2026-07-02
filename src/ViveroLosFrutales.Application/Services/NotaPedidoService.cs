@@ -37,7 +37,7 @@ public class NotaPedidoService(
     public async Task<NotaPedidoFormDataDto> FormDataAsync(NotaPedidoEditDto dto, CancellationToken cancellationToken)
     {
         var clienteSeleccionado = dto.ClienteId > 0
-            ? await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+            ? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             : null;
         var productos = (await productoRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         foreach (var producto in await ProductosSeleccionadosAsync(dto.Detalles.Select(x => x.ProductoId), cancellationToken))
@@ -45,7 +45,7 @@ public class NotaPedidoService(
             if (productos.All(x => x.ProductoId != producto.ProductoId)) productos.Add(producto);
         }
 
-        var clientes = (await clienteRepository.BuscarActivosAsync(null, 50, cancellationToken)).ToList();
+        var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
             clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Estado));
@@ -67,7 +67,7 @@ public class NotaPedidoService(
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
-        var clientes = await clienteRepository.BuscarActivosAsync(search, 20, cancellationToken);
+        var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
         return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion)).ToArray();
     }
 
@@ -178,7 +178,7 @@ public class NotaPedidoService(
         var detallesValidos = dto.Detalles.Where(x => x.ProductoId > 0 || x.Cantidad > 0 || x.PrecioUnitario > 0).ToArray();
         if (detallesValidos.Length == 0) throw new InvalidOperationException("Ingrese al menos un producto.");
 
-        _ = await clienteRepository.ObtenerAsync(dto.ClienteId, cancellationToken)
+        _ = await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
 
         NotaPedido nota;
@@ -341,7 +341,7 @@ public class NotaPedidoService(
     {
         var nota = await notaPedidoRepository.ObtenerAsync(empresaContext.EmpresaId, notaPedidoId, cancellationToken)
             ?? throw new InvalidOperationException("Nota de pedido no encontrada.");
-        var cliente = nota.Cliente ?? await clienteRepository.ObtenerAsync(nota.ClienteId, cancellationToken)
+        var cliente = nota.Cliente ?? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, nota.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
         var tipoDestino = cliente.TipoDocumento == TipoDocumentoCliente.RUC ? TipoComprobante.FAC : TipoComprobante.BOL;
 
@@ -375,7 +375,7 @@ public class NotaPedidoService(
             throw new InvalidOperationException("No es posible convertir la Nota de Pedido porque aún tiene saldo pendiente.");
         }
 
-        var cliente = nota.Cliente ?? await clienteRepository.ObtenerAsync(nota.ClienteId, cancellationToken)
+        var cliente = nota.Cliente ?? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, nota.ClienteId, cancellationToken)
             ?? throw new InvalidOperationException("Cliente no encontrado.");
         ValidarTipoComprobantePorDocumento(cliente.TipoDocumento, tipoDestino);
         var empresa = await empresaRepository.ObtenerAsync(empresaContext.EmpresaId, cancellationToken)

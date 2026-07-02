@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -11,7 +11,7 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
 {
     public async Task<CajaIndexDto> BuscarAsync(int empresaId, SearchRequest request, string? medioPago, TipoMovimientoCaja? tipoMovimiento, CancellationToken cancellationToken)
     {
-        var query = db.MovimientosCaja.AsNoTracking().Where(x => x.EmpresaId == empresaId);
+        var query = db.MovimientosCaja.AsNoTracking().Include(x => x.CuentaFinanciera).Where(x => x.EmpresaId == empresaId);
         if (request.FechaDesde is not null) query = query.Where(x => x.Fecha >= request.FechaDesde.Value.Date);
         if (request.FechaHasta is not null)
         {
@@ -195,6 +195,11 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
                     documento = $"INGRESO-{ingreso.IngresoId:000000}";
                     textoBusquedaExtra = $"{documento} {ingreso.TipoIngreso} {ingreso.Descripcion}";
                 }
+                else if (x.Origen == OrigenMovimientoCaja.TRANSFERENCIA)
+                {
+                    documento = $"TRF-{x.OrigenId:000000}";
+                    textoBusquedaExtra = $"{documento} {x.Descripcion}";
+                }
 
                 return new MovimientoCajaItem(
                     new MovimientoCajaListDto(
@@ -206,6 +211,7 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
                         clienteProveedor,
                         documento,
                         x.MedioPago,
+                        x.CuentaFinanciera == null ? string.Empty : x.CuentaFinanciera.Nombre,
                         x.Monto,
                         x.Estado),
                     $"{textoBusquedaExtra} {x.MedioPago} {x.Descripcion}");
@@ -284,9 +290,12 @@ public class MovimientoCajaRepository(ApplicationDbContext db) : IMovimientoCaja
         OrigenMovimientoCaja.INGRESO_MANUAL => "Ingreso Manual",
         OrigenMovimientoCaja.DEVOLUCION_CLIENTE => "Devolucion Cliente",
         OrigenMovimientoCaja.DEVOLUCION_PROVEEDOR => "Devolucion Proveedor",
+        OrigenMovimientoCaja.TRANSFERENCIA => "Transferencia",
         OrigenMovimientoCaja.OTRO => "Otro",
         _ => origen.ToString()
     };
 
     private sealed record MovimientoCajaItem(MovimientoCajaListDto Dto, string SearchText);
 }
+
+

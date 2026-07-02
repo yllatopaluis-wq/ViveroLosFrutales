@@ -64,6 +64,17 @@ body.menu-open { overflow: hidden; }
 
 .sidebar-logo img { width: 100%; height: 100%; object-fit: contain; }
 
+.sidebar-logo-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--app-green-dark);
+  font-size: 14px;
+  font-weight: 800;
+  background: #e8f6ed;
+}
+
 .sidebar-brand-copy {
   min-width: 0;
   overflow: hidden;
@@ -217,6 +228,13 @@ body.menu-open { overflow: hidden; }
 
 .sidebar-submenu .sidebar-item.active::after { background: var(--app-green); }
 .sidebar-submenu .sidebar-item.active::before { display: none; }
+.sidebar-item-disabled,
+.sidebar-item-disabled:hover {
+  color: #9aa3a0;
+  cursor: default;
+  background: transparent;
+}
+.sidebar-item-disabled::after { background: #d8dfdc; }
 
 .sidebar-collapsed .sidebar-brand-copy,
 .sidebar-collapsed .sidebar-nav-label,

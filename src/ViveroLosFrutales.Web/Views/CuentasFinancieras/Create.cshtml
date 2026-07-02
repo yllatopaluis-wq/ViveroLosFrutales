@@ -1,0 +1,46 @@
+﻿@model CuentaFinancieraEditDto
+@{
+    ViewData["Title"] = Model.CuentaFinancieraId == 0 ? "Nueva cuenta financiera" : "Editar cuenta financiera";
+    static string TipoTexto(TipoCuentaFinanciera tipo) => tipo switch
+    {
+        TipoCuentaFinanciera.CAJA => "Caja",
+        TipoCuentaFinanciera.BANCO => "Banco",
+        TipoCuentaFinanciera.BILLETERA => "Billetera",
+        _ => tipo.ToString()
+    };
+}
+
+<form asp-action="Create" method="post" class="dense-form document-entry-form">
+    @Html.AntiForgeryToken()
+    <input asp-for="CuentaFinancieraId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <fieldset class="form-grid cols-4">
+        <label>Nombre<input asp-for="Nombre" class="form-control form-control-sm" maxlength="120" required /></label>
+        <label>Tipo<select asp-for="Tipo" class="form-select form-select-sm" id="tipoCuentaFinanciera">@foreach (var tipo in Enum.GetValues<TipoCuentaFinanciera>()) { <option value="@tipo" selected="@(Model.Tipo == tipo)">@TipoTexto(tipo)</option> }</select></label>
+        <label>Banco<input asp-for="Banco" class="form-control form-control-sm" maxlength="120" /></label>
+        <label>Numero cuenta<input asp-for="NumeroCuenta" class="form-control form-control-sm" maxlength="80" /></label>
+        <label>Moneda<input asp-for="Moneda" class="form-control form-control-sm" maxlength="3" readonly /></label>
+        <label>Saldo inicial<input asp-for="SaldoInicial" class="form-control form-control-sm" type="number" step="0.01" /></label>
+        <label>Fecha saldo inicial<input asp-for="FechaSaldoInicial" class="form-control form-control-sm" type="date" /></label>
+        <label class="checkbox-label"><input asp-for="Activo" type="checkbox" /> Activa</label>
+    </fieldset>
+    <div class="form-actions">
+        <button class="btn btn-sm btn-primary">Guardar</button>
+        <a class="btn btn-sm btn-outline-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>
+
+<script>
+(function () {
+    const tipo = document.getElementById('tipoCuentaFinanciera');
+    const banco = document.getElementById('Banco');
+    const numero = document.getElementById('NumeroCuenta');
+    function sync() {
+        const esCaja = tipo && tipo.value === 'CAJA';
+        if (banco) banco.disabled = esCaja;
+        if (numero) numero.disabled = esCaja;
+    }
+    tipo?.addEventListener('change', sync);
+    sync();
+})();
+</script>
