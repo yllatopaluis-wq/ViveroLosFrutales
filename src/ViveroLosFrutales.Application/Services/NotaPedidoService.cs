@@ -65,6 +65,14 @@ public class NotaPedidoService(
         };
     }
 
+    private static decimal ObtenerPrecioVentaConIgv(Producto producto)
+    {
+        if (producto.PrecioVentaConIgv > 0) return producto.PrecioVentaConIgv;
+        return producto.AfectoIgv
+            ? decimal.Round(producto.PrecioVentaSinIgv * 1.18m, 2)
+            : producto.PrecioVentaSinIgv;
+    }
+
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
         var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
@@ -84,7 +92,7 @@ public class NotaPedidoService(
         {
             var producto = await productoRepository.ObtenerAsync(empresaContext.EmpresaId, productoId, cancellationToken);
             if (producto is null) continue;
-            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, producto.PrecioVentaConIgv, producto.Stock, producto.AfectoIgv, producto.Estado));
+            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
         return productos;

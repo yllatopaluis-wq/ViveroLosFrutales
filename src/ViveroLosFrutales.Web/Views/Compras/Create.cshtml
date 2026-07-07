@@ -1,4 +1,4 @@
-@model CompraFormDataDto
+﻿@model CompraFormDataDto
 @{
     ViewData["Title"] = "Registrar Compra";
     var detalles = Model.Compra.Detalles.Count == 0 ? new List<CompraDetalleEditDto> { new() } : Model.Compra.Detalles;
@@ -32,8 +32,10 @@
                 <select asp-for="Compra.TipoDocumento" name="TipoDocumento" class="form-select" id="tipoDocumentoCompra">
                     <option value="@TipoDocumentoCompra.FACTURA">FACTURA</option>
                     <option value="@TipoDocumentoCompra.BOLETA">BOLETA</option>
-                    <option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACI&Oacute;N DE COMPRA</option>
-                    <option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE DE COMPROBANTE</option>
+                    <option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option>
+                    <option value="@TipoDocumentoCompra.RECIBO">RECIBO</option>
+                    <option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option>
+                    <option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option>
                     <option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option>
                 </select>
             </label>
@@ -55,13 +57,23 @@
             </label>
             <label>
                 <span>Medio de pago <b>*</b></span>
-                <select asp-for="Compra.MedioPago" name="MedioPago" class="form-select">
+                <select asp-for="Compra.MedioPago" name="MedioPago" class="form-select" id="medioPagoCompra">
                     <option value="EFECTIVO">Efectivo</option>
                     <option value="TRANSFERENCIA">Transferencia</option>
                     <option value="YAPE">Yape</option>
-                    <option value="TARJETA DEBITO">Tarjeta débito</option>
-                    <option value="TARJETA CREDITO">Tarjeta crédito</option>
+                    <option value="TARJETA DEBITO">Tarjeta d&eacute;bito</option>
+                    <option value="TARJETA CREDITO">Tarjeta cr&eacute;dito</option>
 </select>
+            </label>
+            <label id="cuentaFinancieraCompraWrap">
+                <span>Cuenta destino</span>
+                <select asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra">
+                    <option value="">Caja principal</option>
+                    @foreach (var cuenta in Model.CuentasFinancieras)
+                    {
+                        <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                    }
+                </select>
             </label>
             <label class="span-4">
                 <span>Observaci&oacute;n</span>
@@ -107,7 +119,7 @@
                                     <option value="">Seleccione producto</option>
                                     @foreach (var producto in Model.Productos)
                                     {
-                                        <option value="@producto.ProductoId" selected="@(detalle.ProductoId == producto.ProductoId)">
+                                        <option value="@producto.ProductoId" data-afecto-igv="@producto.AfectoIgv" selected="@(detalle.ProductoId == producto.ProductoId)">
                                             @producto.Nombre (@producto.Categoria)
                                         </option>
                                     }
@@ -149,5 +161,23 @@
     <script>
         window.viveroCompraForm();
         window.viveroCompraDocumentoForm?.();
+        const formaPagoCompra = document.querySelector('[name="FormaPago"]');
+        const medioPagoCompraWrap = document.getElementById('medioPagoCompra')?.closest('label');
+        const medioPagoCompra = document.getElementById('medioPagoCompra');
+        const cuentaFinancieraCompraWrap = document.getElementById('cuentaFinancieraCompraWrap');
+        const cuentaFinancieraCompra = document.getElementById('cuentaFinancieraCompra');
+        const syncMedioPagoCompra = () => {
+            const esCredito = formaPagoCompra?.value === '@((int)FormaPagoCompra.CREDITO)' || formaPagoCompra?.value === 'CREDITO';
+            medioPagoCompraWrap?.classList.toggle('d-none', esCredito);
+            if (medioPagoCompra) medioPagoCompra.disabled = !!esCredito;
+            cuentaFinancieraCompraWrap?.classList.toggle('d-none', esCredito);
+            if (cuentaFinancieraCompra) cuentaFinancieraCompra.disabled = !!esCredito;
+        };
+        formaPagoCompra?.addEventListener('change', syncMedioPagoCompra);
+        syncMedioPagoCompra();
+        window.viveroFiltrarCuentasPorMedioPago?.({
+            medioPagoSelector: '#medioPagoCompra',
+            cuentaSelector: '#cuentaFinancieraCompra'
+        });
     </script>
 }

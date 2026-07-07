@@ -275,6 +275,24 @@ Al guardar una compra:
 - Se registra movimiento de inventario.
 - Si queda pendiente de pago, aparece en cuentas por pagar.
 
+
+Tipos de documento de compra disponibles:
+
+- `FACTURA`.
+- `BOLETA`.
+- `LIQUIDACION COMPRA`.
+- `RECIBO`.
+- `NOTA VENTA`.
+- `PENDIENTE COMPROBANTE`.
+- `SIN DOCUMENTO`.
+
+Reglas:
+
+- `FACTURA`, `BOLETA` y `LIQUIDACION COMPRA` piden serie y numero.
+- `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no piden serie ni numero.
+- `PENDIENTE COMPROBANTE` es un tipo de documento, no un estado.
+- El costo unitario se ingresa con IGV. Si el producto esta afecto a IGV, el sistema separa base e IGV con factor `1.18`; si no esta afecto, no calcula IGV.
+
 ### 6.2 Pagos a proveedores
 
 Desde el detalle de compra se puede registrar pago.
@@ -369,6 +387,19 @@ Permite revisar compras pendientes de pago a proveedores.
 ### 9.4 Devoluciones proveedor
 
 Permite consultar devoluciones o saldos relacionados con proveedores cuando aplique.
+
+
+### 9.5 Reporte de notas de pedido
+
+Ruta: `Reportes > Notas de pedido`.
+
+Permite consultar y exportar notas de pedido filtrando por cliente/documento, numero, fechas, estado de pago y estado del documento. Muestra cartillas de total de notas, total vendido, total cobrado, saldo pendiente, pendientes, parciales, pagadas y anuladas.
+
+### 9.6 Reporte de comprobantes
+
+Ruta: `Reportes > Comprobantes`.
+
+Permite consultar y exportar boletas y facturas filtrando por tipo, serie, numero, fechas, cliente, estado SUNAT, estado del comprobante, medio de pago y vendedor. Muestra cartillas de total de comprobantes, importe, IGV, gravado, exonerado, cancelado y por cobrar. La moneda se visualiza como `Soles`.
 
 ## 10. Administración
 

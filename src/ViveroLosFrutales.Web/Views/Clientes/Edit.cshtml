@@ -8,12 +8,12 @@
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input asp-for="ClienteId" type="hidden" />
     <fieldset disabled="@readOnly" class="form-grid cols-3">
-        <label>Tipo Documento<select asp-for="TipoDocumento" asp-items="Html.GetEnumSelectList<TipoDocumentoCliente>()" class="form-select form-select-sm"></select></label>
-        <label>Numero Documento<input asp-for="NumeroDocumento" class="form-control form-control-sm" /></label>
-        <label>Cliente<input asp-for="NombreCompleto" class="form-control form-control-sm" /></label>
-        <label>Email<input asp-for="Email" class="form-control form-control-sm" /></label>
-        <label>Direccion<input asp-for="Direccion" class="form-control form-control-sm" /></label>
-        <label>Telefono<input asp-for="Telefono" class="form-control form-control-sm" /></label>
+        <label>Tipo Documento<select asp-for="TipoDocumento" asp-items="Html.GetEnumSelectList<TipoDocumentoCliente>()" class="form-select form-select-sm"></select><span asp-validation-for="TipoDocumento" class="text-danger"></span></label>
+        <label>Numero Documento<input asp-for="NumeroDocumento" class="form-control form-control-sm" /><span asp-validation-for="NumeroDocumento" class="text-danger"></span></label>
+        <label>Cliente<input asp-for="NombreCompleto" class="form-control form-control-sm" /><span asp-validation-for="NombreCompleto" class="text-danger"></span></label>
+        <label>Email<input asp-for="Email" class="form-control form-control-sm" /><span asp-validation-for="Email" class="text-danger"></span></label>
+        <label>Direccion<input asp-for="Direccion" class="form-control form-control-sm" /><span asp-validation-for="Direccion" class="text-danger"></span></label>
+        <label>Telefono<input asp-for="Telefono" class="form-control form-control-sm" /><span asp-validation-for="Telefono" class="text-danger"></span></label>
     </fieldset>
     <div class="form-actions">
         @if (!readOnly)

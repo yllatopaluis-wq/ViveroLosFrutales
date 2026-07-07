@@ -19,7 +19,7 @@ public class ProductoRepository(ApplicationDbContext db) : IProductoRepository
         }
 
         return query.OrderBy(x => x.Nombre)
-            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv, x.Estado))
+            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv > 0 ? x.PrecioVentaConIgv : (x.AfectoIgv ? decimal.Round(x.PrecioVentaSinIgv * 1.18m, 2) : x.PrecioVentaSinIgv), x.Stock, x.AfectoIgv, x.Estado))
             .ToPagedAsync(request, cancellationToken);
     }
 
@@ -28,7 +28,7 @@ public class ProductoRepository(ApplicationDbContext db) : IProductoRepository
         return await db.Productos.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo)
             .OrderBy(x => x.Nombre)
-            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv, x.Estado))
+            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv > 0 ? x.PrecioVentaConIgv : (x.AfectoIgv ? decimal.Round(x.PrecioVentaSinIgv * 1.18m, 2) : x.PrecioVentaSinIgv), x.Stock, x.AfectoIgv, x.Estado))
             .ToListAsync(cancellationToken);
     }
 
@@ -47,7 +47,7 @@ public class ProductoRepository(ApplicationDbContext db) : IProductoRepository
             .OrderBy(x => x.Nombre)
             .ThenBy(x => x.ProductoId)
             .Take(Math.Clamp(take, 1, 50))
-            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv, x.Estado))
+            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv > 0 ? x.PrecioVentaConIgv : (x.AfectoIgv ? decimal.Round(x.PrecioVentaSinIgv * 1.18m, 2) : x.PrecioVentaSinIgv), x.Stock, x.AfectoIgv, x.Estado))
             .ToListAsync(cancellationToken);
     }
 
@@ -59,7 +59,7 @@ public class ProductoRepository(ApplicationDbContext db) : IProductoRepository
         return await db.Productos.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId && productoIds.Contains(x.ProductoId))
             .OrderBy(x => x.Nombre)
-            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv, x.Estado))
+            .Select(x => new ProductoListDto(x.ProductoId, x.Categoria, x.Nombre, x.PrecioVentaSinIgv, x.PrecioVentaConIgv > 0 ? x.PrecioVentaConIgv : (x.AfectoIgv ? decimal.Round(x.PrecioVentaSinIgv * 1.18m, 2) : x.PrecioVentaSinIgv), x.Stock, x.AfectoIgv, x.Estado))
             .ToListAsync(cancellationToken);
     }
 

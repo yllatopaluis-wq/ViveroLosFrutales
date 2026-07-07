@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
@@ -506,7 +506,7 @@ END;");
         var vendedor = await db.RolesNegocio.FirstOrDefaultAsync(x => x.RolId == 2);
         if (vendedor is not null)
         {
-            var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "TESORERIA", "TESORERIA_CAJA", "TESORERIA_CAJABANCOS", "TESORERIA_COBROS", "TESORERIA_TRANSFERENCIAS", "TESORERIA_CUENTASCLIENTES" };
+            var modulosVendedor = new[] { "Home", "Categorias", "Productos", "Clientes", "Cotizaciones", "Comprobantes", "NotasCredito", "NotasPedido", "CobrosClientes", "Devoluciones", "Caja", "TESORERIA", "TESORERIA_CAJA", "TESORERIA_CAJABANCOS", "TESORERIA_COBROS", "TESORERIA_PAGOSPROVEEDORES", "TESORERIA_TRANSFERENCIAS", "TESORERIA_CUENTASCLIENTES" };
             var accionesVendedor = new[] { "Ver", "Crear", "Editar", "Anular", "Imprimir", "Convertir", "Registrar", "RegistrarPago" };
             var permisos = await db.Permisos
                 .Where(x => modulosVendedor.Contains(x.Modulo) && accionesVendedor.Contains(x.Accion))
@@ -524,6 +524,7 @@ END;");
         await db.SaveChangesAsync();
     }
 }
+
 
 
 

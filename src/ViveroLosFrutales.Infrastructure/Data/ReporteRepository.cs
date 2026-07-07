@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Enums;
@@ -196,6 +197,294 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
             }
         };
     }
+    public async Task<ReporteNotasPedidoDto> ObtenerNotasPedidoAsync(
+        int empresaId,
+        ReporteNotasPedidoRequest request,
+        CancellationToken cancellationToken)
+    {
+        var query = db.NotasPedido.AsNoTracking().Where(x => x.EmpresaId == empresaId);
+
+        if (request.FechaDesde is not null) query = query.Where(x => x.Fecha >= request.FechaDesde.Value.Date);
+        if (request.FechaHasta is not null)
+        {
+            var hasta = request.FechaHasta.Value.Date.AddDays(1);
+            query = query.Where(x => x.Fecha < hasta);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.Trim();
+            query = query.Where(x => x.Cliente!.NombreCompleto.Contains(term)
+                || x.Cliente.NumeroDocumento.Contains(term)
+                || x.Serie.Contains(term)
+                || (x.Serie + "-" + x.Correlativo).Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Numero))
+        {
+            var numero = request.Numero.Trim();
+            query = query.Where(x => x.Serie.Contains(numero) || (x.Serie + "-" + x.Correlativo).Contains(numero));
+        }
+
+        if (request.EstadoDocumento is not null) query = query.Where(x => x.EstadoDocumento == request.EstadoDocumento.Value);
+
+        var shaped = query.Select(x => new
+        {
+            Nota = x,
+            TotalCobrado = x.Cobros
+                .Where(c => c.Estado != CobroClienteEstado.ANULADO)
+                .Sum(c => (decimal?)c.Monto) ?? 0
+        })
+        .Select(x => new
+        {
+            x.Nota,
+            x.TotalCobrado,
+            Saldo = x.Nota.Total - x.TotalCobrado < 0 ? 0 : x.Nota.Total - x.TotalCobrado,
+            EstadoPagoCalculado = x.TotalCobrado <= 0
+                ? EstadoPagoNotaPedido.PENDIENTE
+                : x.Nota.Total - x.TotalCobrado <= 0
+                    ? EstadoPagoNotaPedido.PAGADO
+                    : EstadoPagoNotaPedido.PAGO_PARCIAL
+        });
+
+        if (request.EstadoPago is not null) shaped = shaped.Where(x => x.EstadoPagoCalculado == request.EstadoPago.Value);
+
+        var resumenFilas = await shaped
+            .Select(x => new
+            {
+                x.Nota.Total,
+                x.TotalCobrado,
+                x.Saldo,
+                x.EstadoPagoCalculado,
+                x.Nota.EstadoDocumento
+            })
+            .ToListAsync(cancellationToken);
+
+        var resumen = new ReporteNotasPedidoResumenDto(
+            resumenFilas.Count,
+            resumenFilas.Sum(x => x.Total),
+            resumenFilas.Sum(x => x.TotalCobrado),
+            resumenFilas.Sum(x => x.Saldo),
+            resumenFilas.Count(x => x.EstadoPagoCalculado == EstadoPagoNotaPedido.PENDIENTE),
+            resumenFilas.Count(x => x.EstadoPagoCalculado == EstadoPagoNotaPedido.PAGO_PARCIAL),
+            resumenFilas.Count(x => x.EstadoPagoCalculado == EstadoPagoNotaPedido.PAGADO),
+            resumenFilas.Count(x => x.EstadoDocumento == NotaPedidoEstado.ANULADO));
+
+        var page = request.Page < 1 ? 1 : request.Page;
+        var pageSize = request.PageSize < 1 ? 10 : Math.Min(request.PageSize, 5000);
+        var total = resumen.TotalNotas;
+
+        var items = await shaped
+            .OrderByDescending(x => x.Nota.Fecha)
+            .ThenByDescending(x => x.Nota.NotaPedidoId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new ReporteNotaPedidoRowDto(
+                x.Nota.NotaPedidoId,
+                x.Nota.Fecha,
+                x.Nota.Serie + "-" + x.Nota.Correlativo,
+                x.Nota.Cliente!.NombreCompleto,
+                x.Nota.Cliente.NumeroDocumento,
+                x.Nota.EstadoDocumento,
+                x.EstadoPagoCalculado,
+                x.Nota.UsuarioModificacion == "" ? "-" : x.Nota.UsuarioModificacion,
+                x.Saldo > 0 ? "Credito" : "Contado",
+                x.Nota.Subtotal,
+                x.Nota.Igv,
+                x.Nota.Total,
+                x.TotalCobrado,
+                x.Saldo,
+                x.Nota.ComprobanteId == null ? "-" : "Convertida a comprobante"))
+            .ToListAsync(cancellationToken);
+
+        return new ReporteNotasPedidoDto
+        {
+            Request = request,
+            Notas = new PagedResult<ReporteNotaPedidoRowDto>
+            {
+                Items = items,
+                Total = total,
+                Page = page,
+                PageSize = pageSize
+            },
+            Resumen = resumen
+        };
+    }
+    public async Task<ReporteComprobantesDto> ObtenerComprobantesAsync(
+        int empresaId,
+        ReporteComprobantesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var baseQuery = db.Comprobantes.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId
+                && (x.TipoComprobante == TipoComprobante.BOL || x.TipoComprobante == TipoComprobante.FAC));
+
+        var series = await baseQuery
+            .Select(x => x.Serie)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+
+        var vendedores = await baseQuery
+            .Where(x => x.UsuarioRegistro != "")
+            .Select(x => x.UsuarioRegistro)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+
+        var mediosDb = await db.CobrosCliente.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.Estado == CobroClienteEstado.ACTIVO && x.ComprobanteId != null && x.MedioPago != "")
+            .Select(x => x.MedioPago)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+        var mediosPago = new[] { "Contado", "Credito" }.Concat(mediosDb).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToArray();
+
+        var query = baseQuery;
+
+        if (request.TipoComprobante is not null) query = query.Where(x => x.TipoComprobante == request.TipoComprobante.Value);
+        if (!string.IsNullOrWhiteSpace(request.Serie))
+        {
+            var serie = request.Serie.Trim();
+            query = query.Where(x => x.Serie == serie);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Numero))
+        {
+            var numero = request.Numero.Trim();
+            query = query.Where(x => x.Serie.Contains(numero) || (x.Serie + "-" + x.Correlativo).Contains(numero));
+        }
+
+        if (request.FechaDesde is not null) query = query.Where(x => x.FechaEmision >= request.FechaDesde.Value.Date);
+        if (request.FechaHasta is not null)
+        {
+            var hasta = request.FechaHasta.Value.Date.AddDays(1);
+            query = query.Where(x => x.FechaEmision < hasta);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Cliente))
+        {
+            var cliente = request.Cliente.Trim();
+            query = query.Where(x => x.Cliente!.NombreCompleto.Contains(cliente) || x.Cliente.NumeroDocumento.Contains(cliente));
+        }
+
+        if (request.EstadoSunat is not null) query = query.Where(x => x.EstadoSunat == request.EstadoSunat.Value);
+        if (request.EstadoComprobante is not null) query = query.Where(x => x.Estado == request.EstadoComprobante.Value);
+        if (!string.IsNullOrWhiteSpace(request.Vendedor))
+        {
+            var vendedor = request.Vendedor.Trim();
+            query = query.Where(x => x.UsuarioRegistro == vendedor);
+        }
+
+        var shaped = query.Select(x => new
+        {
+            Comprobante = x,
+            TotalPagado = x.Cobros
+                .Where(c => c.Estado == CobroClienteEstado.ACTIVO
+                    && !x.CobrosAplicados.Any(a => a.CobroClienteId == c.CobroClienteId))
+                .Sum(c => (decimal?)c.Monto) ?? 0,
+            TotalAplicado = x.CobrosAplicados
+                .Where(c => c.CobroCliente != null && c.CobroCliente.Estado == CobroClienteEstado.ACTIVO)
+                .Sum(c => (decimal?)c.MontoAplicado) ?? 0,
+            TotalNotasCredito = db.Comprobantes
+                .Where(nc => nc.EmpresaId == x.EmpresaId
+                    && nc.TipoComprobante == TipoComprobante.NCR
+                    && nc.Estado == EstadoRegistro.Activo
+                    && nc.ComprobanteReferenciaId == x.ComprobanteId)
+                .Sum(nc => (decimal?)nc.Total) ?? 0,
+            MedioPagoCobro = x.Cobros
+                .Where(c => c.Estado == CobroClienteEstado.ACTIVO && c.MedioPago != "")
+                .OrderByDescending(c => c.CobroClienteId)
+                .Select(c => c.MedioPago)
+                .FirstOrDefault()
+        })
+        .Select(x => new
+        {
+            x.Comprobante,
+            TotalCobrado = x.TotalPagado + x.TotalAplicado,
+            Saldo = x.Comprobante.Total - x.TotalNotasCredito - (x.TotalPagado + x.TotalAplicado) < 0
+                ? 0
+                : x.Comprobante.Total - x.TotalNotasCredito - (x.TotalPagado + x.TotalAplicado),
+            Gravado = x.Comprobante.Igv > 0 ? x.Comprobante.SubTotal : 0,
+            Exonerado = x.Comprobante.Igv > 0 ? 0 : x.Comprobante.SubTotal,
+            MedioPago = x.MedioPagoCobro ?? (x.Comprobante.FormaPago == FormaPago.Credito ? "Credito" : "Contado")
+        });
+
+        if (!string.IsNullOrWhiteSpace(request.MedioPago))
+        {
+            var medioPago = request.MedioPago.Trim();
+            shaped = shaped.Where(x => x.MedioPago == medioPago);
+        }
+
+        var resumenFilas = await shaped
+            .Select(x => new
+            {
+                x.Gravado,
+                x.Comprobante.Igv,
+                x.Exonerado,
+                x.Comprobante.Total,
+                x.TotalCobrado,
+                x.Saldo
+            })
+            .ToListAsync(cancellationToken);
+
+        var resumen = new ReporteComprobantesResumenDto(
+            resumenFilas.Count,
+            resumenFilas.Sum(x => x.Total),
+            resumenFilas.Sum(x => x.Igv),
+            resumenFilas.Sum(x => x.Gravado),
+            resumenFilas.Sum(x => x.Exonerado),
+            resumenFilas.Sum(x => x.TotalCobrado),
+            resumenFilas.Sum(x => x.Saldo));
+
+        var page = request.Page < 1 ? 1 : request.Page;
+        var pageSize = request.PageSize < 1 ? 10 : Math.Min(request.PageSize, 5000);
+
+        var items = await shaped
+            .OrderByDescending(x => x.Comprobante.FechaEmision)
+            .ThenByDescending(x => x.Comprobante.ComprobanteId)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new ReporteComprobanteRowDto(
+                x.Comprobante.ComprobanteId,
+                x.Comprobante.FechaEmision,
+                x.Comprobante.TipoComprobante,
+                x.Comprobante.Serie + "-" + x.Comprobante.Correlativo,
+                x.Comprobante.Cliente!.NombreCompleto,
+                x.Comprobante.Cliente.NumeroDocumento,
+                "Soles",
+                x.Gravado,
+                x.Comprobante.Igv,
+                x.Exonerado,
+                x.Comprobante.Total,
+                x.TotalCobrado,
+                x.Saldo,
+                x.Comprobante.EstadoSunat,
+                x.Comprobante.Estado,
+                x.Comprobante.UsuarioRegistro == "" ? "-" : x.Comprobante.UsuarioRegistro,
+                x.MedioPago))
+            .ToListAsync(cancellationToken);
+
+        return new ReporteComprobantesDto
+        {
+            Request = request,
+            Comprobantes = new PagedResult<ReporteComprobanteRowDto>
+            {
+                Items = items,
+                Total = resumen.TotalComprobantes,
+                Page = page,
+                PageSize = pageSize
+            },
+            Resumen = resumen,
+            Series = series,
+            MediosPago = mediosPago,
+            Vendedores = vendedores
+        };
+    }
 
     private sealed record MesMonto(int Anio, int Mes, decimal Monto);
 }
+
+
+
+

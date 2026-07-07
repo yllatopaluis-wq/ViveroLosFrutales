@@ -1,4 +1,4 @@
-USE ViveroLosFrutalesDB;
+﻿USE ViveroLosFrutalesDB;
 GO
 
 SET NOCOUNT ON;
@@ -55,6 +55,8 @@ VALUES
 (N'Tesoreria', N'TESORERIA_COBROS', N'Ver', N'Ver Cobros clientes'),
 (N'Tesoreria', N'TESORERIA_COBROS', N'Crear', N'Crear Cobros clientes'),
 (N'Tesoreria', N'TESORERIA_COBROS', N'Anular', N'Anular Cobros clientes'),
+(N'Tesoreria', N'TESORERIA_PAGOSPROVEEDORES', N'Ver', N'Ver Pagos proveedores'),
+(N'Tesoreria', N'TESORERIA_PAGOSPROVEEDORES', N'Registrar', N'Registrar Pagos proveedores'),
 (N'Tesoreria', N'TESORERIA_TRANSFERENCIAS', N'Ver', N'Ver Transferencias'),
 (N'Tesoreria', N'TESORERIA_TRANSFERENCIAS', N'Crear', N'Crear Transferencias'),
 (N'Tesoreria', N'TESORERIA_TRANSFERENCIAS', N'Anular', N'Anular Transferencias'),
@@ -94,6 +96,8 @@ VALUES
 (N'Operaciones', N'Caja', N'Ver', N'Ver Caja'),
 (N'Reportes', N'ReporteGeneral', N'Ver', N'Ver Reporte general'),
 (N'Reportes', N'PropuestasComerciales', N'Ver', N'Ver Propuestas comerciales'),
+(N'Reportes', N'ReporteNotasPedido', N'Ver', N'Ver Reporte de notas de pedido'),
+(N'Reportes', N'ReporteComprobantes', N'Ver', N'Ver Reporte de comprobantes'),
 (N'Reportes', N'CuentasPorPagar', N'Ver', N'Ver Estado de cuenta proveedores'),
 (N'Reportes', N'DevolucionesProveedor', N'Ver', N'Ver Devoluciones proveedor'),
 (N'Reportes', N'ReporteCaja', N'Ver', N'Ver Reporte caja'),
@@ -177,7 +181,7 @@ VALUES
 (N'Home'), (N'Categorias'), (N'Productos'), (N'Clientes'), (N'Cotizaciones'), (N'Comprobantes'),
 (N'NotasCredito'), (N'NotasPedido'), (N'Devoluciones'), (N'Caja'),
 (N'TESORERIA'), (N'TESORERIA_CAJA'), (N'TESORERIA_CAJABANCOS'), (N'TESORERIA_COBROS'),
-(N'TESORERIA_TRANSFERENCIAS'), (N'TESORERIA_CUENTASCLIENTES');
+(N'TESORERIA_PAGOSPROVEEDORES'), (N'TESORERIA_TRANSFERENCIAS'), (N'TESORERIA_CUENTASCLIENTES');
 
 DECLARE @AccionesVendedor TABLE (Accion nvarchar(50) NOT NULL PRIMARY KEY);
 INSERT INTO @AccionesVendedor (Accion)
@@ -194,3 +198,4 @@ WHERE NOT EXISTS (
 
 PRINT N'Roles y permisos sincronizados correctamente.';
 GO
+

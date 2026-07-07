@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
@@ -100,6 +100,7 @@ public interface ICompraRepository
 
 public interface IPagoProveedorRepository
 {
+    Task<PagedResult<PagoProveedorTesoreriaListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
     Task<PagoProveedor?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
     Task GuardarAsync(PagoProveedor pago, CancellationToken cancellationToken);
 }
@@ -155,6 +156,8 @@ public interface IDashboardRepository
 public interface IReporteRepository
 {
     Task<ReporteGeneralDto> ObtenerGeneralAsync(int empresaId, int anioDesde, int anioHasta, string indicador, CancellationToken cancellationToken);
+    Task<ReporteNotasPedidoDto> ObtenerNotasPedidoAsync(int empresaId, ReporteNotasPedidoRequest request, CancellationToken cancellationToken);
+    Task<ReporteComprobantesDto> ObtenerComprobantesAsync(int empresaId, ReporteComprobantesRequest request, CancellationToken cancellationToken);
 }
 
 public interface IErrorAplicacionRepository
@@ -213,7 +216,6 @@ public interface IDevolucionRepository
     Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
     Task GuardarAsync(Devolucion devolucion, CancellationToken cancellationToken);
 }
-
 
 
 

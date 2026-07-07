@@ -49,6 +49,7 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
         if (string.IsNullOrWhiteSpace(serie) || string.IsNullOrWhiteSpace(numero)) return Task.FromResult(false);
 
         return db.Compras.AsNoTracking().AnyAsync(x => x.EmpresaId == empresaId
+            && x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO
             && x.ProveedorId == proveedorId
             && x.TipoDocumento == tipoDocumento
             && x.Serie == serie
@@ -151,7 +152,16 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             x.Fecha,
             x.Proveedor!.RazonSocial,
             x.Documento == string.Empty
-                ? (x.Serie == string.Empty || x.Numero == string.Empty ? "-" : x.Serie + "-" + x.Numero)
+                ? (x.Serie == string.Empty || x.Numero == string.Empty
+                    ? x.TipoDocumento == TipoDocumentoCompra.FACTURA ? "FACTURA"
+                        : x.TipoDocumento == TipoDocumentoCompra.BOLETA ? "BOLETA"
+                        : x.TipoDocumento == TipoDocumentoCompra.LIQUIDACION_COMPRA ? "LIQUIDACION COMPRA"
+                        : x.TipoDocumento == TipoDocumentoCompra.RECIBO ? "RECIBO"
+                        : x.TipoDocumento == TipoDocumentoCompra.NOTA_VENTA ? "NOTA VENTA"
+                        : x.TipoDocumento == TipoDocumentoCompra.PENDIENTE_COMPROBANTE ? "PENDIENTE COMPROBANTE"
+                        : x.TipoDocumento == TipoDocumentoCompra.SIN_DOCUMENTO ? "SIN DOCUMENTO"
+                        : string.Empty
+                    : x.Serie + "-" + x.Numero)
                 : x.Documento,
             x.SubTotal,
             x.Igv,
@@ -163,9 +173,21 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO && x.EstadoPago != EstadoPagoCompra.PAGADO && x.SaldoPendiente > 0,
             x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO));
 
+    private static string TipoDocumentoEtiqueta(TipoDocumentoCompra tipo) => tipo switch
+    {
+        TipoDocumentoCompra.FACTURA => "FACTURA",
+        TipoDocumentoCompra.BOLETA => "BOLETA",
+        TipoDocumentoCompra.LIQUIDACION_COMPRA => "LIQUIDACION COMPRA",
+        TipoDocumentoCompra.RECIBO => "RECIBO",
+        TipoDocumentoCompra.NOTA_VENTA => "NOTA VENTA",
+        TipoDocumentoCompra.PENDIENTE_COMPROBANTE => "PENDIENTE COMPROBANTE",
+        TipoDocumentoCompra.SIN_DOCUMENTO => "SIN DOCUMENTO",
+        _ => tipo.ToString()
+    };
+
     private static string Documento(Compra compra) =>
         string.IsNullOrWhiteSpace(compra.Documento)
-            ? (string.IsNullOrWhiteSpace(compra.Serie) || string.IsNullOrWhiteSpace(compra.Numero) ? compra.TipoDocumento.ToString() : $"{compra.Serie}-{compra.Numero}")
+            ? (string.IsNullOrWhiteSpace(compra.Serie) || string.IsNullOrWhiteSpace(compra.Numero) ? TipoDocumentoEtiqueta(compra.TipoDocumento) : $"{compra.Serie}-{compra.Numero}")
             : compra.Documento;
 }
 

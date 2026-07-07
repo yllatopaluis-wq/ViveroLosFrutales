@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -21,6 +21,9 @@ public class CompraService(
 
     public Task<IReadOnlyList<CompraListDto>> CuentasPorPagarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarCuentasPorPagarAsync(empresaContext.EmpresaId, request, cancellationToken);
+
+    public Task<PagedResult<PagoProveedorTesoreriaListDto>> BuscarPagosProveedorAsync(SearchRequest request, CancellationToken cancellationToken) =>
+        pagoProveedorRepository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
 
     public async Task<CompraFormDataDto> NuevoAsync(CancellationToken cancellationToken) => new()
     {
@@ -90,8 +93,9 @@ public class CompraService(
             if (item.Cantidad <= 0) throw new InvalidOperationException("La cantidad debe ser mayor a cero.");
             if (item.CostoUnitario < 0) throw new InvalidOperationException("El costo unitario no puede ser negativo.");
 
-            var importe = decimal.Round(item.Cantidad * item.CostoUnitario, 2);
-            var igv = decimal.Round(importe * 0.18m, 2);
+            var totalLinea = decimal.Round(item.Cantidad * item.CostoUnitario, 2);
+            var importe = producto.AfectoIgv ? decimal.Round(totalLinea / 1.18m, 2) : totalLinea;
+            var igv = producto.AfectoIgv ? decimal.Round(totalLinea - importe, 2) : 0;
             compra.Detalles.Add(new CompraDetalle
             {
                 ProductoId = item.ProductoId,
@@ -100,7 +104,7 @@ public class CompraService(
                 CostoUnitario = item.CostoUnitario,
                 Importe = importe,
                 Igv = igv,
-                TotalLinea = importe + igv
+                TotalLinea = totalLinea
             });
         }
 
@@ -306,8 +310,20 @@ public class CompraService(
 
     private static string Documento(Compra compra) =>
         string.IsNullOrWhiteSpace(compra.Serie) || string.IsNullOrWhiteSpace(compra.Numero)
-            ? (string.IsNullOrWhiteSpace(compra.Documento) ? compra.TipoDocumento.ToString() : compra.Documento)
+            ? (string.IsNullOrWhiteSpace(compra.Documento) ? TipoDocumentoEtiqueta(compra.TipoDocumento) : compra.Documento)
             : $"{compra.Serie}-{compra.Numero}";
+
+    private static string TipoDocumentoEtiqueta(TipoDocumentoCompra tipo) => tipo switch
+    {
+        TipoDocumentoCompra.FACTURA => "FACTURA",
+        TipoDocumentoCompra.BOLETA => "BOLETA",
+        TipoDocumentoCompra.LIQUIDACION_COMPRA => "LIQUIDACION COMPRA",
+        TipoDocumentoCompra.RECIBO => "RECIBO",
+        TipoDocumentoCompra.NOTA_VENTA => "NOTA VENTA",
+        TipoDocumentoCompra.PENDIENTE_COMPROBANTE => "PENDIENTE COMPROBANTE",
+        TipoDocumentoCompra.SIN_DOCUMENTO => "SIN DOCUMENTO",
+        _ => tipo.ToString()
+    };
 
     private static CompraDetalleViewDto ToDetalleDto(Compra compra) => new()
     {
@@ -348,4 +364,5 @@ public class CompraService(
             x.EstadoPago == PagoProveedorEstado.ACTIVO && compra.EstadoDocumento == EstadoDocumentoCompra.ACTIVO)).ToList()
     };
 }
+
 

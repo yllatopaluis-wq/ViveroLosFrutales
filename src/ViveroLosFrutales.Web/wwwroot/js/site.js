@@ -1,4 +1,4 @@
-window.viveroDetalleRows = function () {
+﻿window.viveroDetalleRows = function () {
   const table = document.querySelector("#detalle tbody");
   if (!table) return;
 
@@ -176,7 +176,7 @@ window.viveroComprobanteForm = function (config) {
     const options = ['<option value="">Seleccione producto</option>'];
     for (const producto of productos) {
       const selected = String(producto.id) === String(selectedId) ? " selected" : "";
-      const precio = producto.precio ?? 0;
+      const precio = precioProducto(producto);
       const afectoIgv = producto.afectoIgv === true || producto.AfectoIgv === true;
       options.push(`<option value="${producto.id}" data-precio="${precio}" data-afecto-igv="${afectoIgv}"${selected}>${escapeHtml(producto.texto)}</option>`);
     }
@@ -197,6 +197,15 @@ window.viveroComprobanteForm = function (config) {
 
   function formatMoney(value) {
     return `S/ ${Number(value || 0).toFixed(2)}`;
+  }
+
+  function precioProducto(producto) {
+    if (!producto) return 0;
+    const precio = producto.precio ?? producto.Precio ?? producto.precioVentaConIgv ?? producto.PrecioVentaConIgv ?? 0;
+    if (Number(precio) > 0) return Number(precio);
+    const precioSinIgv = producto.precioVentaSinIgv ?? producto.PrecioVentaSinIgv ?? 0;
+    const afectoIgv = producto.afectoIgv === true || producto.AfectoIgv === true;
+    return afectoIgv ? Math.round(Number(precioSinIgv || 0) * 1.18 * 100) / 100 : Number(precioSinIgv || 0);
   }
 
   function obtenerProducto(productoId) {
@@ -408,10 +417,14 @@ window.viveroComprobanteForm = function (config) {
     select.addEventListener("change", function () {
       const producto = obtenerProducto(select.value);
       if (producto) {
-        precio.value = Number(producto.precio || 0).toFixed(2);
+        precio.value = precioProducto(producto).toFixed(2);
       }
       recalcularTotal();
     });
+    if (select.value && Number(precio.value || 0) <= 0) {
+      const producto = obtenerProducto(select.value);
+      if (producto) precio.value = precioProducto(producto).toFixed(2);
+    }
     cantidad?.addEventListener("input", recalcularTotal);
     precio.addEventListener("input", recalcularTotal);
     recalcularTotal();
@@ -500,16 +513,22 @@ window.viveroCompraForm = function () {
 
   function recalcularTotales() {
     let subtotal = 0;
+    let igv = 0;
     body.querySelectorAll("tr").forEach((row) => {
+      const producto = row.querySelector(".producto-select");
       const cantidad = Number(row.querySelector(".cantidad-input")?.value || 0);
       const costo = Number(row.querySelector(".costo-input")?.value || 0);
-      const importe = cantidad * costo;
+      const totalLinea = cantidad * costo;
+      const afectoIgv = producto?.selectedOptions?.[0]?.dataset.afectoIgv === "True"
+        || producto?.selectedOptions?.[0]?.dataset.afectoIgv === "true";
+      const importe = afectoIgv ? Math.round((totalLinea / 1.18) * 100) / 100 : totalLinea;
+      const igvLinea = afectoIgv ? totalLinea - importe : 0;
       const total = row.querySelector(".line-total");
-      if (total) total.value = importe.toFixed(2);
+      if (total) total.value = totalLinea.toFixed(2);
       subtotal += importe;
+      igv += igvLinea;
     });
 
-    const igv = subtotal * 0.18;
     const totalCompra = subtotal + igv;
     const esContado = formaPagoSelect?.value === "CONTADO" || formaPagoSelect?.value === "1";
     if (subtotalOutput) subtotalOutput.textContent = formatMoney(subtotal);
@@ -521,6 +540,7 @@ window.viveroCompraForm = function () {
   }
 
   function configurarFila(row) {
+    row.querySelector(".producto-select")?.addEventListener("change", recalcularTotales);
     row.querySelector(".cantidad-input")?.addEventListener("input", recalcularTotales);
     row.querySelector(".costo-input")?.addEventListener("input", recalcularTotales);
   }
@@ -727,7 +747,7 @@ window.viveroCompraDocumentoForm = function () {
   const fields = Array.from(document.querySelectorAll(".compra-document-number-field"));
   if (!tipoDocumento || !serie || !numero || fields.length === 0) return;
 
-  const documentosSinSerieNumero = new Set(["6", "7", "PENDIENTE_COMPROBANTE", "SIN_DOCUMENTO"]);
+  const documentosSinSerieNumero = new Set(["4", "5", "6", "7", "RECIBO", "NOTA_VENTA", "PENDIENTE_COMPROBANTE", "SIN_DOCUMENTO"]);
 
   function normalizarTipoDocumento() {
     const value = (tipoDocumento.value || "").trim().toUpperCase();
@@ -738,6 +758,8 @@ window.viveroCompraDocumentoForm = function () {
   function sincronizarDocumento() {
     const tipo = normalizarTipoDocumento();
     const ocultar = documentosSinSerieNumero.has(tipo.value)
+      || tipo.text.includes("RECIBO")
+      || tipo.text.includes("NOTA VENTA")
       || tipo.text.includes("PENDIENTE")
       || tipo.text.includes("SIN DOCUMENTO");
 

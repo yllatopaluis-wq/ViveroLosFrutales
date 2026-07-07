@@ -19,7 +19,7 @@
     var ventasTrendClass = diario.Ventas.VariacionPorcentaje >= 0 ? "up" : "down";
     var comprasTrendClass = diario.Compras.VariacionPorcentaje >= 0 ? "up" : "down";
     var gastosTrendClass = diario.Gastos.VariacionPorcentaje >= 0 ? "up" : "down";
-    var devolucionesTrendClass = diario.DevolucionesPendientes.VariacionPorcentaje >= 0 ? "up" : "down";
+    var notasPedidoTrendClass = diario.NotasPedido.VariacionPorcentaje >= 0 ? "up" : "down";
 }
 
 <section class="erp-dashboard">
@@ -40,6 +40,12 @@
             <small class="metric-trend @ventasTrendClass"><b>@Html.Raw(TrendIcon(diario.Ventas.VariacionPorcentaje)) @Math.Abs(diario.Ventas.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
             <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16l4-4 3 3 5-7M19 8v5h-5" /></svg></i>
         </a>
+        <a class="metric-card metric-purple" asp-controller="NotasPedido" asp-action="Index">
+            <span>Notas de pedido del d&iacute;a</span>
+            <strong>@diario.NotasPedido.ValorHoy.ToString("C", cultura)</strong>
+            <small class="metric-trend @notasPedidoTrendClass"><b>@Html.Raw(TrendIcon(diario.NotasPedido.VariacionPorcentaje)) @Math.Abs(diario.NotasPedido.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
+            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></i>
+        </a>
         <a class="metric-card metric-orange" asp-controller="Compras" asp-action="Index">
             <span>Compras del d&iacute;a</span>
             <strong>@diario.Compras.ValorHoy.ToString("C", cultura)</strong>
@@ -51,12 +57,6 @@
             <strong>@diario.Gastos.ValorHoy.ToString("C", cultura)</strong>
             <small class="metric-trend @gastosTrendClass"><b>@Html.Raw(TrendIcon(diario.Gastos.VariacionPorcentaje)) @Math.Abs(diario.Gastos.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
             <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 7h14v12H5zM8 11h8M8 15h5" /></svg></i>
-        </a>
-        <a class="metric-card metric-purple" asp-controller="Devoluciones" asp-action="Index">
-            <span>Devoluciones pendientes</span>
-            <strong>@diario.DevolucionesPendientes.ValorHoy.ToString("N0", cultura)</strong>
-            <small class="metric-trend @devolucionesTrendClass"><b>@Html.Raw(TrendIcon(diario.DevolucionesPendientes.VariacionPorcentaje)) @Math.Abs(diario.DevolucionesPendientes.VariacionPorcentaje).ToString("N1", cultura)%</b><em>vs. ayer</em></small>
-            <i class="metric-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7v10l-8 4-8-4V7l8-4ZM12 11v10M4 7l8 4 8-4" /></svg></i>
         </a>
     </section>
 

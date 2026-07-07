@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -26,14 +26,14 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
         producto.Categoria = dto.Categoria.Trim();
         producto.Nombre = dto.Nombre.Trim();
         producto.UnidadMedida = NormalizarUnidadMedida(dto.UnidadMedida);
-        producto.Stock = dto.Stock;
+        producto.Stock = EsCategoriaServicio(dto.Categoria) ? 0 : dto.Stock;
         producto.AfectoIgv = dto.AfectoIgv;
-        producto.PrecioVentaSinIgv = dto.PrecioVentaSinIgv;
+        producto.PrecioVentaConIgv = decimal.Round(dto.PrecioVentaConIgv, 2);
+        producto.PrecioVentaSinIgv = CalcularPrecioSinIgv(producto.PrecioVentaConIgv, producto.AfectoIgv);
         producto.TieneDetraccion = dto.TieneDetraccion;
         producto.PorcentajeDetraccion = dto.TieneDetraccion ? dto.PorcentajeDetraccion : 0;
         producto.UsuarioRegistro = empresaContext.UsuarioNombre;
         producto.Estado = dto.Estado;
-        producto.RecalcularPrecioConIgv();
 
         await repository.GuardarAsync(producto, cancellationToken);
     }
@@ -49,10 +49,16 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
     {
         if (string.IsNullOrWhiteSpace(dto.Categoria)) throw new InvalidOperationException("Seleccione una categoria.");
         if (string.IsNullOrWhiteSpace(dto.Nombre)) throw new InvalidOperationException("El nombre del producto es obligatorio.");
-        if (dto.PrecioVentaSinIgv < 0) throw new InvalidOperationException("El precio no puede ser negativo.");
-        if (dto.Stock < 0) throw new InvalidOperationException("El stock no puede ser negativo.");
+        if (dto.PrecioVentaConIgv < 0) throw new InvalidOperationException("El precio de venta no puede ser negativo.");
+        if (!EsCategoriaServicio(dto.Categoria) && dto.Stock < 0) throw new InvalidOperationException("El stock no puede ser negativo.");
         if (dto.TieneDetraccion && dto.PorcentajeDetraccion <= 0) throw new InvalidOperationException("Ingrese el porcentaje de detraccion.");
     }
+
+    private static bool EsCategoriaServicio(string? categoria) =>
+        string.Equals(categoria?.Trim(), "SERVICIO", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal CalcularPrecioSinIgv(decimal precioVenta, bool afectoIgv) =>
+        afectoIgv ? decimal.Round(precioVenta / 1.18m, 2) : decimal.Round(precioVenta, 2);
 
     private static string NormalizarUnidadMedida(string? unidad)
     {
@@ -82,3 +88,4 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
         Estado = producto.Estado
     };
 }
+

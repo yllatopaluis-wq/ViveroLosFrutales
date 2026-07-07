@@ -149,6 +149,32 @@ El detalle usa el mismo estilo operativo que comprobantes:
 
 Al guardar una compra, el stock del producto aumenta y se registra movimiento de inventario.
 
+
+Tipos de documento admitidos:
+
+- `FACTURA`.
+- `BOLETA`.
+- `LIQUIDACION COMPRA`.
+- `RECIBO`.
+- `NOTA VENTA`.
+- `PENDIENTE COMPROBANTE`.
+- `SIN DOCUMENTO`.
+
+Reglas del documento:
+
+- `FACTURA`, `BOLETA` y `LIQUIDACION COMPRA` requieren serie y numero.
+- `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no requieren serie ni numero.
+- `PENDIENTE COMPROBANTE` es tipo de documento, no estado de compra.
+
+Reglas de pago y anulacion:
+
+- Los estados de pago de compra son `PENDIENTE`, `PARCIAL` y `PAGADO`.
+- El estado del documento de compra es `ACTIVO` o `ANULADO`.
+- Una compra al contado queda pagada y genera pago a proveedor con movimiento de caja.
+- Una compra a credito queda pendiente hasta registrar pagos desde el detalle.
+- Al anular una compra se revierte el stock. Si existen pagos activos, se conserva la trazabilidad historica y se genera una devolucion pendiente del proveedor.
+- Los documentos anulados no bloquean volver a registrar el mismo documento para el mismo proveedor.
+
 ## 11. Cotizaciones
 
 Las cotizaciones son documentos no SUNAT.
@@ -642,6 +668,18 @@ El Reporte General presenta un comparativo anual con meses en filas y aÃ±os en
 - Compras.
 
 Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+
+
+Reportes operativos disponibles:
+
+- `Reporte de notas de pedido`: lista notas de pedido con filtros por cliente/documento, numero de nota, fecha, estado de pago y estado de documento. Incluye cartillas de total de notas, total vendido, total cobrado, saldo pendiente, notas pendientes, parciales, pagadas y anuladas. Permite exportar a Excel/CSV.
+- `Reporte de comprobantes`: lista boletas y facturas emitidas con filtros por tipo, serie, numero, fecha, cliente, estado SUNAT, estado del comprobante, medio de pago y vendedor. Incluye cartillas de total de comprobantes, importe, IGV, gravado, exonerado, cancelado y por cobrar. La moneda se muestra como `Soles` y no se muestra la columna canal. Permite exportar a Excel/CSV.
+
+Permisos de reportes:
+
+- `ReporteNotasPedido` controla el acceso al reporte de notas de pedido.
+- `ReporteComprobantes` controla el acceso al reporte de comprobantes.
+- Estos permisos son independientes de los permisos operativos de `NotasPedido` y `Comprobantes` en ventas.
 
 Los formularios de lista con informacion fechada usan rango de fechas:
 

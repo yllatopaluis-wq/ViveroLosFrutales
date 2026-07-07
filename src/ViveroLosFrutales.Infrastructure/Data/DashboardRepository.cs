@@ -71,8 +71,8 @@ public class DashboardRepository(ApplicationDbContext db) : IDashboardRepository
         var comprasAyer = await SumComprasAsync(empresaId, ayer, hoy, cancellationToken);
         var gastosHoy = await SumGastosAsync(empresaId, hoy, manana, cancellationToken);
         var gastosAyer = await SumGastosAsync(empresaId, ayer, hoy, cancellationToken);
-        var devolucionesHoy = await CountDevolucionesPendientesAsync(empresaId, hoy, manana, cancellationToken);
-        var devolucionesAyer = await CountDevolucionesPendientesAsync(empresaId, ayer, hoy, cancellationToken);
+        var notasPedidoHoy = await SumNotasPedidoAsync(empresaId, hoy, manana, cancellationToken);
+        var notasPedidoAyer = await SumNotasPedidoAsync(empresaId, ayer, hoy, cancellationToken);
 
         var ventasPorDiaRaw = await db.Comprobantes.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId
@@ -160,7 +160,7 @@ public class DashboardRepository(ApplicationDbContext db) : IDashboardRepository
                 new DashboardIndicadorDiarioDto("Ventas del dia", ventasHoy, ventasAyer, CalcularVariacion(ventasHoy, ventasAyer), true),
                 new DashboardIndicadorDiarioDto("Compras del dia", comprasHoy, comprasAyer, CalcularVariacion(comprasHoy, comprasAyer), true),
                 new DashboardIndicadorDiarioDto("Gastos del dia", gastosHoy, gastosAyer, CalcularVariacion(gastosHoy, gastosAyer), true),
-                new DashboardIndicadorDiarioDto("Devoluciones pendientes", devolucionesHoy, devolucionesAyer, CalcularVariacion(devolucionesHoy, devolucionesAyer), false)),
+                new DashboardIndicadorDiarioDto("Notas de pedido del dia", notasPedidoHoy, notasPedidoAyer, CalcularVariacion(notasPedidoHoy, notasPedidoAyer), true)),
             ventasPorDia,
             comprasPorDia,
             gastosPorCategoria,
@@ -195,12 +195,13 @@ public class DashboardRepository(ApplicationDbContext db) : IDashboardRepository
                 && x.Fecha < hasta)
             .SumAsync(x => (decimal?)x.Importe, cancellationToken) ?? 0;
 
-    private Task<int> CountDevolucionesPendientesAsync(int empresaId, DateTime desde, DateTime hasta, CancellationToken cancellationToken) =>
-        db.Devoluciones.AsNoTracking()
-            .CountAsync(x => x.EmpresaId == empresaId
-                && (x.EstadoDevolucion == EstadoDevolucion.PENDIENTE || x.EstadoDevolucion == EstadoDevolucion.PARCIAL)
-                && x.FechaGeneracion >= desde
-                && x.FechaGeneracion < hasta, cancellationToken);
+    private async Task<decimal> SumNotasPedidoAsync(int empresaId, DateTime desde, DateTime hasta, CancellationToken cancellationToken) =>
+        await db.NotasPedido.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId
+                && x.EstadoDocumento == NotaPedidoEstado.ACTIVO
+                && x.Fecha >= desde
+                && x.Fecha < hasta)
+            .SumAsync(x => (decimal?)x.Total, cancellationToken) ?? 0;
 
     private async Task<IReadOnlyList<DashboardMovimientoDto>> ObtenerUltimosMovimientosAsync(int empresaId, CancellationToken cancellationToken)
     {

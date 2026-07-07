@@ -34,9 +34,9 @@ public class ClienteService(IClienteRepository repository, IEmpresaContext empre
         cliente.TipoDocumento = dto.TipoDocumento;
         cliente.NumeroDocumento = dto.NumeroDocumento.Trim();
         cliente.NombreCompleto = dto.NombreCompleto.Trim();
-        cliente.Email = dto.Email.Trim();
+        cliente.Email = dto.Email?.Trim() ?? string.Empty;
         cliente.Direccion = dto.Direccion.Trim();
-        cliente.Telefono = dto.Telefono.Trim();
+        cliente.Telefono = dto.Telefono?.Trim() ?? string.Empty;
         cliente.Estado = dto.Estado;
         if (esNuevo)
         {

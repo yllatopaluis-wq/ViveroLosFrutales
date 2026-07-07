@@ -45,7 +45,7 @@ public class CotizacionService(
             if (productos.Any(x => x.ProductoId == productoId)) continue;
             var producto = await productoRepository.ObtenerAsync(empresaContext.EmpresaId, productoId, cancellationToken);
             if (producto is null) continue;
-            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, producto.PrecioVentaConIgv, producto.Stock, producto.AfectoIgv, producto.Estado));
+            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
         var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
@@ -62,6 +62,14 @@ public class CotizacionService(
                 .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion))
                 .ToArray(),
             productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray());
+    }
+
+    private static decimal ObtenerPrecioVentaConIgv(Producto producto)
+    {
+        if (producto.PrecioVentaConIgv > 0) return producto.PrecioVentaConIgv;
+        return producto.AfectoIgv
+            ? decimal.Round(producto.PrecioVentaSinIgv * 1.18m, 2)
+            : producto.PrecioVentaSinIgv;
     }
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)

@@ -19,4 +19,12 @@ public class ReporteGeneralService(IReporteRepository repository, IEmpresaContex
 
         return repository.ObtenerGeneralAsync(empresaContext.EmpresaId, desde, hasta, indicadorValido, cancellationToken);
     }
+    public Task<ReporteNotasPedidoDto> ObtenerNotasPedidoAsync(ReporteNotasPedidoRequest request, CancellationToken cancellationToken) =>
+        repository.ObtenerNotasPedidoAsync(empresaContext.EmpresaId, request, cancellationToken);
+
+    public Task<ReporteComprobantesDto> ObtenerComprobantesAsync(ReporteComprobantesRequest request, CancellationToken cancellationToken) =>
+        repository.ObtenerComprobantesAsync(empresaContext.EmpresaId, request, cancellationToken);
 }
+
+
+
