@@ -125,7 +125,7 @@ public class DashboardRepository(ApplicationDbContext db) : IDashboardRepository
                 x.TipoComprobante,
                 x.Serie,
                 x.Correlativo,
-                Cliente = x.Cliente!.NombreCompleto,
+                Cliente = x.ClienteNombre != null && x.ClienteNombre != string.Empty ? x.ClienteNombre : x.Cliente!.NombreCompleto,
                 x.Total,
                 x.EstadoSunat
             })

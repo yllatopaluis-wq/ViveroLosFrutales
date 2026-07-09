@@ -1,9 +1,9 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
-public record ClienteListDto(int ClienteId, string NombreCompleto, TipoDocumentoCliente TipoDocumento, string NumeroDocumento, string Direccion, string Telefono, EstadoRegistro Estado);
+public record ClienteListDto(int ClienteId, string NombreCompleto, TipoDocumentoCliente TipoDocumento, string NumeroDocumento, string Direccion, string Telefono, string Email, EstadoRegistro Estado);
 
 public class ClienteEditDto
 {
@@ -23,3 +23,4 @@ public class ClienteEditDto
     public string? Telefono { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
 }
+

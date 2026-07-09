@@ -7,6 +7,13 @@ public class NotaPedido : EmpresaEntity
 {
     public int NotaPedidoId { get; set; }
     public int ClienteId { get; set; }
+    public TipoDocumentoCliente? ClienteTipoDocumento { get; set; }
+    public string? ClienteNumeroDocumento { get; set; }
+    public string? ClienteNombre { get; set; }
+    public string? ClienteNombreComercial { get; set; }
+    public string? ClienteDireccion { get; set; }
+    public string? ClienteTelefono { get; set; }
+    public string? ClienteEmail { get; set; }
     public int? CotizacionId { get; set; }
     public int? ComprobanteId { get; set; }
     public string Serie { get; set; } = string.Empty;
@@ -28,6 +35,36 @@ public class NotaPedido : EmpresaEntity
     public ICollection<CobroCliente> Cobros { get; set; } = new List<CobroCliente>();
     public ICollection<Comprobante> Comprobantes { get; set; } = new List<Comprobante>();
 
+    public TipoDocumentoCliente? ClienteTipoDocumentoMostrar => ClienteTipoDocumento ?? Cliente?.TipoDocumento;
+    public string ClienteNumeroDocumentoMostrar => FirstNotEmpty(ClienteNumeroDocumento, Cliente?.NumeroDocumento);
+    public string ClienteNombreMostrar => FirstNotEmpty(ClienteNombre, Cliente?.NombreCompleto);
+    public string ClienteNombreComercialMostrar => FirstNotEmpty(ClienteNombreComercial);
+    public string ClienteDireccionMostrar => FirstNotEmpty(ClienteDireccion, Cliente?.Direccion);
+    public string ClienteTelefonoMostrar => FirstNotEmpty(ClienteTelefono, Cliente?.Telefono);
+    public string ClienteEmailMostrar => FirstNotEmpty(ClienteEmail, Cliente?.Email);
+
+    public void AplicarSnapshotCliente(Cliente cliente)
+    {
+        ClienteTipoDocumento = cliente.TipoDocumento;
+        ClienteNumeroDocumento = cliente.NumeroDocumento;
+        ClienteNombre = cliente.NombreCompleto;
+        ClienteNombreComercial = string.Empty;
+        ClienteDireccion = cliente.Direccion;
+        ClienteTelefono = cliente.Telefono;
+        ClienteEmail = cliente.Email;
+    }
+
+    public void AplicarSnapshotClienteDesde(Cotizacion cotizacion)
+    {
+        ClienteTipoDocumento = cotizacion.ClienteTipoDocumento ?? cotizacion.Cliente?.TipoDocumento;
+        ClienteNumeroDocumento = FirstNotEmpty(cotizacion.ClienteNumeroDocumento, cotizacion.Cliente?.NumeroDocumento);
+        ClienteNombre = FirstNotEmpty(cotizacion.ClienteNombre, cotizacion.Cliente?.NombreCompleto);
+        ClienteNombreComercial = FirstNotEmpty(cotizacion.ClienteNombreComercial);
+        ClienteDireccion = FirstNotEmpty(cotizacion.ClienteDireccion, cotizacion.Direccion, cotizacion.Cliente?.Direccion);
+        ClienteTelefono = FirstNotEmpty(cotizacion.ClienteTelefono, cotizacion.Cliente?.Telefono);
+        ClienteEmail = FirstNotEmpty(cotizacion.ClienteEmail, cotizacion.Cliente?.Email);
+    }
+
     public void RecalcularTotales()
     {
         Subtotal = decimal.Round(Detalles.Sum(x => x.Subtotal), 2);
@@ -40,4 +77,7 @@ public class NotaPedido : EmpresaEntity
                 ? EstadoPagoNotaPedido.PAGADO
                 : EstadoPagoNotaPedido.PAGO_PARCIAL;
     }
+
+    private static string FirstNotEmpty(params string?[] values) =>
+        values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? string.Empty;
 }

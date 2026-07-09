@@ -169,6 +169,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.Serie).HasMaxLength(10).IsRequired();
             entity.Property(x => x.MotivoNotaCredito).HasMaxLength(500);
             entity.Property(x => x.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(x => x.ClienteNumeroDocumento).HasMaxLength(20);
+            entity.Property(x => x.ClienteNombre).HasMaxLength(250);
+            entity.Property(x => x.ClienteNombreComercial).HasMaxLength(250);
+            entity.Property(x => x.ClienteDireccion).HasMaxLength(500);
+            entity.Property(x => x.ClienteTelefono).HasMaxLength(40);
+            entity.Property(x => x.ClienteEmail).HasMaxLength(120);
             entity.Property(x => x.Direccion).HasMaxLength(500);
             entity.Property(x => x.SubTotal).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Igv).HasColumnType("decimal(18,2)");
@@ -429,6 +435,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.ToTable("NotaPedido");
             entity.HasKey(x => x.NotaPedidoId);
             entity.Property(x => x.Serie).HasMaxLength(10).IsRequired();
+            entity.Property(x => x.ClienteNumeroDocumento).HasMaxLength(20);
+            entity.Property(x => x.ClienteNombre).HasMaxLength(250);
+            entity.Property(x => x.ClienteNombreComercial).HasMaxLength(250);
+            entity.Property(x => x.ClienteDireccion).HasMaxLength(500);
+            entity.Property(x => x.ClienteTelefono).HasMaxLength(40);
+            entity.Property(x => x.ClienteEmail).HasMaxLength(120);
             entity.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Igv).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Total).HasColumnType("decimal(18,2)");
@@ -555,6 +567,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.ToTable("Cotizacion");
             entity.HasKey(x => x.CotizacionId);
             entity.Property(x => x.Serie).HasMaxLength(10).IsRequired();
+            entity.Property(x => x.ClienteNumeroDocumento).HasMaxLength(20);
+            entity.Property(x => x.ClienteNombre).HasMaxLength(250);
+            entity.Property(x => x.ClienteNombreComercial).HasMaxLength(250);
+            entity.Property(x => x.ClienteDireccion).HasMaxLength(500);
+            entity.Property(x => x.ClienteTelefono).HasMaxLength(40);
+            entity.Property(x => x.ClienteEmail).HasMaxLength(120);
             entity.Property(x => x.Direccion).HasMaxLength(500);
             entity.Property(x => x.SubTotal).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Igv).HasColumnType("decimal(18,2)");

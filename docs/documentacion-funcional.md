@@ -196,6 +196,8 @@ Reglas importantes:
 - No se consideran deuda del cliente.
 - No generan comprobantes directamente; la boleta o factura nace desde la nota de pedido.
 - Al convertir, la cotizacion cambia a estado `CONVERTIDA`.
+- Al guardar una cotizacion, se conserva una copia historica de los datos principales del cliente: tipo y numero de documento, nombre, nombre comercial, direccion, telefono y email. Si la cotizacion es antigua y no tiene esos campos, las consultas y PDF usan fallback al maestro de clientes mediante `ClienteId`.
+- La conversion a nota de pedido traslada el snapshot historico del cliente desde la cotizacion, para que el documento generado no cambie si luego se modifica el maestro de clientes.
 
 ## 12. Notas de pedido
 
@@ -225,7 +227,8 @@ Reglas de conversion:
 - Si el cliente no tiene RUC, el sistema genera boleta.
 - Solo se convierte si esta activa, pagada, sin saldo pendiente y sin comprobante relacionado.
 - Al convertir, se mantiene la trazabilidad entre la nota de pedido, sus cobros y el comprobante generado.
-- El comprobante generado muestra los cobros aplicados sin duplicarlos.
+- La nota de pedido conserva una copia historica de los datos principales del cliente. Si proviene de una cotizacion, hereda el snapshot de la cotizacion; si se registra directamente, toma los datos actuales del maestro al guardar.
+- El comprobante generado hereda el snapshot de cliente de la nota de pedido y muestra los cobros aplicados sin duplicarlos.
 
 Reglas de anulacion:
 
@@ -277,6 +280,8 @@ Reglas de comprobantes:
 - Para anular se exige registrar motivo. Si el comprobante tiene cobros activos, esos cobros y sus movimientos de caja permanecen registrados y se genera una solicitud de devolucion pendiente por el monto cobrado.
 - Al anular un comprobante, el sistema envia primero la anulacion a Nubefact cuando corresponde. Solo si Nubefact responde correctamente se marca el comprobante como `ANULADO`; los cobros activos directos o aplicados desde nota de pedido no se anulan.
 - Si el comprobante esta fuera del plazo de anulacion, debe reversarse mediante nota de credito.
+- Al guardar boletas, facturas y notas de credito, el comprobante conserva una copia historica del cliente: tipo y numero de documento, nombre, nombre comercial, direccion, telefono y email. Si un comprobante antiguo no tiene esos campos, listados, reportes, PDFs y Nubefact usan fallback al maestro `Cliente` mediante `ClienteId`.
+- Cuando existe snapshot historico, siempre se muestran esos datos y no los valores actuales del maestro de clientes.
 
 La lista de comprobantes permite buscar por:
 
@@ -301,6 +306,7 @@ Permite:
 - Registrar motivo desde el catalogo de motivos de nota de credito.
 - Generar numeracion propia con serie de nota de credito segun el tipo de comprobante origen.
 - Cargar automaticamente cliente, fecha, total y detalle del comprobante origen.
+- Copiar el snapshot historico del cliente desde el comprobante origen para mantener la misma identidad comercial en la nota de credito.
 - Registrar cantidad de nota de credito por producto, mayor que cero y menor o igual a la cantidad original.
 - Calcular subtotal, IGV y total de forma proporcional al detalle original, respetando productos exonerados.
 - Enviar la nota de credito a Nubefact y guardar PDF/XML/hash/respuesta en el log tecnico.

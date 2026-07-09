@@ -158,6 +158,7 @@ public interface IReporteRepository
     Task<ReporteGeneralDto> ObtenerGeneralAsync(int empresaId, int anioDesde, int anioHasta, string indicador, CancellationToken cancellationToken);
     Task<ReporteNotasPedidoDto> ObtenerNotasPedidoAsync(int empresaId, ReporteNotasPedidoRequest request, CancellationToken cancellationToken);
     Task<ReporteComprobantesDto> ObtenerComprobantesAsync(int empresaId, ReporteComprobantesRequest request, CancellationToken cancellationToken);
+    Task<ReporteMovimientoCajaDto> ObtenerMovimientoCajaAsync(int empresaId, ReporteMovimientoCajaRequest request, CancellationToken cancellationToken);
 }
 
 public interface IErrorAplicacionRepository

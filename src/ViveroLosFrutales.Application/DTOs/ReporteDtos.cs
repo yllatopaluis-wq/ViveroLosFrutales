@@ -156,4 +156,40 @@ public class ReporteComprobantesDto
     public IReadOnlyList<string> MediosPago { get; set; } = Array.Empty<string>();
     public IReadOnlyList<string> Vendedores { get; set; } = Array.Empty<string>();
 }
+public class ReporteMovimientoCajaRequest : SearchRequest
+{
+    public TipoMovimientoCaja? TipoMovimiento { get; set; }
+    public OrigenMovimientoCaja? Origen { get; set; }
+    public string? MedioPago { get; set; }
+    public int? CuentaFinancieraId { get; set; }
+}
 
+public record ReporteMovimientoCajaRowDto(
+    int MovimientoCajaId,
+    DateTime Fecha,
+    TipoMovimientoCaja TipoMovimiento,
+    OrigenMovimientoCaja Origen,
+    string OrigenDescripcion,
+    string ClienteProveedor,
+    string Documento,
+    string MedioPago,
+    string CuentaFinanciera,
+    decimal Monto,
+    string Descripcion);
+
+public record ReporteMovimientoCajaResumenDto(
+    int TotalMovimientos,
+    decimal TotalIngresos,
+    decimal TotalEgresos,
+    decimal Saldo,
+    int MovimientosIngreso,
+    int MovimientosEgreso);
+
+public class ReporteMovimientoCajaDto
+{
+    public ReporteMovimientoCajaRequest Request { get; set; } = new();
+    public PagedResult<ReporteMovimientoCajaRowDto> Movimientos { get; set; } = new();
+    public ReporteMovimientoCajaResumenDto Resumen { get; set; } = new(0, 0, 0, 0, 0, 0);
+    public IReadOnlyList<string> MediosPago { get; set; } = Array.Empty<string>();
+    public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
+}

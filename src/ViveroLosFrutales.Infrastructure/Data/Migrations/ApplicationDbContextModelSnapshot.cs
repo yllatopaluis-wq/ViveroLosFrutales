@@ -563,6 +563,32 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
 
                     b.Property<int>("ClienteId")
                         .HasColumnType("int");
+                    b.Property<string>("ClienteDireccion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ClienteEmail")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("ClienteNombre")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNombreComercial")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNumeroDocumento")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClienteTelefono")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int?>("ClienteTipoDocumento")
+                        .HasColumnType("int");
 
                     b.Property<int?>("ComprobanteReferenciaId")
                         .HasColumnType("int");
@@ -862,6 +888,32 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+                    b.Property<string>("ClienteDireccion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ClienteEmail")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("ClienteNombre")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNombreComercial")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNumeroDocumento")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClienteTelefono")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int?>("ClienteTipoDocumento")
                         .HasColumnType("int");
 
                     b.Property<string>("CondicionesVenta")
@@ -1681,6 +1733,32 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotaPedidoId"));
 
                     b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+                    b.Property<string>("ClienteDireccion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ClienteEmail")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("ClienteNombre")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNombreComercial")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("ClienteNumeroDocumento")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClienteTelefono")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<int?>("ClienteTipoDocumento")
                         .HasColumnType("int");
 
                     b.Property<int?>("ComprobanteId")

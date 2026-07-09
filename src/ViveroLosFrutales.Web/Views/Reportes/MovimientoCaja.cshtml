@@ -1,0 +1,201 @@
+@model ReporteMovimientoCajaDto
+@{
+    var cultura = new System.Globalization.CultureInfo("es-PE");
+    var request = Model.Request;
+    var movimientos = Model.Movimientos;
+    var resumen = Model.Resumen;
+    var desde = request.FechaDesde?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var hasta = request.FechaHasta?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var generado = PeruDateTime.Now.ToString("dd/MM/yyyy hh:mm tt", cultura).ToLowerInvariant();
+
+    string Money(decimal value) => value.ToString("C", cultura);
+    string TipoTexto(TipoMovimientoCaja tipo) => tipo == TipoMovimientoCaja.INGRESO ? "Ingreso" : "Egreso";
+    string TipoClass(TipoMovimientoCaja tipo) => tipo == TipoMovimientoCaja.INGRESO ? "success" : "danger";
+    string OrigenTexto(OrigenMovimientoCaja origen) => origen switch
+    {
+        OrigenMovimientoCaja.COBRO_CLIENTE => "Cobro Cliente",
+        OrigenMovimientoCaja.PAGO_PROVEEDOR => "Pago Proveedor",
+        OrigenMovimientoCaja.GASTO => "Gasto",
+        OrigenMovimientoCaja.INGRESO_MANUAL => "Ingreso Manual",
+        OrigenMovimientoCaja.DEVOLUCION_CLIENTE => "Devolucion Cliente",
+        OrigenMovimientoCaja.DEVOLUCION_PROVEEDOR => "Devolucion Proveedor",
+        OrigenMovimientoCaja.TRANSFERENCIA => "Transferencia",
+        OrigenMovimientoCaja.OTRO => "Otro",
+        _ => origen.ToString()
+    };    string MontoTexto(ReporteMovimientoCajaRowDto item) => $"{(item.TipoMovimiento == TipoMovimientoCaja.INGRESO ? "+" : "-")} {Money(item.Monto)}";
+    string TextoCapitalizado(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "-";
+        var normalized = value.Trim().ToLowerInvariant();
+        return string.Join(" ", normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(x => char.ToUpperInvariant(x[0]) + x[1..]));
+    }
+
+    var queryBase = new Dictionary<string, string>();
+    void AddQuery(string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) queryBase[key] = value;
+    }
+
+    AddQuery("Search", request.Search);
+    AddQuery("FechaDesde", desde);
+    AddQuery("FechaHasta", hasta);
+    AddQuery("TipoMovimiento", request.TipoMovimiento?.ToString());
+    AddQuery("Origen", request.Origen?.ToString());
+    AddQuery("MedioPago", request.MedioPago);
+    AddQuery("CuentaFinancieraId", request.CuentaFinancieraId?.ToString());
+}
+
+<section class="notes-report-page comprobantes-report-page">
+    <div class="notes-report-header">
+        <div class="notes-report-title">
+            <span class="notes-report-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z" /><path d="M7 10h4M15 14h2" /><circle cx="12" cy="12" r="2" /></svg></span>
+            <div>
+                <h1>Reporte de Movimiento de Caja</h1>
+                <p>Consulta y exporta los movimientos activos de caja.</p>
+            </div>
+        </div>
+        <div class="notes-report-actions">
+            <button class="btn-report-primary" form="movimientoCajaReportFilters" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg>Buscar</button>
+            <a class="btn-report-light" asp-action="MovimientoCaja"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6v12m8-12v12" /></svg>Limpiar</a>
+            <a class="btn-report-excel" asp-action="ExportarMovimientoCaja" asp-all-route-data="queryBase"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 10l4 8M13 10l-4 8" /></svg>Exportar Excel</a>
+        </div>
+    </div>
+
+    <form id="movimientoCajaReportFilters" method="get" class="notes-report-filters comprobantes-report-filters">
+        <label>
+            <span>Buscar</span>
+            <input type="search" name="Search" value="@request.Search" placeholder="Cliente, documento, descripcion o cuenta" />
+        </label>
+        <div class="notes-date-range">
+            <label>
+                <span>Fecha de movimiento</span>
+                <input type="date" name="FechaDesde" value="@desde" />
+            </label>
+            <label>
+                <span>&nbsp;</span>
+                <input type="date" name="FechaHasta" value="@hasta" />
+            </label>
+        </div>
+        <label>
+            <span>Tipo de movimiento</span>
+            <select name="TipoMovimiento">
+                <option value="">Todos</option>
+                <option value="INGRESO" selected="@(request.TipoMovimiento == TipoMovimientoCaja.INGRESO)">Ingreso</option>
+                <option value="EGRESO" selected="@(request.TipoMovimiento == TipoMovimientoCaja.EGRESO)">Egreso</option>
+            </select>
+        </label>
+        <label>
+            <span>Origen</span>
+            <select name="Origen">
+                <option value="">Todos</option>
+                @foreach (var origen in Enum.GetValues<OrigenMovimientoCaja>())
+                {
+                    <option value="@origen" selected="@(request.Origen == origen)">@OrigenTexto(origen)</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Medio de pago</span>
+            <select name="MedioPago">
+                <option value="">Todos</option>
+                @foreach (var medio in Model.MediosPago)
+                {
+                    <option value="@medio" selected="@(request.MedioPago == medio)">@TextoCapitalizado(medio)</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Cuenta origen</span>
+            <select name="CuentaFinancieraId">
+                <option value="">Todas</option>
+                @foreach (var cuenta in Model.CuentasFinancieras)
+                {
+                    <option value="@cuenta.CuentaFinancieraId" selected="@(request.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                }
+            </select>
+        </label>
+        <input type="hidden" name="Page" value="1" />
+        <input type="hidden" name="PageSize" value="@(movimientos.PageSize <= 0 ? 10 : movimientos.PageSize)" />
+    </form>
+
+    <div class="notes-kpi-grid comprobantes-kpi-grid">
+        <article class="notes-kpi success"><small>Movimientos</small><strong>@resumen.TotalMovimientos</strong></article>
+        <article class="notes-kpi money"><small>Total Ingresos</small><strong>@Money(resumen.TotalIngresos)</strong></article>
+        <article class="notes-kpi red"><small>Total Egresos</small><strong>@Money(resumen.TotalEgresos)</strong></article>
+        <article class="notes-kpi blue"><small>Saldo</small><strong>@Money(resumen.Saldo)</strong></article>
+        <article class="notes-kpi green"><small>Ingresos</small><strong>@resumen.MovimientosIngreso</strong></article>
+        <article class="notes-kpi orange"><small>Egresos</small><strong>@resumen.MovimientosEgreso</strong></article>
+    </div>
+
+    <section class="notes-table-card">
+        <div class="notes-table-toolbar">
+            <h2>Detalle de Movimiento de Caja</h2>
+            <form method="get" class="notes-page-size">
+                @foreach (var pair in queryBase)
+                {
+                    <input type="hidden" name="@pair.Key" value="@pair.Value" />
+                }
+                <input type="hidden" name="Page" value="1" />
+                <span>Mostrar</span>
+                <select name="PageSize" onchange="this.form.submit()">
+                    <option value="10" selected="@(movimientos.PageSize == 10)">10</option>
+                    <option value="25" selected="@(movimientos.PageSize == 25)">25</option>
+                    <option value="50" selected="@(movimientos.PageSize == 50)">50</option>
+                    <option value="100" selected="@(movimientos.PageSize == 100)">100</option>
+                </select>
+                <span>registros</span>
+            </form>
+        </div>
+
+        <div class="notes-table-wrap">
+            <table class="notes-report-table comprobantes-report-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Origen</th>
+                        <th>Cliente / Proveedor</th>
+                        <th>Documento</th>
+                        <th>Medio de Pago</th>
+                        <th>Cuenta origen</th>
+                        <th>Descripcion</th>
+                        <th class="text-end">Monto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!movimientos.Items.Any())
+                {
+                    <tr><td colspan="9" class="notes-empty">No hay movimientos activos para los filtros seleccionados.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in movimientos.Items)
+                    {
+                        <tr>
+                            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td><span class="notes-badge @TipoClass(item.TipoMovimiento)">@TipoTexto(item.TipoMovimiento)</span></td>
+                            <td>@item.OrigenDescripcion</td>
+                            <td>@item.ClienteProveedor</td>
+                            <td><strong>@item.Documento</strong></td>
+                            <td>@TextoCapitalizado(item.MedioPago)</td>
+                            <td>@(string.IsNullOrWhiteSpace(item.CuentaFinanciera) ? "-" : item.CuentaFinanciera)</td>
+                            <td>@item.Descripcion</td>
+                            <td class="text-end"><strong>@MontoTexto(item)</strong></td>
+                        </tr>
+                    }
+                }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="8">TOTALES DE LA PAGINA</th>
+                        <th class="text-end">@Money(movimientos.Items.Sum(x => x.TipoMovimiento == TipoMovimientoCaja.INGRESO ? x.Monto : -x.Monto))</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @await Html.PartialAsync("_Pager", movimientos)
+    </section>
+
+    <div class="report-generation-note">Fecha de generacion: @generado</div>
+</section>

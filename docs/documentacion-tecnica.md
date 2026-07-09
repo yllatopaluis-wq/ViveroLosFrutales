@@ -284,6 +284,20 @@ Notas de pedido:
 - `NotaPedidoService.AnularAsync` recibe motivo. Si existen cobros activos no llama a `CobroClienteService.AnularAsync`; marca la nota como anulada y delega a `DevolucionService.CrearDevolucionPorAnulacionNotaPedidoAsync`.
 - La lista de notas de pedido muestra `EstadoDevolucion` desde `Devolucion` cuando existe una devolucion activa relacionada.
 
+Datos historicos del cliente:
+
+- `Cotizacion`, `NotaPedido` y `Comprobante` mantienen `ClienteId` como relacion funcional con el maestro `Cliente`.
+- Adicionalmente guardan snapshot nullable del cliente al momento de emitir o guardar el documento: `ClienteTipoDocumento`, `ClienteNumeroDocumento`, `ClienteNombre`, `ClienteNombreComercial`, `ClienteDireccion`, `ClienteTelefono` y `ClienteEmail`.
+- `ClienteTipoDocumento` se almacena como `int NULL`, porque corresponde al enum `TipoDocumentoCliente?`. No debe crearse como `nvarchar`.
+- Los helpers `ClienteNombreMostrar`, `ClienteNumeroDocumentoMostrar`, `ClienteDireccionMostrar` y equivalentes devuelven primero el snapshot; si esta vacio por tratarse de un registro antiguo, hacen fallback al maestro `Cliente`.
+- `CotizacionService.GuardarAsync` llena el snapshot desde el cliente y la direccion final del documento.
+- `CotizacionService.ConvertirANotaPedidoAsync` copia el snapshot de cotizacion hacia `NotaPedido`.
+- `NotaPedidoService.GuardarAsync` llena el snapshot desde el cliente cuando la nota se registra directamente.
+- `NotaPedidoService.ConvertirAsync` copia el snapshot de nota de pedido hacia `Comprobante`.
+- `ComprobanteService.GuardarAsync` llena el snapshot para BOL/FAC directas.
+- `ComprobanteService.EmitirNotaCreditoAsync` copia el snapshot desde el comprobante original hacia la NCR.
+- Repositorios, reportes, tablero, PDF y Nubefact deben proyectar datos de cliente con snapshot primero y fallback despues; no deben leer directamente `Cliente.NombreCompleto` cuando el documento ya tiene snapshot.
+- Los scripts `015-add-snapshot-cliente-comprobante.sql` y `016-add-snapshot-cliente-cotizacion-nota-pedido.sql` agregan estas columnas de forma idempotente sin backfill obligatorio.
 Notas de credito:
 
 - Se implementan como `Comprobante.TipoComprobante = NCR`.

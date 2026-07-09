@@ -64,6 +64,8 @@ window.viveroComprobanteForm = function (config) {
   const clienteSearch = document.querySelector("#clienteSearch");
   const clienteId = document.querySelector("#clienteId");
   const clienteDireccion = document.querySelector("#clienteDireccion");
+  const clienteResumenNombre = document.querySelector("#clienteResumenNombre");
+  const clienteResumenDocumento = document.querySelector("#clienteResumenDocumento");
   const clientesOptions = document.querySelectorAll("#clientesOptions option");
   let clientes = config.clientes || [];
   const tipoComprobante = document.querySelector("#tipoComprobante");
@@ -78,6 +80,7 @@ window.viveroComprobanteForm = function (config) {
   const comprobanteTotal = document.querySelector("#comprobanteTotal");
   let productos = config.productos || [];
   const showTotals = detalleTable?.dataset.showTotals === "true";
+  const externalProductPicker = detalleTable?.dataset.productPickerOwned === "true";
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -97,13 +100,32 @@ window.viveroComprobanteForm = function (config) {
     return clientes;
   }
 
+  function pintarClienteResumen(cliente) {
+    if (clienteResumenNombre) clienteResumenNombre.textContent = cliente?.nombre || "Seleccione cliente";
+    if (clienteResumenDocumento) clienteResumenDocumento.textContent = cliente?.documento || "-";
+    if (clienteResumenTelefono) clienteResumenTelefono.textContent = cliente?.telefono || "-";
+    if (clienteResumenEmail) clienteResumenEmail.textContent = cliente?.email || "-";
+    if (clienteResumenDireccion) clienteResumenDireccion.textContent = cliente?.direccion || "-";
+    if (clienteDireccion) clienteDireccion.value = cliente?.direccion || "";
+  }
+
   function resolverCliente() {
     if (!clienteSearch || !clienteId) return;
     const cliente = clientes.find((item) => item.texto === clienteSearch.value);
     const option = Array.from(clientesOptions).find((item) => item.value === clienteSearch.value);
     clienteId.value = cliente ? cliente.id : option ? option.dataset.id : "";
-    if (clienteDireccion) {
-      clienteDireccion.value = cliente ? cliente.direccion || "" : option ? option.dataset.direccion || "" : "";
+    if (cliente) {
+      pintarClienteResumen(cliente);
+    } else if (option) {
+      pintarClienteResumen({
+        nombre: option.dataset.nombre || option.value.split(" - ")[0] || "Seleccione cliente",
+        documento: option.dataset.documento || option.value.split(" - ").slice(1).join(" - ") || "-",
+        telefono: option.dataset.telefono || "",
+        email: option.dataset.email || "",
+        direccion: option.dataset.direccion || ""
+      });
+    } else {
+      pintarClienteResumen(null);
     }
   }
 
@@ -156,7 +178,7 @@ window.viveroComprobanteForm = function (config) {
       if (!cliente) return;
       clienteSearch.value = cliente.texto || "";
       clienteId.value = cliente.id;
-      if (clienteDireccion) clienteDireccion.value = cliente.direccion || "";
+      pintarClienteResumen(cliente);
       cerrarResultados();
     });
   }
@@ -440,7 +462,7 @@ window.viveroComprobanteForm = function (config) {
     tipoComprobante.addEventListener("change", actualizarNumeracion);
   }
 
-  if (detalleBody) {
+  if (detalleBody && !externalProductPicker) {
     detalleBody.querySelectorAll("tr").forEach(configurarFila);
     detalleBody.addEventListener("click", function (event) {
       const removeButton = event.target.closest(".remove-row");
@@ -477,7 +499,378 @@ window.viveroComprobanteForm = function (config) {
   }
 };
 
-window.viveroStartSunatSync = function (url, empresaId) {
+window.viveroProductoGridSearch = function (config) {
+  const table = document.querySelector(config?.tableSelector || "#detalle");
+  const body = table?.querySelector("tbody");
+  const picker = document.querySelector(config?.pickerSelector || "[data-product-grid-picker]");
+  if (!table || !body || !picker) return;
+
+  let productos = config?.productos || [];
+  const search = picker.querySelector(".producto-grid-search");
+  const results = picker.querySelector(".producto-search-results");
+  const toggle = picker.querySelector(".producto-search-toggle");
+  const add = picker.querySelector(".product-grid-add");
+  const subtotalExonerado = document.querySelector("#comprobanteSubtotalExonerado");
+  const subtotalGravado = document.querySelector("#comprobanteSubtotalGravado");
+  const descuentoOutput = document.querySelector("#comprobanteDescuento");
+  const igvOutput = document.querySelector("#comprobanteIgv");
+  const totalOutput = document.querySelector("#comprobanteTotal");
+  if (!search || !results || !add) return;
+  if (results.parentElement !== document.body) document.body.appendChild(results);
+
+  let itemsActuales = [];
+  let indiceActivo = -1;
+  let punteroEnResultados = false;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function normalizar(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLocaleUpperCase();
+  }
+
+  function codigoProducto(producto) {
+    return producto?.codigo || producto?.Codigo || (producto?.id ? `PROD-${String(producto.id).padStart(6, "0")}` : "");
+  }
+
+  function skuProducto(producto) {
+    return producto?.sku || producto?.Sku || "";
+  }
+
+  function codigoBarrasProducto(producto) {
+    return producto?.codigoBarras || producto?.CodigoBarras || "";
+  }
+
+  function unidadProducto(producto) {
+    return producto?.unidad || producto?.Unidad || producto?.unidadMedida || producto?.UnidadMedida || "NIU";
+  }
+
+  function precioProducto(producto) {
+    return Number(producto?.precio ?? producto?.Precio ?? producto?.precioVentaConIgv ?? producto?.PrecioVentaConIgv ?? 0);
+  }
+
+  function stockProducto(producto) {
+    return Number(producto?.stock ?? producto?.Stock ?? 0);
+  }
+
+  function esAfecto(producto) {
+    return producto?.afectoIgv === true || producto?.AfectoIgv === true;
+  }
+
+  function textoProducto(producto) {
+    if (!producto) return "";
+    return producto.texto || producto.Texto || producto.nombre || producto.Nombre || "";
+  }
+
+  function formatMoney(value) {
+    return `S/ ${Number(value || 0).toFixed(2)}`;
+  }
+
+  function productoIdDeFila(row) {
+    const value = row?.querySelector(".producto-select")?.value || "";
+    return value === "0" ? "" : value;
+  }
+
+  function filaSinProducto(row) {
+    return !productoIdDeFila(row);
+  }
+
+  function obtenerProducto(productoId) {
+    return productos.find((producto) => String(producto.id) === String(productoId));
+  }
+
+  function buscarLocal(term) {
+    const query = normalizar(term);
+    if (!query) return productos.slice(0, 25);
+    return productos.filter((producto) => {
+      return normalizar(textoProducto(producto)).includes(query)
+        || normalizar(producto.nombre || producto.Nombre).includes(query)
+        || normalizar(producto.categoria || producto.Categoria).includes(query)
+        || normalizar(codigoProducto(producto)).includes(query)
+        || normalizar(skuProducto(producto)).includes(query)
+        || normalizar(codigoBarrasProducto(producto)).includes(query);
+    }).slice(0, 25);
+  }
+
+  async function buscarRemoto(term) {
+    if (!config?.productosUrl) return buscarLocal(term);
+    const response = await fetch(`${config.productosUrl}?search=${encodeURIComponent(term || "")}`, { headers: { "Accept": "application/json" } });
+    if (!response.ok) return buscarLocal(term);
+    const encontrados = await response.json();
+    const map = new Map(productos.map((producto) => [String(producto.id), producto]));
+    encontrados.forEach((producto) => map.set(String(producto.id), producto));
+    productos = Array.from(map.values());
+    return encontrados;
+  }
+
+  function cerrarResultados() {
+    results.hidden = true;
+    indiceActivo = -1;
+  }
+
+  function renumerar() {
+    body.querySelectorAll("tr").forEach((row, index) => {
+      const number = row.querySelector(".quote-row-number");
+      if (number) number.textContent = String(index + 1);
+      row.querySelector(".producto-select")?.setAttribute("name", `Detalles[${index}].ProductoId`);
+      row.querySelector(".cantidad-input")?.setAttribute("name", `Detalles[${index}].Cantidad`);
+      row.querySelector(".precio-input")?.setAttribute("name", `Detalles[${index}].PrecioUnitario`);
+    });
+  }
+
+  function marcarStock(row) {
+    const cantidad = Number(row.querySelector(".cantidad-input")?.value || 0);
+    const stock = Number(row.querySelector(".stock-input")?.value || 0);
+    row.classList.toggle("stock-warning", stock > 0 && cantidad > stock);
+  }
+
+  function recalcular() {
+    let exonerado = 0;
+    let gravado = 0;
+    let igv = 0;
+    let descuentoTotal = 0;
+    body.querySelectorAll("tr").forEach((row) => {
+      const producto = obtenerProducto(productoIdDeFila(row));
+      const cantidadInput = row.querySelector(".cantidad-input");
+      const precio = Number(row.querySelector(".precio-input")?.value || 0);
+      const descuento = Math.min(Math.max(Number(row.querySelector(".descuento-input")?.value || 0), 0), 100);
+      const cantidad = Math.max(Number(cantidadInput?.value || 0), 0);
+      if (cantidadInput && Number(cantidadInput.value || 0) <= 0) row.classList.add("quantity-warning");
+      else row.classList.remove("quantity-warning");
+      const bruto = cantidad * precio;
+      const importe = bruto * (1 - descuento / 100);
+      descuentoTotal += bruto - importe;
+      const total = row.querySelector(".line-total");
+      if (total) total.value = importe.toFixed(2);
+      marcarStock(row);
+      if (importe <= 0) return;
+      if (esAfecto(producto)) {
+        const base = Math.round((importe / 1.18) * 100) / 100;
+        gravado += base;
+        igv += importe - base;
+      } else {
+        exonerado += importe;
+      }
+    });
+    if (subtotalExonerado) subtotalExonerado.textContent = formatMoney(exonerado);
+    if (subtotalGravado) subtotalGravado.textContent = formatMoney(gravado);
+    if (descuentoOutput) descuentoOutput.textContent = formatMoney(descuentoTotal);
+    if (igvOutput) igvOutput.textContent = formatMoney(igv);
+    if (totalOutput) totalOutput.textContent = formatMoney(exonerado + gravado + igv);
+  }
+
+  function crearFila(producto) {
+    const index = body.querySelectorAll("tr").length;
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td class="quote-row-number">${index + 1}</td>
+      <td>
+        <input class="form-control form-control-sm producto-search" value="${escapeHtml(textoProducto(producto))}" readonly />
+        <input name="Detalles[${index}].ProductoId" class="producto-select" type="hidden" value="${escapeHtml(producto?.id || "")}" />
+      </td>
+      <td><input value="${escapeHtml(unidadProducto(producto))}" class="form-control form-control-sm unidad-input" readonly /></td>
+      <td><input value="${stockProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end stock-input" readonly /></td>
+      <td><input name="Detalles[${index}].Cantidad" value="1" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+      <td><input name="Detalles[${index}].PrecioUnitario" value="${precioProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
+      <td><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100" /></td>
+      <td><input value="0.00" class="form-control form-control-sm text-end line-total" readonly /></td>
+      <td class="text-center"><button type="button" class="icon-btn danger remove-row" title="Quitar fila" aria-label="Quitar fila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button></td>`;
+    body.appendChild(row);
+    enlazarFila(row);
+    return row;
+  }
+
+  function aplicarProducto(row, producto) {
+    if (!row || !producto) return;
+    row.querySelector(".producto-select").value = producto.id;
+    row.querySelector(".producto-search").value = textoProducto(producto);
+    row.querySelector(".unidad-input").value = unidadProducto(producto);
+    row.querySelector(".stock-input").value = stockProducto(producto).toFixed(2);
+    const cantidad = row.querySelector(".cantidad-input");
+    const precio = row.querySelector(".precio-input");
+    const descuento = row.querySelector(".descuento-input");
+    if (cantidad && Number(cantidad.value || 0) <= 0) cantidad.value = "1";
+    if (precio) precio.value = precioProducto(producto).toFixed(2);
+    if (descuento && descuento.value === "") descuento.value = "0";
+    recalcular();
+  }
+
+  function agregarProducto(producto) {
+    if (!producto) return;
+    let row = Array.from(body.querySelectorAll("tr")).find((item) => String(productoIdDeFila(item)) === String(producto.id));
+    if (row) {
+      const cantidad = row.querySelector(".cantidad-input");
+      cantidad.value = (Number(cantidad.value || 0) + 1).toFixed(2).replace(/\.00$/, "");
+      row.classList.add("product-merged");
+      window.setTimeout(() => row.classList.remove("product-merged"), 550);
+    } else {
+      row = Array.from(body.querySelectorAll("tr")).find(filaSinProducto);
+      if (!row) row = crearFila(producto);
+      aplicarProducto(row, producto);
+    }
+    renumerar();
+    recalcular();
+  }
+
+  function enlazarFila(row) {
+    if (row.dataset.productGridBound === "true") return;
+    row.dataset.productGridBound = "true";
+    row.querySelector(".cantidad-input")?.addEventListener("input", recalcular);
+    row.querySelector(".precio-input")?.addEventListener("input", recalcular);
+    row.querySelector(".descuento-input")?.addEventListener("input", recalcular);
+    row.querySelector(".producto-select")?.addEventListener("change", recalcular);
+  }
+
+  function setActiveIndex(index) {
+    if (itemsActuales.length === 0) return;
+    indiceActivo = (index + itemsActuales.length) % itemsActuales.length;
+    results.querySelectorAll(".producto-search-option").forEach((item, itemIndex) => {
+      item.classList.toggle("active", itemIndex === indiceActivo);
+      if (itemIndex === indiceActivo) item.scrollIntoView({ block: "nearest" });
+    });
+  }
+
+  function pintarResultados(items) {
+    itemsActuales = items;
+    indiceActivo = items.length ? 0 : -1;
+    const rect = search.getBoundingClientRect();
+    results.style.left = `${rect.left}px`;
+    results.style.top = `${rect.bottom + 4}px`;
+    results.style.width = `${rect.width}px`;
+    results.innerHTML = items.length
+      ? items.map((producto, index) => {
+          const sku = skuProducto(producto);
+          const codigoBarras = codigoBarrasProducto(producto);
+          const meta = [`Código: ${codigoProducto(producto)}`, sku ? `SKU: ${sku}` : "SKU: -", codigoBarras ? `CB: ${codigoBarras}` : "", `Stock: ${stockProducto(producto).toFixed(2)} ${unidadProducto(producto)}`].filter(Boolean).join(" | ");
+          return `<button type="button" class="producto-search-option${index === 0 ? " active" : ""}" data-id="${escapeHtml(producto.id)}"><strong>${escapeHtml(textoProducto(producto))}</strong><span>${escapeHtml(meta)}</span><em>Precio: ${formatMoney(precioProducto(producto))}</em></button>`;
+        }).join("")
+      : '<div class="producto-search-empty">Sin coincidencias</div>';
+    results.hidden = false;
+  }
+
+  async function mostrarResultados() {
+    const items = await buscarRemoto(search.value);
+    pintarResultados(items);
+    return items;
+  }
+
+  async function agregarDesdeBusqueda() {
+    if (!search.value.trim() && results.hidden) {
+      await mostrarResultados();
+      search.focus();
+      return;
+    }
+    if (itemsActuales.length === 0) await mostrarResultados();
+    const producto = itemsActuales[indiceActivo] || itemsActuales[0];
+    if (!producto) return;
+    agregarProducto(producto);
+    search.value = "";
+    cerrarResultados();
+    search.focus();
+  }
+
+  body.querySelectorAll("tr").forEach(enlazarFila);
+  renumerar();
+  recalcular();
+
+  table.closest("form")?.addEventListener("submit", function () {
+    body.querySelectorAll("tr").forEach((row) => {
+      const precio = row.querySelector(".precio-input");
+      const descuento = row.querySelector(".descuento-input");
+      const descuentoValue = Math.min(Math.max(Number(descuento?.value || 0), 0), 100);
+      if (!precio || descuentoValue <= 0) return;
+      precio.value = (Number(precio.value || 0) * (1 - descuentoValue / 100)).toFixed(2);
+      descuento.value = "0";
+    });
+  });
+
+  body.addEventListener("click", function (event) {
+    const removeButton = event.target.closest(".remove-row");
+    if (!removeButton) return;
+    removeButton.closest("tr")?.remove();
+    renumerar();
+    recalcular();
+    search.focus();
+  });
+
+  search.addEventListener("input", mostrarResultados);
+  search.addEventListener("focus", mostrarResultados);
+  search.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (results.hidden) mostrarResultados();
+      else setActiveIndex(indiceActivo + 1);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (results.hidden) mostrarResultados();
+      else setActiveIndex(indiceActivo - 1);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      agregarDesdeBusqueda();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cerrarResultados();
+    }
+  });
+  search.addEventListener("blur", function () {
+    window.setTimeout(function () {
+      if (!punteroEnResultados) cerrarResultados();
+    }, 150);
+  });
+  toggle?.addEventListener("click", function () {
+    search.focus();
+    mostrarResultados();
+  });
+  add.addEventListener("click", async function () {
+    if (!search.value.trim()) {
+      search.focus();
+      await mostrarResultados();
+      return;
+    }
+    await agregarDesdeBusqueda();
+  });
+  results.addEventListener("pointerenter", function () {
+    punteroEnResultados = true;
+  });
+  results.addEventListener("pointerleave", function () {
+    punteroEnResultados = false;
+    if (document.activeElement !== search) cerrarResultados();
+  });
+  results.addEventListener("mousemove", function (event) {
+    const option = event.target.closest(".producto-search-option");
+    if (!option) return;
+    const options = Array.from(results.querySelectorAll(".producto-search-option"));
+    setActiveIndex(options.indexOf(option));
+  });
+  results.addEventListener("mousedown", function (event) {
+    const option = event.target.closest(".producto-search-option");
+    if (!option) return;
+    event.preventDefault();
+    const producto = obtenerProducto(option.dataset.id);
+    if (producto) agregarProducto(producto);
+    search.value = "";
+    cerrarResultados();
+    search.focus();
+  });
+  window.addEventListener("scroll", cerrarResultados, true);
+  window.addEventListener("resize", cerrarResultados);
+};window.viveroStartSunatSync = function (url, empresaId) {
   const key = `viveroSunatSyncStarted:${empresaId || "default"}`;
   if (!url || sessionStorage.getItem(key) === "true") return;
   sessionStorage.setItem(key, "true");
@@ -784,3 +1177,13 @@ window.viveroCompraDocumentoForm = function () {
   tipoDocumento.addEventListener("input", sincronizarDocumento);
   sincronizarDocumento();
 };
+
+
+
+
+
+
+
+
+
+

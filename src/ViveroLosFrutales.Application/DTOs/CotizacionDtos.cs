@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Domain.Enums;
+﻿using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
@@ -17,6 +17,13 @@ public class CotizacionEditDto
 {
     public int CotizacionId { get; set; }
     public int ClienteId { get; set; }
+    public TipoDocumentoCliente? ClienteTipoDocumento { get; set; }
+    public string ClienteNumeroDocumento { get; set; } = string.Empty;
+    public string ClienteNombre { get; set; } = string.Empty;
+    public string ClienteNombreComercial { get; set; } = string.Empty;
+    public string ClienteDireccion { get; set; } = string.Empty;
+    public string ClienteTelefono { get; set; } = string.Empty;
+    public string ClienteEmail { get; set; } = string.Empty;
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
     public DateTime FechaEmision { get; set; } = PeruDateTime.Today;

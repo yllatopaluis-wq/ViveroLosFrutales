@@ -31,6 +31,13 @@ public class ComprobanteEditDto
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
     public int ClienteId { get; set; }
+    public TipoDocumentoCliente? ClienteTipoDocumento { get; set; }
+    public string ClienteNumeroDocumento { get; set; } = string.Empty;
+    public string ClienteNombre { get; set; } = string.Empty;
+    public string ClienteNombreComercial { get; set; } = string.Empty;
+    public string ClienteDireccion { get; set; } = string.Empty;
+    public string ClienteTelefono { get; set; } = string.Empty;
+    public string ClienteEmail { get; set; } = string.Empty;
     public int? CotizacionId { get; set; }
     public int? NotaPedidoId { get; set; }
     public string Direccion { get; set; } = string.Empty;
@@ -124,12 +131,14 @@ public class NotaCreditoCreatePageDto
     public PagedResult<NotaCreditoOrigenDto>? Origenes { get; set; }
 }
 public record ComprobanteNumeracionDto(string Serie, int Correlativo);
-public record ComprobanteClienteOptionDto(int ClienteId, string NombreCompleto, string NumeroDocumento, string Direccion);
-public record ComprobanteProductoOptionDto(int ProductoId, string Nombre, string Categoria, decimal PrecioVentaConIgv, decimal Stock, bool AfectoIgv);
+public record ComprobanteClienteOptionDto(int ClienteId, string NombreCompleto, string NumeroDocumento, string Direccion, string Telefono, string Email);
+public record ComprobanteProductoOptionDto(int ProductoId, string Nombre, string Categoria, string UnidadMedida, decimal PrecioVentaConIgv, decimal Stock, bool AfectoIgv);
 public record ComprobanteFormDataDto(
     ComprobanteEditDto Comprobante,
     ComprobanteNumeracionDto Numeracion,
     IReadOnlyCollection<ComprobanteClienteOptionDto> Clientes,
     IReadOnlyCollection<ComprobanteProductoOptionDto> Productos,
     IReadOnlyCollection<CuentaFinancieraOptionDto> CuentasFinancieras);
+
+
 

@@ -127,6 +127,7 @@ Reglas importantes:
 - Una cotización no registra cobros.
 - Una cotización no se convierte directamente en boleta o factura.
 - La conversión válida es a nota de pedido.
+- La cotizacion conserva los datos del cliente usados al guardarla. Cambios posteriores en el maestro no modifican la cotizacion ni su PDF.
 
 ### 5.2 Notas de pedido
 
@@ -155,6 +156,7 @@ Conversión a comprobante:
 - Si el cliente no tiene RUC, se genera boleta.
 - La nota debe estar activa, pagada y sin saldo pendiente.
 - Los cobros registrados en la nota se aplican al comprobante generado.
+- La nota de pedido conserva los datos del cliente de ese momento. Si proviene de una cotizacion, mantiene los datos que venian de esa cotizacion.
 
 Anulación:
 
@@ -186,6 +188,7 @@ Reglas principales:
 - Solo se puede editar si no fue impreso y no fue aceptado por SUNAT.
 - Para anular se exige motivo.
 - Si tiene cobros activos y se anula, se genera devolución pendiente.
+- El comprobante conserva los datos del cliente usados al emitirlo. Cambios posteriores en el maestro no modifican comprobantes ya emitidos ni notas de credito relacionadas.
 
 ### 5.4 Notas de crédito
 

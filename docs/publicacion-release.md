@@ -69,9 +69,11 @@ Cuando se publica una versiÃ³n nueva sobre una base ya existente, ejecutar los
 011-validar-esquema-publicado.sql
 012-sync-roles-permisos.sql
 013-reparar-cuenta-cobros-movimiento-caja.sql
+015-add-snapshot-cliente-comprobante.sql
+016-add-snapshot-cliente-cotizacion-nota-pedido.sql
 ```
 
-El `008` crea o completa el esquema de TesorerÃ­a, cuentas financieras, columnas `CuentaFinancieraId`, cuenta `Caja principal`, Ã­ndices, relaciones y transferencias. El `009` diferencia clientes por empresa. El `010` agrega representante legal y firma de empresa. El `011` valida que PRE/producciÃ³n tenga las tablas y columnas que el cÃ³digo publicado espera. El `012` sincroniza permisos y asignaciones para que el formulario de roles muestre todos los formularios vigentes. El `013` repara los movimientos de caja de cobros existentes para que usen la cuenta financiera guardada en el cobro y no queden imputados a Caja principal.
+El `008` crea o completa el esquema de TesorerÃ­a, cuentas financieras, columnas `CuentaFinancieraId`, cuenta `Caja principal`, Ã­ndices, relaciones y transferencias. El `009` diferencia clientes por empresa. El `010` agrega representante legal y firma de empresa. El `011` valida que PRE/producciÃ³n tenga las tablas y columnas que el cÃ³digo publicado espera. El `012` sincroniza permisos y asignaciones para que el formulario de roles muestre todos los formularios vigentes. El `013` repara los movimientos de caja de cobros existentes para que usen la cuenta financiera guardada en el cobro y no queden imputados a Caja principal. El `015` agrega snapshot historico de cliente en `Comprobante`. El `016` agrega snapshot historico en `Cotizacion` y `NotaPedido`; `ClienteTipoDocumento` debe quedar como `int`, no como `nvarchar`.
 
 Ejemplo con autenticaciÃ³n Windows:
 
@@ -82,6 +84,8 @@ sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\010-add-represen
 sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\011-validar-esquema-publicado.sql
 sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\012-sync-roles-permisos.sql
 sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\013-reparar-cuenta-cobros-movimiento-caja.sql
+sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\015-add-snapshot-cliente-comprobante.sql
+sqlcmd -S SERVIDOR_SQL -d ViveroLosFrutalesDB -E -i scripts\sql\016-add-snapshot-cliente-cotizacion-nota-pedido.sql
 ```
 
 Con usuario SQL reemplazar `-E` por `-U usuario -P password`.

@@ -24,7 +24,12 @@ public class ReporteGeneralService(IReporteRepository repository, IEmpresaContex
 
     public Task<ReporteComprobantesDto> ObtenerComprobantesAsync(ReporteComprobantesRequest request, CancellationToken cancellationToken) =>
         repository.ObtenerComprobantesAsync(empresaContext.EmpresaId, request, cancellationToken);
+
+    public Task<ReporteMovimientoCajaDto> ObtenerMovimientoCajaAsync(ReporteMovimientoCajaRequest request, CancellationToken cancellationToken)
+    {
+        var today = PeruDateTime.Today;
+        request.FechaDesde ??= new DateTime(today.Year, today.Month, 1);
+        request.FechaHasta ??= today;
+        return repository.ObtenerMovimientoCajaAsync(empresaContext.EmpresaId, request, cancellationToken);
+    }
 }
-
-
-

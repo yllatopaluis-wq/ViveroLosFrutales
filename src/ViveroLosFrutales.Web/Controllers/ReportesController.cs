@@ -120,6 +120,42 @@ public class ReportesController(
         var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
         return File(bytes, "text/csv; charset=utf-8", $"reporte-comprobantes-{PeruDateTime.Today:yyyyMMdd}.csv");
     }
+
+    public async Task<IActionResult> MovimientoCaja([FromQuery] ReporteMovimientoCajaRequest request, CancellationToken cancellationToken)
+    {
+        request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+        ViewData["Title"] = "Reporte de movimiento de caja";
+        return View(await reporteGeneralService.ObtenerMovimientoCajaAsync(request, cancellationToken));
+    }
+
+    public async Task<IActionResult> ExportarMovimientoCaja([FromQuery] ReporteMovimientoCajaRequest request, CancellationToken cancellationToken)
+    {
+        request.Page = 1;
+        request.PageSize = 5000;
+        var reporte = await reporteGeneralService.ObtenerMovimientoCajaAsync(request, cancellationToken);
+        var csv = new StringBuilder();
+        csv.AppendLine("Fecha,Tipo,Origen,Cliente Proveedor,Documento,Medio de Pago,Cuenta,Descripcion,Monto");
+
+        foreach (var item in reporte.Movimientos.Items)
+        {
+            csv.AppendLine(string.Join(',', new[]
+            {
+                Csv(item.Fecha.ToString("dd/MM/yyyy")),
+                Csv(TipoMovimientoTexto(item.TipoMovimiento)),
+                Csv(item.OrigenDescripcion),
+                Csv(item.ClienteProveedor),
+                Csv(item.Documento),
+                Csv(item.MedioPago),
+                Csv(item.CuentaFinanciera),
+                Csv(item.Descripcion),
+                Csv(item.Monto.ToString("0.00"))
+            }));
+        }
+
+        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
+        return File(bytes, "text/csv; charset=utf-8", $"reporte-movimiento-caja-{PeruDateTime.Today:yyyyMMdd}.csv");
+    }
+
     private static string Csv(string value) => $"\"{value.Replace("\"", "\"\"")}\"";
     private static string EstadoPagoTexto(EstadoPagoNotaPedido estado) => estado switch
     {
@@ -138,6 +174,8 @@ public class ReportesController(
     };
 
     private static string EstadoRegistroTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+
+    private static string TipoMovimientoTexto(TipoMovimientoCaja tipo) => tipo == TipoMovimientoCaja.INGRESO ? "Ingreso" : "Egreso";
 
     private static string TipoComprobanteTexto(TipoComprobante tipo) => tipo switch
     {

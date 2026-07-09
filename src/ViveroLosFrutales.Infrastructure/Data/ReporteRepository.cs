@@ -214,7 +214,9 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim();
-            query = query.Where(x => x.Cliente!.NombreCompleto.Contains(term)
+            query = query.Where(x => (x.ClienteNombre ?? string.Empty).Contains(term)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(term)
+                || x.Cliente!.NombreCompleto.Contains(term)
                 || x.Cliente.NumeroDocumento.Contains(term)
                 || x.Serie.Contains(term)
                 || (x.Serie + "-" + x.Correlativo).Contains(term));
@@ -283,8 +285,8 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
                 x.Nota.NotaPedidoId,
                 x.Nota.Fecha,
                 x.Nota.Serie + "-" + x.Nota.Correlativo,
-                x.Nota.Cliente!.NombreCompleto,
-                x.Nota.Cliente.NumeroDocumento,
+                x.Nota.ClienteNombre != null && x.Nota.ClienteNombre != string.Empty ? x.Nota.ClienteNombre : x.Nota.Cliente!.NombreCompleto,
+                x.Nota.ClienteNumeroDocumento != null && x.Nota.ClienteNumeroDocumento != string.Empty ? x.Nota.ClienteNumeroDocumento : x.Nota.Cliente!.NumeroDocumento,
                 x.Nota.EstadoDocumento,
                 x.EstadoPagoCalculado,
                 x.Nota.UsuarioModificacion == "" ? "-" : x.Nota.UsuarioModificacion,
@@ -365,7 +367,10 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
         if (!string.IsNullOrWhiteSpace(request.Cliente))
         {
             var cliente = request.Cliente.Trim();
-            query = query.Where(x => x.Cliente!.NombreCompleto.Contains(cliente) || x.Cliente.NumeroDocumento.Contains(cliente));
+            query = query.Where(x => (x.ClienteNombre ?? string.Empty).Contains(cliente)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(cliente)
+                || x.Cliente!.NombreCompleto.Contains(cliente)
+                || x.Cliente.NumeroDocumento.Contains(cliente));
         }
 
         if (request.EstadoSunat is not null) query = query.Where(x => x.EstadoSunat == request.EstadoSunat.Value);
@@ -450,8 +455,8 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
                 x.Comprobante.FechaEmision,
                 x.Comprobante.TipoComprobante,
                 x.Comprobante.Serie + "-" + x.Comprobante.Correlativo,
-                x.Comprobante.Cliente!.NombreCompleto,
-                x.Comprobante.Cliente.NumeroDocumento,
+                x.Comprobante.ClienteNombre != null && x.Comprobante.ClienteNombre != string.Empty ? x.Comprobante.ClienteNombre : x.Comprobante.Cliente!.NombreCompleto,
+                x.Comprobante.ClienteNumeroDocumento != null && x.Comprobante.ClienteNumeroDocumento != string.Empty ? x.Comprobante.ClienteNumeroDocumento : x.Comprobante.Cliente!.NumeroDocumento,
                 "Soles",
                 x.Gravado,
                 x.Comprobante.Igv,
@@ -482,9 +487,251 @@ public class ReporteRepository(ApplicationDbContext db) : IReporteRepository
         };
     }
 
+
+    public async Task<ReporteMovimientoCajaDto> ObtenerMovimientoCajaAsync(
+        int empresaId,
+        ReporteMovimientoCajaRequest request,
+        CancellationToken cancellationToken)
+    {
+        var cuentasFinancieras = await db.CuentasFinancieras.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.Activo)
+            .OrderBy(x => x.Tipo)
+            .ThenBy(x => x.Nombre)
+            .Select(x => new CuentaFinancieraOptionDto(x.CuentaFinancieraId, x.Nombre, x.Tipo, x.Moneda))
+            .ToListAsync(cancellationToken);
+
+        var mediosPago = await db.MovimientosCaja.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo && x.MedioPago != "")
+            .Select(x => x.MedioPago)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToListAsync(cancellationToken);
+
+        var query = db.MovimientosCaja.AsNoTracking()
+            .Include(x => x.CuentaFinanciera)
+            .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo);
+
+        if (request.FechaDesde is not null) query = query.Where(x => x.Fecha >= request.FechaDesde.Value.Date);
+        if (request.FechaHasta is not null)
+        {
+            var hasta = request.FechaHasta.Value.Date.AddDays(1);
+            query = query.Where(x => x.Fecha < hasta);
+        }
+
+        if (request.TipoMovimiento is not null) query = query.Where(x => x.TipoMovimiento == request.TipoMovimiento.Value);
+        if (request.Origen is not null) query = query.Where(x => x.Origen == request.Origen.Value);
+        if (request.CuentaFinancieraId is int cuentaId && cuentaId > 0) query = query.Where(x => x.CuentaFinancieraId == cuentaId);
+        if (!string.IsNullOrWhiteSpace(request.MedioPago))
+        {
+            var medio = request.MedioPago.Trim();
+            query = query.Where(x => x.MedioPago == medio);
+        }
+
+        var movimientosBase = await query
+            .OrderByDescending(x => x.Fecha)
+            .ThenByDescending(x => x.MovimientoCajaId)
+            .ToListAsync(cancellationToken);
+
+        var cobroIds = movimientosBase.Where(x => x.Origen == OrigenMovimientoCaja.COBRO_CLIENTE).Select(x => x.OrigenId).Distinct().ToArray();
+        var devolucionIds = movimientosBase.Where(x => x.Origen is OrigenMovimientoCaja.DEVOLUCION_CLIENTE or OrigenMovimientoCaja.DEVOLUCION_PROVEEDOR).Select(x => x.OrigenId).Distinct().ToArray();
+        var gastoIds = movimientosBase.Where(x => x.Origen == OrigenMovimientoCaja.GASTO).Select(x => x.OrigenId).Distinct().ToArray();
+        var pagoProveedorIds = movimientosBase.Where(x => x.Origen == OrigenMovimientoCaja.PAGO_PROVEEDOR).Select(x => x.OrigenId).Distinct().ToArray();
+        var ingresoIds = movimientosBase.Where(x => x.Origen == OrigenMovimientoCaja.INGRESO_MANUAL).Select(x => x.OrigenId).Distinct().ToArray();
+
+        var cobros = await db.CobrosCliente.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && cobroIds.Contains(x.CobroClienteId))
+            .Select(x => new
+            {
+                x.CobroClienteId,
+                Cliente = x.Cliente!.NombreCompleto,
+                NotaSerie = x.NotaPedido == null ? string.Empty : x.NotaPedido.Serie,
+                NotaCorrelativo = x.NotaPedido == null ? 0 : x.NotaPedido.Correlativo,
+                ComprobanteSerie = x.Comprobante == null ? string.Empty : x.Comprobante.Serie,
+                ComprobanteCorrelativo = x.Comprobante == null ? 0 : x.Comprobante.Correlativo,
+                Aplicado = x.Aplicaciones
+                    .OrderByDescending(a => a.FechaAplicacion)
+                    .Select(a => new { a.Comprobante!.Serie, a.Comprobante.Correlativo })
+                    .FirstOrDefault()
+            })
+            .ToDictionaryAsync(x => x.CobroClienteId, cancellationToken);
+
+        var devoluciones = await db.Devoluciones.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && devolucionIds.Contains(x.DevolucionId))
+            .Select(x => new
+            {
+                x.DevolucionId,
+                Tercero = x.TipoTercero == TipoTerceroDevolucion.CLIENTE ? x.Cliente!.NombreCompleto : x.Proveedor!.RazonSocial,
+                NotaSerie = x.NotaPedido == null ? string.Empty : x.NotaPedido.Serie,
+                NotaCorrelativo = x.NotaPedido == null ? 0 : x.NotaPedido.Correlativo,
+                ComprobanteSerie = x.Comprobante == null ? string.Empty : x.Comprobante.Serie,
+                ComprobanteCorrelativo = x.Comprobante == null ? 0 : x.Comprobante.Correlativo,
+                NotaCreditoSerie = x.NotaCredito == null ? string.Empty : x.NotaCredito.Serie,
+                NotaCreditoCorrelativo = x.NotaCredito == null ? 0 : x.NotaCredito.Correlativo,
+                CompraDocumento = x.Compra == null ? string.Empty : x.Compra.Documento
+            })
+            .ToDictionaryAsync(x => x.DevolucionId, cancellationToken);
+
+        var gastos = await db.Gastos.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && gastoIds.Contains(x.GastoId))
+            .Select(x => new { x.GastoId, x.Descripcion, x.Categoria })
+            .ToDictionaryAsync(x => x.GastoId, cancellationToken);
+
+        var pagosProveedor = await db.PagosProveedor.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && pagoProveedorIds.Contains(x.PagoProveedorId))
+            .Select(x => new
+            {
+                x.PagoProveedorId,
+                Proveedor = x.Proveedor!.RazonSocial,
+                Documento = x.Compra == null ? string.Empty : x.Compra.Documento,
+                x.CompraId
+            })
+            .ToDictionaryAsync(x => x.PagoProveedorId, cancellationToken);
+
+        var ingresosManuales = await db.Ingresos.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && ingresoIds.Contains(x.IngresoId))
+            .Select(x => new { x.IngresoId, x.TipoIngreso, x.Descripcion })
+            .ToDictionaryAsync(x => x.IngresoId, cancellationToken);
+
+        var movimientos = movimientosBase.Select(x =>
+        {
+            var tercero = "-";
+            var documento = "-";
+            var descripcion = x.Descripcion;
+            var extraBusqueda = string.Empty;
+
+            if (x.Origen == OrigenMovimientoCaja.COBRO_CLIENTE && cobros.TryGetValue(x.OrigenId, out var cobro))
+            {
+                tercero = cobro.Cliente;
+                documento = DocumentoCobro(
+                    Numero(cobro.NotaSerie, cobro.NotaCorrelativo),
+                    Numero(cobro.ComprobanteSerie, cobro.ComprobanteCorrelativo),
+                    cobro.Aplicado is null ? string.Empty : Numero(cobro.Aplicado.Serie, cobro.Aplicado.Correlativo));
+                extraBusqueda = $"{tercero} {documento}";
+            }
+            else if ((x.Origen == OrigenMovimientoCaja.DEVOLUCION_CLIENTE || x.Origen == OrigenMovimientoCaja.DEVOLUCION_PROVEEDOR) && devoluciones.TryGetValue(x.OrigenId, out var devolucion))
+            {
+                tercero = devolucion.Tercero;
+                documento = DocumentoDevolucion(
+                    Numero(devolucion.NotaSerie, devolucion.NotaCorrelativo),
+                    Numero(devolucion.ComprobanteSerie, devolucion.ComprobanteCorrelativo),
+                    Numero(devolucion.NotaCreditoSerie, devolucion.NotaCreditoCorrelativo),
+                    devolucion.CompraDocumento);
+                extraBusqueda = $"{tercero} {documento}";
+            }
+            else if (x.Origen == OrigenMovimientoCaja.GASTO && gastos.TryGetValue(x.OrigenId, out var gasto))
+            {
+                documento = $"GASTO-{gasto.GastoId:000000}";
+                descripcion = string.IsNullOrWhiteSpace(descripcion) ? gasto.Descripcion : descripcion;
+                extraBusqueda = $"{documento} {gasto.Categoria} {gasto.Descripcion}";
+            }
+            else if (x.Origen == OrigenMovimientoCaja.PAGO_PROVEEDOR && pagosProveedor.TryGetValue(x.OrigenId, out var pagoProveedor))
+            {
+                tercero = pagoProveedor.Proveedor;
+                documento = string.IsNullOrWhiteSpace(pagoProveedor.Documento) ? $"COMPRA-{pagoProveedor.CompraId:000000}" : pagoProveedor.Documento;
+                extraBusqueda = $"{tercero} {documento}";
+            }
+            else if (x.Origen == OrigenMovimientoCaja.INGRESO_MANUAL && ingresosManuales.TryGetValue(x.OrigenId, out var ingreso))
+            {
+                documento = $"INGRESO-{ingreso.IngresoId:000000}";
+                descripcion = string.IsNullOrWhiteSpace(descripcion) ? ingreso.Descripcion : descripcion;
+                extraBusqueda = $"{documento} {ingreso.TipoIngreso} {ingreso.Descripcion}";
+            }
+            else if (x.Origen == OrigenMovimientoCaja.TRANSFERENCIA)
+            {
+                documento = $"TRF-{x.OrigenId:000000}";
+                extraBusqueda = $"{documento} {descripcion}";
+            }
+
+            var cuenta = x.CuentaFinanciera?.Nombre ?? string.Empty;
+            var dto = new ReporteMovimientoCajaRowDto(
+                x.MovimientoCajaId,
+                x.Fecha,
+                x.TipoMovimiento,
+                x.Origen,
+                OrigenDescripcion(x.Origen),
+                tercero,
+                documento,
+                x.MedioPago,
+                cuenta,
+                x.Monto,
+                descripcion);
+
+            return new MovimientoCajaReporteItem(dto, $"{extraBusqueda} {x.MedioPago} {cuenta} {descripcion}");
+        });
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var term = request.Search.Trim();
+            movimientos = movimientos.Where(x => x.SearchText.Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var filas = movimientos.ToList();
+        var ingresos = filas.Where(x => x.Dto.TipoMovimiento == TipoMovimientoCaja.INGRESO).Sum(x => x.Dto.Monto);
+        var egresos = filas.Where(x => x.Dto.TipoMovimiento == TipoMovimientoCaja.EGRESO).Sum(x => x.Dto.Monto);
+        var resumen = new ReporteMovimientoCajaResumenDto(
+            filas.Count,
+            ingresos,
+            egresos,
+            ingresos - egresos,
+            filas.Count(x => x.Dto.TipoMovimiento == TipoMovimientoCaja.INGRESO),
+            filas.Count(x => x.Dto.TipoMovimiento == TipoMovimientoCaja.EGRESO));
+
+        var page = request.Page < 1 ? 1 : request.Page;
+        var pageSize = request.PageSize < 1 ? 10 : Math.Min(request.PageSize, 5000);
+        var items = filas.Select(x => x.Dto).Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+        return new ReporteMovimientoCajaDto
+        {
+            Request = request,
+            Movimientos = new PagedResult<ReporteMovimientoCajaRowDto>
+            {
+                Items = items,
+                Total = resumen.TotalMovimientos,
+                Page = page,
+                PageSize = pageSize
+            },
+            Resumen = resumen,
+            MediosPago = mediosPago,
+            CuentasFinancieras = cuentasFinancieras
+        };
+    }
+
+    private static string DocumentoCobro(string notaNumero, string comprobanteNumero, string aplicadoNumero)
+    {
+        if (!string.IsNullOrWhiteSpace(notaNumero) && !string.IsNullOrWhiteSpace(aplicadoNumero)) return $"{notaNumero} -> {aplicadoNumero}";
+        if (!string.IsNullOrWhiteSpace(notaNumero)) return notaNumero;
+        if (!string.IsNullOrWhiteSpace(comprobanteNumero)) return comprobanteNumero;
+        if (!string.IsNullOrWhiteSpace(aplicadoNumero)) return aplicadoNumero;
+        return "-";
+    }
+
+    private static string Numero(string serie, int correlativo) =>
+        string.IsNullOrWhiteSpace(serie) || correlativo <= 0 ? string.Empty : $"{serie}-{correlativo}";
+
+    private static string DocumentoDevolucion(string notaNumero, string comprobanteNumero, string notaCreditoNumero, string compraDocumento)
+    {
+        if (!string.IsNullOrWhiteSpace(notaNumero)) return notaNumero;
+        if (!string.IsNullOrWhiteSpace(comprobanteNumero) && !string.IsNullOrWhiteSpace(notaCreditoNumero)) return $"{comprobanteNumero} -> {notaCreditoNumero}";
+        if (!string.IsNullOrWhiteSpace(notaCreditoNumero)) return notaCreditoNumero;
+        if (!string.IsNullOrWhiteSpace(comprobanteNumero)) return comprobanteNumero;
+        if (!string.IsNullOrWhiteSpace(compraDocumento)) return compraDocumento;
+        return "-";
+    }
+
+    private static string OrigenDescripcion(OrigenMovimientoCaja origen) => origen switch
+    {
+        OrigenMovimientoCaja.COBRO_CLIENTE => "Cobro Cliente",
+        OrigenMovimientoCaja.PAGO_PROVEEDOR => "Pago Proveedor",
+        OrigenMovimientoCaja.GASTO => "Gasto",
+        OrigenMovimientoCaja.INGRESO_MANUAL => "Ingreso Manual",
+        OrigenMovimientoCaja.DEVOLUCION_CLIENTE => "Devolucion Cliente",
+        OrigenMovimientoCaja.DEVOLUCION_PROVEEDOR => "Devolucion Proveedor",
+        OrigenMovimientoCaja.TRANSFERENCIA => "Transferencia",
+        OrigenMovimientoCaja.OTRO => "Otro",
+        _ => origen.ToString()
+    };
+
+    private sealed record MovimientoCajaReporteItem(ReporteMovimientoCajaRowDto Dto, string SearchText);
+
     private sealed record MesMonto(int Anio, int Mes, decimal Monto);
 }
-
-
-
-

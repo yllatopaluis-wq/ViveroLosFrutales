@@ -281,7 +281,7 @@
                                 @if (canReporteComprobantes) { <a asp-controller="Reportes" asp-action="Comprobantes" class="sidebar-item @(controller == "Reportes" && action == "Comprobantes" ? "active" : null)"><span class="sidebar-item-label">Comprobantes</span></a> }
                                 @if (canCuentasPorPagar) { <a asp-controller="Reportes" asp-action="CuentasPorPagar" class="sidebar-item @(controller == "Reportes" && action == "CuentasPorPagar" ? "active" : null)"><span class="sidebar-item-label">Cuentas por pagar</span></a> }
                                 @if (canDevolucionesProveedor) { <a asp-controller="Reportes" asp-action="DevolucionesProveedor" class="sidebar-item @(controller == "Reportes" && action == "DevolucionesProveedor" ? "active" : null)"><span class="sidebar-item-label">Devoluciones proveedor</span></a> }
-                                @if (canReporteCaja) { <a asp-controller="Reportes" asp-action="FlujoCaja" class="sidebar-item @(controller == "Reportes" && action == "FlujoCaja" ? "active" : null)"><span class="sidebar-item-label">Reporte caja</span></a> }
+                                @if (canReporteCaja) { <a asp-controller="Reportes" asp-action="MovimientoCaja" class="sidebar-item @(controller == "Reportes" && action == "MovimientoCaja" ? "active" : null)"><span class="sidebar-item-label">Movimiento de caja</span></a> }
                             </div>
                         </details>
                     }
