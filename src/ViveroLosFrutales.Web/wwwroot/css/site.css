@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #f3f6f4;
   --surface: #ffffff;
   --surface-soft: #f8faf7;
@@ -465,14 +465,14 @@ a:hover {
 }
 
 .nav-group summary::after {
-  content: "⌄";
+  content: "âŒ„";
   margin-left: auto;
   color: #8b9792;
   font-size: 15px;
 }
 
 .nav-group[open] summary::after {
-  content: "⌃";
+  content: "âŒƒ";
 }
 
 .nav-group summary:hover,
@@ -2775,5 +2775,677 @@ fieldset.form-grid,
 
   .login-heading h2 {
     font-size: 28px;
+  }
+}
+
+/* Cotizacion compacta */
+.quote-form {
+  display: grid;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.quote-panel {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.quote-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.quote-header-panel {
+  position: relative;
+  padding-right: 170px;
+}
+
+.quote-number {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  color: var(--accent-strong);
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.quote-general-grid,
+.quote-client-summary,
+.quote-product-picker,
+.quote-notes-grid {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.quote-general-grid {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.quote-general-grid label,
+.quote-notes-grid label {
+  min-width: 0;
+}
+
+.quote-general-grid span,
+.quote-client-summary span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.quote-form .form-control,
+.quote-form .form-select {
+  min-height: 32px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 13px;
+}
+
+.quote-client-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.quote-client-summary {
+  grid-template-columns: minmax(160px, 1fr) minmax(110px, 0.45fr) minmax(220px, 1.4fr);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+
+.quote-client-summary div {
+  min-width: 0;
+}
+
+.quote-client-summary strong,
+.quote-inline-input {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-product-picker {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.quote-product-search {
+  min-width: 0;
+}
+
+.quote-product-search .producto-search-toggle {
+  top: 5px;
+}
+
+.producto-search-option strong,
+.producto-search-option span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.producto-search-option span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quote-detail-fieldset,
+.quote-detail-table-wrap {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow-x: visible;
+}
+
+.quote-detail-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  margin-bottom: 0;
+}
+
+.quote-detail-table th,
+.quote-detail-table td {
+  padding: 5px;
+  vertical-align: middle;
+}
+
+.quote-detail-table .detalle-item { width: 34px; }
+.quote-detail-table .detalle-producto { width: auto; }
+.quote-detail-table .detalle-unidad { width: 62px; }
+.quote-detail-table .detalle-stock { width: 82px; }
+.quote-detail-table .detalle-cantidad { width: 78px; }
+.quote-detail-table .detalle-precio { width: 92px; }
+.quote-detail-table .detalle-descuento { width: 82px; }
+.quote-detail-table .detalle-total { width: 88px; }
+.quote-detail-table .detalle-accion { width: 52px; }
+
+.quote-detail-table .form-control,
+.quote-detail-table .form-select {
+  min-height: 28px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.quote-row-number {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.quote-notes-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.quote-notes-grid textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.quote-total-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.quote-bottom-actions {
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .quote-general-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-client-summary,
+  .quote-notes-grid,
+  .quote-total-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-header-panel {
+    padding-right: 12px;
+  }
+
+  .quote-number {
+    position: static;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .quote-general-grid,
+  .quote-client-summary,
+  .quote-product-picker,
+  .quote-notes-grid,
+  .quote-total-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: auto;
+  }
+
+  .quote-detail-table th,
+  .quote-detail-table td {
+    padding: 4px 3px;
+  }
+
+  .quote-detail-table .detalle-item,
+  .quote-detail-table .detalle-unidad,
+  .quote-detail-table .detalle-stock {
+    display: none;
+  }
+}
+
+.producto-search-option.active,
+.producto-search-option.active:hover,
+.producto-search-option.active:focus {
+  background: #dcefe5;
+  outline: 2px solid rgba(22, 99, 58, 0.18);
+}
+
+.producto-search-option em {
+  display: block;
+  margin-top: 2px;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.quote-detail-table tr.stock-warning td {
+  background: #fff8e5;
+}
+
+.quote-detail-table tr.stock-warning .cantidad-input {
+  border-color: #d49500;
+  color: #8a5a00;
+}
+
+.quote-detail-table tr.quantity-warning .cantidad-input {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.quote-detail-table tr.product-merged td {
+  animation: productMergedPulse 0.55s ease-out;
+}
+
+@keyframes productMergedPulse {
+  0% { background: #dff4e8; }
+  100% { background: transparent; }
+}
+
+
+/* Mejoras visuales para captura rapida de productos */
+.quote-form .form-control,
+.quote-form .form-select,
+.quote-inline-input {
+  width: 100%;
+  border: 1px solid #d6e3dc;
+  border-radius: 10px;
+  background-color: #fbfdfc;
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(17, 34, 28, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.quote-form .form-control:hover,
+.quote-form .form-select:hover {
+  border-color: #b7cdc3;
+  background-color: #fff;
+}
+
+.quote-form .form-control:focus,
+.quote-form .form-select:focus {
+  border-color: var(--accent);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(28, 125, 73, 0.14);
+}
+
+.quote-form .form-control[readonly],
+.quote-form .form-control:read-only:not(.producto-grid-search) {
+  background-color: #f8fbf9;
+  color: var(--text);
+}
+
+.quote-product-picker {
+  grid-template-columns: minmax(520px, 1fr) 170px;
+  gap: 10px;
+}
+
+.quote-product-search {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  width: 100%;
+}
+
+.quote-product-search .producto-grid-search {
+  width: 100%;
+  height: 42px;
+  padding: 8px 42px 8px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.quote-product-search .producto-search-toggle {
+  top: 7px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-left: 0;
+  border-radius: 8px;
+  color: var(--accent-strong);
+  background: #eef8f2;
+}
+
+.quote-product-search .producto-search-toggle:hover {
+  background: #dff2e7;
+}
+
+.quote-product-picker .product-grid-add {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.quote-detail-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.quote-detail-table .detalle-item { width: 34px; }
+.quote-detail-table .detalle-producto { width: 42%; }
+.quote-detail-table .detalle-unidad { width: 62px; }
+.quote-detail-table .detalle-stock { width: 78px; }
+.quote-detail-table .detalle-cantidad { width: 74px; }
+.quote-detail-table .detalle-precio { width: 90px; }
+.quote-detail-table .detalle-descuento { width: 78px; }
+.quote-detail-table .detalle-total { width: 86px; }
+.quote-detail-table .detalle-accion { width: 50px; }
+
+.quote-detail-table td {
+  background: #fff;
+}
+
+.quote-detail-table tbody tr:first-child td:first-child {
+  border-top-left-radius: 12px;
+}
+
+.quote-detail-table tbody tr:first-child td:last-child {
+  border-top-right-radius: 12px;
+}
+
+.quote-detail-table .producto-search {
+  min-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-detail-table .unidad-input,
+.quote-detail-table .stock-input,
+.quote-detail-table .line-total {
+  background-color: #f8fbf9;
+  font-weight: 800;
+}
+
+.quote-detail-table .cantidad-input,
+.quote-detail-table .precio-input,
+.quote-detail-table .descuento-input {
+  background-color: #fff;
+  font-weight: 750;
+}
+
+@media (max-width: 1100px) {
+  .quote-product-picker {
+    grid-template-columns: minmax(0, 1fr) 150px;
+  }
+
+  .quote-detail-table .detalle-producto {
+    width: 36%;
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-product-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quote-detail-table .producto-search {
+    min-width: 150px;
+  }
+}
+
+/* Totales de cotizacion en una sola linea */
+.quote-total-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.quote-total-strip > div {
+  min-width: 0;
+  min-height: 88px;
+  padding: 16px 18px;
+}
+
+.quote-total-strip > div span,
+.quote-total-strip > div strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-total-strip > div strong {
+  font-size: 24px;
+  text-align: right;
+}
+
+.quote-total-strip .grand-total {
+  grid-column: auto;
+}
+
+@media (max-width: 1100px) {
+  .quote-total-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .quote-total-strip > div {
+    min-height: 76px;
+    padding: 12px 10px;
+  }
+
+  .quote-total-strip > div span {
+    font-size: 10px;
+  }
+
+  .quote-total-strip > div strong {
+    font-size: 18px;
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-total-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: span 2;
+  }
+}
+
+/* Barra compacta de totales estilo cotizacion */
+.quote-total-strip {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) minmax(140px, 1fr) minmax(120px, 0.9fr) minmax(190px, 1.15fr);
+  gap: 0;
+  align-items: stretch;
+  overflow: hidden;
+  margin-top: 0;
+  padding: 8px;
+  border: 1px solid #dfeae4;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(16, 33, 27, 0.06);
+}
+
+.quote-total-strip > div {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 66px;
+  padding: 8px 22px;
+  border: 0;
+  border-right: 1px solid #e1ebe6;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.quote-total-strip > div span {
+  color: #31423d;
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+  text-transform: none;
+}
+
+.quote-total-strip > div strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.quote-total-strip .grand-total {
+  grid-column: auto;
+  gap: 4px;
+  min-height: 66px;
+  border-right: 0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #0f9852, #10673f);
+  color: #fff;
+}
+
+.quote-total-strip .grand-total span,
+.quote-total-strip .grand-total strong {
+  color: #fff;
+  text-align: center;
+}
+
+.quote-total-strip .grand-total span {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.quote-total-strip .grand-total strong {
+  font-size: 26px;
+}
+
+@media (max-width: 1100px) {
+  .quote-total-strip {
+    grid-template-columns: minmax(95px, 1fr) minmax(95px, 1fr) minmax(110px, 1fr) minmax(95px, 0.9fr) minmax(150px, 1.1fr);
+    padding: 6px;
+  }
+
+  .quote-total-strip > div {
+    min-height: 58px;
+    padding: 7px 10px;
+  }
+
+  .quote-total-strip > div span {
+    font-size: 10px;
+  }
+
+  .quote-total-strip > div strong {
+    font-size: 14px;
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: auto;
+  }
+
+  .quote-total-strip .grand-total strong {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-total-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quote-total-strip > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .quote-total-strip .grand-total {
+    grid-column: span 2;
+  }
+}
+
+/* Resumen informativo de cliente en una sola fila */
+.quote-client-summary-line {
+  grid-template-columns: minmax(170px, 1.25fr) minmax(110px, 0.7fr) minmax(115px, 0.75fr) minmax(160px, 1fr) minmax(260px, 1.7fr);
+  gap: 18px;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid #edf3ef;
+  border-radius: 10px;
+  background: #f8fbf9;
+}
+
+.quote-client-summary-line div {
+  min-width: 0;
+}
+
+.quote-client-summary-line span {
+  margin-bottom: 4px;
+  color: #475d55;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.quote-client-summary-line strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quote-client-summary-line .client-name-block strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+#clienteResumenDireccion {
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .quote-client-summary-line {
+    grid-template-columns: minmax(160px, 1.2fr) minmax(100px, 0.7fr) minmax(110px, 0.75fr) minmax(140px, 1fr) minmax(210px, 1.4fr);
+    gap: 10px;
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .quote-client-summary-line {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

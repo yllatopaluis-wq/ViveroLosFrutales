@@ -18,6 +18,7 @@ public static class PermissionCatalog
         new PermissionDefinition("Tesorería", "TESORERIA_CAJABANCOS", "Ver"),
         new PermissionDefinition("Tesorería", "TESORERIA_CUENTASFINANCIERAS", "Ver", "Crear", "Editar", "Anular"),
         new PermissionDefinition("Tesorería", "TESORERIA_COBROS", "Ver", "Crear", "Anular"),
+        new PermissionDefinition("Tesorería", "TESORERIA_PAGOSPROVEEDORES", "Ver", "Registrar"),
         new PermissionDefinition("Tesorería", "TESORERIA_TRANSFERENCIAS", "Ver", "Crear", "Anular"),
         new PermissionDefinition("Tesorería", "TESORERIA_CUENTASCLIENTES", "Ver"),
         new PermissionDefinition("Tesorería", "TESORERIA_CUENTASPROVEEDORES", "Ver"),
@@ -35,6 +36,8 @@ public static class PermissionCatalog
 
         new PermissionDefinition("Reportes", "ReporteGeneral", "Ver"),
         new PermissionDefinition("Reportes", "PropuestasComerciales", "Ver"),
+        new PermissionDefinition("Reportes", "ReporteNotasPedido", "Ver"),
+        new PermissionDefinition("Reportes", "ReporteComprobantes", "Ver"),
         new PermissionDefinition("Reportes", "CuentasPorPagar", "Ver"),
         new PermissionDefinition("Reportes", "DevolucionesProveedor", "Ver"),
         new PermissionDefinition("Reportes", "ReporteCaja", "Ver"),
@@ -66,6 +69,7 @@ public static class PermissionCatalog
         "TESORERIA_CAJABANCOS" => "Caja y bancos",
         "TESORERIA_CUENTASFINANCIERAS" => "Cuentas financieras",
         "TESORERIA_COBROS" => "Cobros clientes",
+        "TESORERIA_PAGOSPROVEEDORES" => "Pagos proveedores",
         "TESORERIA_TRANSFERENCIAS" => "Transferencias",
         "TESORERIA_CUENTASCLIENTES" => "Estado de cuenta clientes",
         "TESORERIA_CUENTASPROVEEDORES" => "Estado de cuenta proveedores",
@@ -83,6 +87,8 @@ public static class PermissionCatalog
         "ErroresAplicacion" => "Errores de aplicación",
         "ReporteGeneral" => "Reporte general",
         "PropuestasComerciales" => "Propuestas comerciales",
+        "ReporteNotasPedido" => "Reporte de notas de pedido",
+        "ReporteComprobantes" => "Reporte de comprobantes",
         "CuentasPorPagar" => "Estado de cuenta proveedores",
         "DevolucionesProveedor" => "Devoluciones proveedor",
         "ReporteCaja" => "Reporte caja",
@@ -108,3 +114,4 @@ public static class PermissionCatalog
         _ => action
     };
 }
+

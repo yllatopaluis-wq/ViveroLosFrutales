@@ -28,6 +28,8 @@ public class ComprobantesController(
             id = x.ClienteId,
             nombre = x.NombreCompleto,
             documento = x.NumeroDocumento,
+            telefono = x.Telefono,
+            email = x.Email,
             direccion = x.Direccion,
             texto = $"{x.NombreCompleto} - {x.NumeroDocumento}"
         }));
@@ -41,6 +43,10 @@ public class ComprobantesController(
             id = x.ProductoId,
             nombre = x.Nombre,
             categoria = x.Categoria,
+            codigo = $"PROD-{x.ProductoId:D6}",
+            sku = string.Empty,
+            codigoBarras = string.Empty,
+            unidad = x.UnidadMedida,
             precio = x.PrecioVentaConIgv,
             stock = x.Stock,
             afectoIgv = x.AfectoIgv,
@@ -251,4 +257,8 @@ public class ComprobantesController(
         return RedirectToAction(nameof(Index));
     }
 }
+
+
+
+
 

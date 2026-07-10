@@ -1,0 +1,54 @@
+﻿@model RegistrarPagoProveedorDto
+@{
+    ViewData["Title"] = "Registrar pago proveedor";
+    var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
+}
+
+<form asp-action="Registrar" method="post" class="form-card">
+    @Html.AntiForgeryToken()
+    <input asp-for="CompraId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <section class="nota-summary-grid">
+        <div class="nota-summary-card"><span>Proveedor</span><strong>@Model.Proveedor</strong></div>
+        <div class="nota-summary-card"><span>Documento compra</span><strong>@Model.DocumentoCompra</strong></div>
+        <div class="nota-summary-card"><span>Total compra</span><strong>S/ @Model.TotalCompra.ToString("N2")</strong></div>
+        <div class="nota-summary-card"><span>Total pagado</span><strong>S/ @Model.TotalPagado.ToString("N2")</strong></div>
+        <div class="nota-summary-card"><span>Saldo pendiente</span><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></div>
+    </section>
+
+    <div class="form-grid">
+        <label>Fecha pago<input asp-for="FechaPago" type="date" class="form-control form-control-sm" /></label>
+        <label>
+            Medio pago
+            <select asp-for="MedioPago" class="form-select form-select-sm">
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TRANSFERENCIA">Transferencia</option>
+                <option value="YAPE">Yape</option>
+                <option value="TARJETA DEBITO">Tarjeta debito</option>
+                <option value="TARJETA CREDITO">Tarjeta credito</option>
+            </select>
+        </label>
+        <label>Monto pago<input asp-for="MontoPago" class="form-control form-control-sm" /></label>
+        <label>
+            Cuenta origen
+            <select asp-for="CuentaFinancieraId" class="form-select form-select-sm">
+                <option value="">Caja principal</option>
+                @foreach (var cuenta in cuentas)
+                {
+                    <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                }
+            </select>
+        </label>
+    </div>
+    <label>Observacion<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
+    <p class="text-muted">Al confirmar se creara un MovimientoCaja de tipo EGRESO.</p>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-sm btn-primary">Registrar pago</button>
+        <a class="btn btn-sm btn-secondary" asp-action="Index">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>window.viveroFiltrarCuentasPorMedioPago?.();</script>
+}

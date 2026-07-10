@@ -63,6 +63,19 @@ public record PagoProveedorListDto(
     string Observacion,
     bool PuedeAnular);
 
+
+public record PagoProveedorTesoreriaListDto(
+    int PagoProveedorId,
+    int CompraId,
+    DateTime FechaPago,
+    string Proveedor,
+    string DocumentoCompra,
+    decimal Monto,
+    string MedioPago,
+    string CuentaFinanciera,
+    PagoProveedorEstado Estado,
+    string Observacion,
+    bool PuedeAnular);
 public class CompraDetalleViewDto
 {
     public int CompraId { get; set; }
@@ -101,4 +114,8 @@ public class RegistrarPagoProveedorDto
     public decimal MontoPago { get; set; }
     public string Observacion { get; set; } = string.Empty;
 }
+
+
+
+
 

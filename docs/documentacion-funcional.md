@@ -149,6 +149,32 @@ El detalle usa el mismo estilo operativo que comprobantes:
 
 Al guardar una compra, el stock del producto aumenta y se registra movimiento de inventario.
 
+
+Tipos de documento admitidos:
+
+- `FACTURA`.
+- `BOLETA`.
+- `LIQUIDACION COMPRA`.
+- `RECIBO`.
+- `NOTA VENTA`.
+- `PENDIENTE COMPROBANTE`.
+- `SIN DOCUMENTO`.
+
+Reglas del documento:
+
+- `FACTURA`, `BOLETA` y `LIQUIDACION COMPRA` requieren serie y numero.
+- `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no requieren serie ni numero.
+- `PENDIENTE COMPROBANTE` es tipo de documento, no estado de compra.
+
+Reglas de pago y anulacion:
+
+- Los estados de pago de compra son `PENDIENTE`, `PARCIAL` y `PAGADO`.
+- El estado del documento de compra es `ACTIVO` o `ANULADO`.
+- Una compra al contado queda pagada y genera pago a proveedor con movimiento de caja.
+- Una compra a credito queda pendiente hasta registrar pagos desde el detalle.
+- Al anular una compra se revierte el stock. Si existen pagos activos, se conserva la trazabilidad historica y se genera una devolucion pendiente del proveedor.
+- Los documentos anulados no bloquean volver a registrar el mismo documento para el mismo proveedor.
+
 ## 11. Cotizaciones
 
 Las cotizaciones son documentos no SUNAT.
@@ -170,6 +196,8 @@ Reglas importantes:
 - No se consideran deuda del cliente.
 - No generan comprobantes directamente; la boleta o factura nace desde la nota de pedido.
 - Al convertir, la cotizacion cambia a estado `CONVERTIDA`.
+- Al guardar una cotizacion, se conserva una copia historica de los datos principales del cliente: tipo y numero de documento, nombre, nombre comercial, direccion, telefono y email. Si la cotizacion es antigua y no tiene esos campos, las consultas y PDF usan fallback al maestro de clientes mediante `ClienteId`.
+- La conversion a nota de pedido traslada el snapshot historico del cliente desde la cotizacion, para que el documento generado no cambie si luego se modifica el maestro de clientes.
 
 ## 12. Notas de pedido
 
@@ -199,7 +227,8 @@ Reglas de conversion:
 - Si el cliente no tiene RUC, el sistema genera boleta.
 - Solo se convierte si esta activa, pagada, sin saldo pendiente y sin comprobante relacionado.
 - Al convertir, se mantiene la trazabilidad entre la nota de pedido, sus cobros y el comprobante generado.
-- El comprobante generado muestra los cobros aplicados sin duplicarlos.
+- La nota de pedido conserva una copia historica de los datos principales del cliente. Si proviene de una cotizacion, hereda el snapshot de la cotizacion; si se registra directamente, toma los datos actuales del maestro al guardar.
+- El comprobante generado hereda el snapshot de cliente de la nota de pedido y muestra los cobros aplicados sin duplicarlos.
 
 Reglas de anulacion:
 
@@ -251,6 +280,8 @@ Reglas de comprobantes:
 - Para anular se exige registrar motivo. Si el comprobante tiene cobros activos, esos cobros y sus movimientos de caja permanecen registrados y se genera una solicitud de devolucion pendiente por el monto cobrado.
 - Al anular un comprobante, el sistema envia primero la anulacion a Nubefact cuando corresponde. Solo si Nubefact responde correctamente se marca el comprobante como `ANULADO`; los cobros activos directos o aplicados desde nota de pedido no se anulan.
 - Si el comprobante esta fuera del plazo de anulacion, debe reversarse mediante nota de credito.
+- Al guardar boletas, facturas y notas de credito, el comprobante conserva una copia historica del cliente: tipo y numero de documento, nombre, nombre comercial, direccion, telefono y email. Si un comprobante antiguo no tiene esos campos, listados, reportes, PDFs y Nubefact usan fallback al maestro `Cliente` mediante `ClienteId`.
+- Cuando existe snapshot historico, siempre se muestran esos datos y no los valores actuales del maestro de clientes.
 
 La lista de comprobantes permite buscar por:
 
@@ -275,6 +306,7 @@ Permite:
 - Registrar motivo desde el catalogo de motivos de nota de credito.
 - Generar numeracion propia con serie de nota de credito segun el tipo de comprobante origen.
 - Cargar automaticamente cliente, fecha, total y detalle del comprobante origen.
+- Copiar el snapshot historico del cliente desde el comprobante origen para mantener la misma identidad comercial en la nota de credito.
 - Registrar cantidad de nota de credito por producto, mayor que cero y menor o igual a la cantidad original.
 - Calcular subtotal, IGV y total de forma proporcional al detalle original, respetando productos exonerados.
 - Enviar la nota de credito a Nubefact y guardar PDF/XML/hash/respuesta en el log tecnico.
@@ -642,6 +674,18 @@ El Reporte General presenta un comparativo anual con meses en filas y aÃ±os en
 - Compras.
 
 Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+
+
+Reportes operativos disponibles:
+
+- `Reporte de notas de pedido`: lista notas de pedido con filtros por cliente/documento, numero de nota, fecha, estado de pago y estado de documento. Incluye cartillas de total de notas, total vendido, total cobrado, saldo pendiente, notas pendientes, parciales, pagadas y anuladas. Permite exportar a Excel/CSV.
+- `Reporte de comprobantes`: lista boletas y facturas emitidas con filtros por tipo, serie, numero, fecha, cliente, estado SUNAT, estado del comprobante, medio de pago y vendedor. Incluye cartillas de total de comprobantes, importe, IGV, gravado, exonerado, cancelado y por cobrar. La moneda se muestra como `Soles` y no se muestra la columna canal. Permite exportar a Excel/CSV.
+
+Permisos de reportes:
+
+- `ReporteNotasPedido` controla el acceso al reporte de notas de pedido.
+- `ReporteComprobantes` controla el acceso al reporte de comprobantes.
+- Estos permisos son independientes de los permisos operativos de `NotasPedido` y `Comprobantes` en ventas.
 
 Los formularios de lista con informacion fechada usan rango de fechas:
 

@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -66,8 +66,8 @@ public class ComprobanteService(
             EmpresaDireccion = empresa.Direccion,
             EmpresaTelefono = empresa.Telefono,
             EmpresaEmail = empresa.Email,
-            CondicionesVenta = "• Plazo de entrega: Entrega programada a los 6 meses después de aceptación de cotización.\n• Lugar de entrega: En las instalaciones del Vivero (Huaral)\n• Forma de pago: Contado.\n• Garantía: 1 meses\n• Medios de pago: En efectivo, depósito a cuenta corriente",
-            CaracteristicasTecnicas = "• Semillas vegetativas seleccionadas de campos certificados con control fitosanitario.\n• Edad: Plantas de 5 meses.\n• Tamaño de 50 – 70 cm\n• Bolsas medidas de 7 x 12\n• Peso aprox. por planta 3 kilos"
+            CondicionesVenta = "â€¢ Plazo de entrega: Entrega programada a los 6 meses despuÃ©s de aceptaciÃ³n de cotizaciÃ³n.\nâ€¢ Lugar de entrega: En las instalaciones del Vivero (Huaral)\nâ€¢ Forma de pago: Contado.\nâ€¢ GarantÃ­a: 1 meses\nâ€¢ Medios de pago: En efectivo, depÃ³sito a cuenta corriente",
+            CaracteristicasTecnicas = "â€¢ Semillas vegetativas seleccionadas de campos certificados con control fitosanitario.\nâ€¢ Edad: Plantas de 5 meses.\nâ€¢ TamaÃ±o de 50 â€“ 70 cm\nâ€¢ Bolsas medidas de 7 x 12\nâ€¢ Peso aprox. por planta 3 kilos"
         };
     }
 
@@ -88,7 +88,7 @@ public class ComprobanteService(
         var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
-            clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Estado));
+            clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Email, clienteSeleccionado.Estado));
         }
 
         return new ComprobanteFormDataDto(
@@ -96,11 +96,11 @@ public class ComprobanteService(
             numeracion,
             clientes
                 .OrderBy(x => x.NombreCompleto)
-                .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion))
+                .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email))
                 .ToArray(),
             productos
                 .OrderBy(x => x.Nombre)
-                .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
+                .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
                 .ToArray(),
             await cuentaFinancieraService.ListarActivasAsync(cancellationToken));
     }
@@ -116,13 +116,15 @@ public class ComprobanteService(
             {
                 new ComprobanteClienteOptionDto(
                     clienteSeleccionado.ClienteId,
-                    clienteSeleccionado.NombreCompleto,
-                    clienteSeleccionado.NumeroDocumento,
-                    clienteSeleccionado.Direccion)
+                    string.IsNullOrWhiteSpace(dto.ClienteNombre) ? clienteSeleccionado.NombreCompleto : dto.ClienteNombre,
+                    string.IsNullOrWhiteSpace(dto.ClienteNumeroDocumento) ? clienteSeleccionado.NumeroDocumento : dto.ClienteNumeroDocumento,
+                    string.IsNullOrWhiteSpace(dto.ClienteDireccion) ? clienteSeleccionado.Direccion : dto.ClienteDireccion,
+                    string.IsNullOrWhiteSpace(dto.ClienteTelefono) ? clienteSeleccionado.Telefono : dto.ClienteTelefono,
+                    string.IsNullOrWhiteSpace(dto.ClienteEmail) ? clienteSeleccionado.Email : dto.ClienteEmail)
             };
         var productos = (await ProductosSeleccionadosAsync(dto.Detalles.Select(x => x.ProductoId), cancellationToken))
             .OrderBy(x => x.Nombre)
-            .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
+            .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
             .ToArray();
 
         return new ComprobanteFormDataDto(
@@ -136,13 +138,13 @@ public class ComprobanteService(
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
         var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
-        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion)).ToArray();
+        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email)).ToArray();
     }
 
     public async Task<IReadOnlyList<ComprobanteProductoOptionDto>> BuscarProductosAsync(string? search, CancellationToken cancellationToken)
     {
         var productos = await productoRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
-        return productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray();
+        return productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray();
     }
 
     private async Task<IReadOnlyList<ProductoListDto>> ProductosSeleccionadosAsync(IEnumerable<int> productoIds, CancellationToken cancellationToken)
@@ -320,6 +322,7 @@ public class ComprobanteService(
         comprobante.CotizacionId = dto.CotizacionId;
         comprobante.NotaPedidoId = dto.NotaPedidoId;
         comprobante.Direccion = string.IsNullOrWhiteSpace(dto.Direccion) ? cliente.Direccion : dto.Direccion.Trim();
+        comprobante.AplicarSnapshotCliente(cliente, comprobante.Direccion);
         comprobante.FechaEmision = dto.FechaEmision;
         comprobante.FormaPago = dto.FormaPago;
         comprobante.EmpresaRazonSocial = string.IsNullOrWhiteSpace(dto.EmpresaRazonSocial) ? empresa.RazonSocial : dto.EmpresaRazonSocial.Trim();
@@ -640,7 +643,7 @@ public class ComprobanteService(
             Referencia = $"{comprobante.Serie}-{comprobante.Correlativo:000000}",
             TipoComprobanteOrigen = comprobante.TipoComprobante,
             FechaOrigen = comprobante.FechaEmision,
-            Cliente = comprobante.Cliente?.NombreCompleto ?? string.Empty,
+            Cliente = comprobante.ClienteNombreMostrar,
             Total = comprobante.Total,
             TotalCobradoOrigen = totalCobrado,
             NuevoTotalValido = 0,
@@ -708,7 +711,7 @@ public class ComprobanteService(
             Correlativo = await comprobanteRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, TipoComprobante.NCR, serie, cancellationToken),
             ClienteId = original.ClienteId,
             Cliente = original.Cliente,
-            Direccion = original.Direccion,
+            Direccion = original.ClienteDireccionMostrar,
             FechaEmision = dto.FechaEmision.Date,
             FormaPago = FormaPago.Contado,
             Empresa = empresa,
@@ -727,6 +730,7 @@ public class ComprobanteService(
             EstadoSunat = EstadoSunat.Pendiente,
             UsuarioRegistro = empresaContext.UsuarioNombre
         };
+        notaCredito.AplicarSnapshotClienteDesde(original);
 
         foreach (var item in original.Detalles)
         {
@@ -876,6 +880,13 @@ public class ComprobanteService(
         Serie = comprobante.Serie,
         Correlativo = comprobante.Correlativo,
         ClienteId = comprobante.ClienteId,
+        ClienteTipoDocumento = comprobante.ClienteTipoDocumentoMostrar,
+        ClienteNumeroDocumento = comprobante.ClienteNumeroDocumentoMostrar,
+        ClienteNombre = comprobante.ClienteNombreMostrar,
+        ClienteNombreComercial = comprobante.ClienteNombreComercialMostrar,
+        ClienteDireccion = comprobante.ClienteDireccionMostrar,
+        ClienteTelefono = comprobante.ClienteTelefonoMostrar,
+        ClienteEmail = comprobante.ClienteEmailMostrar,
         CotizacionId = comprobante.CotizacionId,
         NotaPedidoId = comprobante.NotaPedidoId,
         Direccion = comprobante.Direccion,
@@ -911,5 +922,8 @@ public class ComprobanteService(
         return decimal.Round(saldo < 0 ? 0 : saldo, 2);
     }
 }
+
+
+
 
 

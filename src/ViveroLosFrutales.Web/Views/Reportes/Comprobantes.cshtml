@@ -1,0 +1,255 @@
+@model ReporteComprobantesDto
+@{
+    var cultura = new System.Globalization.CultureInfo("es-PE");
+    var request = Model.Request;
+    var comprobantes = Model.Comprobantes;
+    var resumen = Model.Resumen;
+    var desde = request.FechaDesde?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var hasta = request.FechaHasta?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var generado = PeruDateTime.Now.ToString("dd/MM/yyyy hh:mm tt", cultura).ToLowerInvariant();
+
+    string Money(decimal value) => value.ToString("C", cultura);
+    string TipoTexto(TipoComprobante tipo) => tipo switch
+    {
+        TipoComprobante.FAC => "Factura",
+        TipoComprobante.BOL => "Boleta",
+        TipoComprobante.NCR => "Nota de credito",
+        _ => tipo.ToString()
+    };
+    string EstadoSunatTexto(EstadoSunat estado) => estado switch
+    {
+        EstadoSunat.Aceptado => "Aceptado",
+        EstadoSunat.Rechazado => "Rechazado",
+        EstadoSunat.Observado => "Observado",
+        EstadoSunat.Pendiente => "Pendiente",
+        EstadoSunat.Anulado => "Anulado",
+        _ => "No enviado"
+    };
+    string EstadoSunatClass(EstadoSunat estado) => estado switch
+    {
+        EstadoSunat.Aceptado => "success",
+        EstadoSunat.Rechazado => "danger",
+        EstadoSunat.Observado => "danger",
+        EstadoSunat.Pendiente => "warning",
+        _ => "muted"
+    };
+    string EstadoTexto(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "Activo" : "Anulado";
+    string EstadoClass(EstadoRegistro estado) => estado == EstadoRegistro.Activo ? "success" : "danger";
+
+    var queryBase = new Dictionary<string, string>();
+    void AddQuery(string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) queryBase[key] = value;
+    }
+
+    AddQuery("TipoComprobante", request.TipoComprobante?.ToString());
+    AddQuery("Serie", request.Serie);
+    AddQuery("Numero", request.Numero);
+    AddQuery("FechaDesde", desde);
+    AddQuery("FechaHasta", hasta);
+    AddQuery("Cliente", request.Cliente);
+    AddQuery("EstadoSunat", request.EstadoSunat?.ToString());
+    AddQuery("EstadoComprobante", request.EstadoComprobante?.ToString());
+    AddQuery("MedioPago", request.MedioPago);
+    AddQuery("Vendedor", request.Vendedor);
+}
+
+<section class="notes-report-page comprobantes-report-page">
+    <div class="notes-report-header">
+        <div class="notes-report-title">
+            <span class="notes-report-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <div>
+                <h1>Reporte de Comprobantes</h1>
+                <p>Consulta y exporta todos los comprobantes emitidos.</p>
+            </div>
+        </div>
+        <div class="notes-report-actions">
+            <button class="btn-report-primary" form="comprobantesReportFilters" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg>Buscar</button>
+            <a class="btn-report-light" asp-action="Comprobantes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6v12m8-12v12" /></svg>Limpiar</a>
+            <a class="btn-report-excel" asp-action="ExportarComprobantes" asp-all-route-data="queryBase"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 10l4 8M13 10l-4 8" /></svg>Exportar Excel</a>
+        </div>
+    </div>
+
+    <form id="comprobantesReportFilters" method="get" class="notes-report-filters comprobantes-report-filters">
+        <label>
+            <span>Tipo de Comprobante</span>
+            <select name="TipoComprobante">
+                <option value="">Todos</option>
+                <option value="FAC" selected="@(request.TipoComprobante == TipoComprobante.FAC)">Factura</option>
+                <option value="BOL" selected="@(request.TipoComprobante == TipoComprobante.BOL)">Boleta</option>
+            </select>
+        </label>
+        <label>
+            <span>Serie</span>
+            <select name="Serie">
+                <option value="">Todas</option>
+                @foreach (var serie in Model.Series)
+                {
+                    <option value="@serie" selected="@(request.Serie == serie)">@serie</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Numero de Comprobante</span>
+            <input type="text" name="Numero" value="@request.Numero" placeholder="Ej: F001-000123" />
+        </label>
+        <div class="notes-date-range">
+            <label>
+                <span>Fecha de emision</span>
+                <input type="date" name="FechaDesde" value="@desde" />
+            </label>
+            <label>
+                <span>&nbsp;</span>
+                <input type="date" name="FechaHasta" value="@hasta" />
+            </label>
+        </div>
+        <label>
+            <span>Cliente</span>
+            <input type="search" name="Cliente" value="@request.Cliente" placeholder="Buscar por cliente o Nro de documento" />
+        </label>
+        <label>
+            <span>Estado SUNAT</span>
+            <select name="EstadoSunat">
+                <option value="">Todos</option>
+                <option value="Aceptado" selected="@(request.EstadoSunat == EstadoSunat.Aceptado)">Aceptado</option>
+                <option value="Pendiente" selected="@(request.EstadoSunat == EstadoSunat.Pendiente)">Pendiente</option>
+                <option value="Rechazado" selected="@(request.EstadoSunat == EstadoSunat.Rechazado)">Rechazado</option>
+                <option value="Observado" selected="@(request.EstadoSunat == EstadoSunat.Observado)">Observado</option>
+                <option value="Anulado" selected="@(request.EstadoSunat == EstadoSunat.Anulado)">Anulado</option>
+                <option value="NoAplica" selected="@(request.EstadoSunat == EstadoSunat.NoAplica)">No enviado</option>
+            </select>
+        </label>
+        <label>
+            <span>Estado del Comprobante</span>
+            <select name="EstadoComprobante">
+                <option value="">Todos</option>
+                <option value="Activo" selected="@(request.EstadoComprobante == EstadoRegistro.Activo)">Activo</option>
+                <option value="Anulado" selected="@(request.EstadoComprobante == EstadoRegistro.Anulado)">Anulado</option>
+            </select>
+        </label>
+        <label>
+            <span>Medio de Pago</span>
+            <select name="MedioPago">
+                <option value="">Todos</option>
+                @foreach (var medio in Model.MediosPago)
+                {
+                    <option value="@medio" selected="@(request.MedioPago == medio)">@medio</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Vendedor</span>
+            <select name="Vendedor">
+                <option value="">Todos</option>
+                @foreach (var vendedor in Model.Vendedores)
+                {
+                    <option value="@vendedor" selected="@(request.Vendedor == vendedor)">@vendedor</option>
+                }
+            </select>
+        </label>
+        <input type="hidden" name="Page" value="1" />
+        <input type="hidden" name="PageSize" value="@(comprobantes.PageSize <= 0 ? 10 : comprobantes.PageSize)" />
+    </form>
+
+    <div class="notes-kpi-grid comprobantes-kpi-grid">
+        <article class="notes-kpi success"><small>Total Comprobantes</small><strong>@resumen.TotalComprobantes</strong></article>
+        <article class="notes-kpi money"><small>Total Importe</small><strong>@Money(resumen.TotalImporte)</strong></article>
+        <article class="notes-kpi blue"><small>Total IGV</small><strong>@Money(resumen.TotalIgv)</strong></article>
+        <article class="notes-kpi warning"><small>Total Gravado</small><strong>@Money(resumen.TotalGravado)</strong></article>
+        <article class="notes-kpi purple"><small>Total Exonerado</small><strong>@Money(resumen.TotalExonerado)</strong></article>
+        <article class="notes-kpi orange"><small>Total Cancelado</small><strong>@Money(resumen.TotalCancelado)</strong></article>
+        <article class="notes-kpi red"><small>Total por Cobrar</small><strong>@Money(resumen.TotalPorCobrar)</strong></article>
+    </div>
+
+    <section class="notes-table-card">
+        <div class="notes-table-toolbar">
+            <h2>Detalle de Comprobantes</h2>
+            <form method="get" class="notes-page-size">
+                @foreach (var pair in queryBase)
+                {
+                    <input type="hidden" name="@pair.Key" value="@pair.Value" />
+                }
+                <input type="hidden" name="Page" value="1" />
+                <span>Mostrar</span>
+                <select name="PageSize" onchange="this.form.submit()">
+                    <option value="10" selected="@(comprobantes.PageSize == 10)">10</option>
+                    <option value="25" selected="@(comprobantes.PageSize == 25)">25</option>
+                    <option value="50" selected="@(comprobantes.PageSize == 50)">50</option>
+                    <option value="100" selected="@(comprobantes.PageSize == 100)">100</option>
+                </select>
+                <span>registros</span>
+            </form>
+        </div>
+
+        <div class="notes-table-wrap">
+            <table class="notes-report-table comprobantes-report-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Serie - Numero</th>
+                        <th>Cliente</th>
+                        <th>Documento</th>
+                        <th>Moneda</th>
+                        <th class="text-end">Gravado</th>
+                        <th class="text-end">IGV</th>
+                        <th class="text-end">Exonerado</th>
+                        <th class="text-end">Importe Total</th>
+                        <th class="text-end">Cobrado</th>
+                        <th class="text-end">Saldo</th>
+                        <th>Estado SUNAT</th>
+                        <th>Estado</th>
+                        <th>Vendedor</th>
+                        <th>Medio de Pago</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!comprobantes.Items.Any())
+                {
+                    <tr><td colspan="16" class="notes-empty">No hay comprobantes para los filtros seleccionados.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in comprobantes.Items)
+                    {
+                        <tr>
+                            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@TipoTexto(item.TipoComprobante)</td>
+                            <td><strong>@item.SerieNumero</strong></td>
+                            <td>@item.Cliente</td>
+                            <td>@item.NumeroDocumento</td>
+                            <td>@item.Moneda</td>
+                            <td class="text-end">@Money(item.Gravado)</td>
+                            <td class="text-end">@Money(item.Igv)</td>
+                            <td class="text-end">@Money(item.Exonerado)</td>
+                            <td class="text-end">@Money(item.Total)</td>
+                            <td class="text-end">@Money(item.TotalCobrado)</td>
+                            <td class="text-end">@Money(item.SaldoPendiente)</td>
+                            <td><span class="notes-badge @EstadoSunatClass(item.EstadoSunat)">@EstadoSunatTexto(item.EstadoSunat)</span></td>
+                            <td><span class="notes-badge @EstadoClass(item.Estado)">@EstadoTexto(item.Estado)</span></td>
+                            <td>@item.Vendedor</td>
+                            <td>@item.MedioPago</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="6">TOTALES</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.Gravado))</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.Igv))</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.Exonerado))</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.Total))</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.TotalCobrado))</th>
+                        <th class="text-end">@Money(comprobantes.Items.Sum(x => x.SaldoPendiente))</th>
+                        <th colspan="4"></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @await Html.PartialAsync("_Pager", comprobantes)
+    </section>
+
+    <div class="report-generation-note">Fecha de generacion: @generado</div>
+</section>

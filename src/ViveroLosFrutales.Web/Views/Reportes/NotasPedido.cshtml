@@ -1,0 +1,193 @@
+@model ReporteNotasPedidoDto
+@{
+    var cultura = new System.Globalization.CultureInfo("es-PE");
+    var request = Model.Request;
+    var notas = Model.Notas;
+    var resumen = Model.Resumen;
+    var desde = request.FechaDesde?.ToString("yyyy-MM-dd") ?? string.Empty;
+    var hasta = request.FechaHasta?.ToString("yyyy-MM-dd") ?? string.Empty;
+
+    string Money(decimal value) => value.ToString("C", cultura);
+    string EstadoPagoTexto(EstadoPagoNotaPedido estado) => estado switch
+    {
+        EstadoPagoNotaPedido.PAGO_PARCIAL => "Parcial",
+        EstadoPagoNotaPedido.PAGADO => "Pagado",
+        _ => "Pendiente"
+    };
+    string EstadoPagoClass(EstadoPagoNotaPedido estado) => estado switch
+    {
+        EstadoPagoNotaPedido.PAGO_PARCIAL => "warning",
+        EstadoPagoNotaPedido.PAGADO => "success",
+        _ => "pending"
+    };
+    string EstadoDocumentoTexto(NotaPedidoEstado estado) => estado == NotaPedidoEstado.ANULADO ? "Anulado" : "Activo";
+    string EstadoDocumentoClass(NotaPedidoEstado estado) => estado == NotaPedidoEstado.ANULADO ? "danger" : "success";
+
+    var queryBase = new Dictionary<string, string>();
+    void AddQuery(string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value)) queryBase[key] = value;
+    }
+
+    AddQuery("Search", request.Search);
+    AddQuery("Numero", request.Numero);
+    AddQuery("FechaDesde", desde);
+    AddQuery("FechaHasta", hasta);
+    AddQuery("EstadoPago", request.EstadoPago?.ToString());
+    AddQuery("EstadoDocumento", request.EstadoDocumento?.ToString());
+}
+
+<section class="notes-report-page">
+    <div class="notes-report-header">
+        <div class="notes-report-title">
+            <span class="notes-report-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <div>
+                <h1>Lista de Notas de Pedido</h1>
+                <p>Consulte y exporte las notas de pedido de su empresa.</p>
+            </div>
+        </div>
+        <div class="notes-report-actions">
+            <button class="btn-report-primary" form="notesReportFilters" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m16 16 4 4" /></svg>Buscar</button>
+            <a class="btn-report-light" asp-action="NotasPedido"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6v12m8-12v12" /></svg>Limpiar</a>
+            <a class="btn-report-excel" asp-action="ExportarNotasPedido" asp-all-route-data="queryBase"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 10l4 8M13 10l-4 8" /></svg>Exportar Excel</a>
+        </div>
+    </div>
+
+    <form id="notesReportFilters" method="get" class="notes-report-filters">
+        <label>
+            <span>Buscar por cliente o N° de documento</span>
+            <input type="search" name="Search" value="@request.Search" placeholder="Nombre del cliente o N° de documento" />
+        </label>
+        <label>
+            <span>N° de Nota de Pedido</span>
+            <input type="text" name="Numero" value="@request.Numero" placeholder="Ej: NP-0000125" />
+        </label>
+        <div class="notes-date-range">
+            <label>
+                <span>Fecha de emisión</span>
+                <input type="date" name="FechaDesde" value="@desde" />
+            </label>
+            <label>
+                <span>&nbsp;</span>
+                <input type="date" name="FechaHasta" value="@hasta" />
+            </label>
+        </div>
+        <label>
+            <span>Estado de Pago</span>
+            <select name="EstadoPago">
+                <option value="">Todos</option>
+                <option value="PENDIENTE" selected="@(request.EstadoPago == EstadoPagoNotaPedido.PENDIENTE)">Pendiente</option>
+                <option value="PAGO_PARCIAL" selected="@(request.EstadoPago == EstadoPagoNotaPedido.PAGO_PARCIAL)">Parcial</option>
+                <option value="PAGADO" selected="@(request.EstadoPago == EstadoPagoNotaPedido.PAGADO)">Pagado</option>
+            </select>
+        </label>
+        <label>
+            <span>Estado del Documento</span>
+            <select name="EstadoDocumento">
+                <option value="">Todos</option>
+                <option value="ACTIVO" selected="@(request.EstadoDocumento == NotaPedidoEstado.ACTIVO)">Activo</option>
+                <option value="ANULADO" selected="@(request.EstadoDocumento == NotaPedidoEstado.ANULADO)">Anulado</option>
+            </select>
+        </label>
+        <input type="hidden" name="Page" value="1" />
+        <input type="hidden" name="PageSize" value="@(notas.PageSize <= 0 ? 10 : notas.PageSize)" />
+    </form>
+
+    <div class="notes-kpi-grid">
+        <article class="notes-kpi success"><small>Total de Notas</small><strong>@resumen.TotalNotas</strong></article>
+        <article class="notes-kpi money"><small>Total Vendido</small><strong>@Money(resumen.TotalVendido)</strong></article>
+        <article class="notes-kpi blue"><small>Total Cobrado</small><strong>@Money(resumen.TotalCobrado)</strong></article>
+        <article class="notes-kpi warning"><small>Saldo Pendiente</small><strong>@Money(resumen.SaldoPendiente)</strong></article>
+        <article class="notes-kpi orange"><small>Notas Pendientes</small><strong>@resumen.NotasPendientes</strong></article>
+        <article class="notes-kpi purple"><small>Notas Parciales</small><strong>@resumen.NotasParciales</strong></article>
+        <article class="notes-kpi green"><small>Notas Pagadas</small><strong>@resumen.NotasPagadas</strong></article>
+        <article class="notes-kpi red"><small>Notas Anuladas</small><strong>@resumen.NotasAnuladas</strong></article>
+    </div>
+
+    <section class="notes-table-card">
+        <div class="notes-table-toolbar">
+            <h2>Detalle de Notas de Pedido</h2>
+            <form method="get" class="notes-page-size">
+                @foreach (var pair in queryBase)
+                {
+                    <input type="hidden" name="@pair.Key" value="@pair.Value" />
+                }
+                <input type="hidden" name="Page" value="1" />
+                <span>Mostrar</span>
+                <select name="PageSize" onchange="this.form.submit()">
+                    <option value="10" selected="@(notas.PageSize == 10)">10</option>
+                    <option value="25" selected="@(notas.PageSize == 25)">25</option>
+                    <option value="50" selected="@(notas.PageSize == 50)">50</option>
+                    <option value="100" selected="@(notas.PageSize == 100)">100</option>
+                </select>
+                <span>registros</span>
+            </form>
+        </div>
+
+        <div class="notes-table-wrap">
+            <table class="notes-report-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>N° Nota Pedido</th>
+                        <th>Cliente</th>
+                        <th>N° Documento</th>
+                        <th>Estado Doc.</th>
+                        <th>Estado Pago</th>
+                        <th>Vendedor</th>
+                        <th>Tipo Venta</th>
+                        <th class="text-end">Subtotal</th>
+                        <th class="text-end">IGV</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Total Cobrado</th>
+                        <th class="text-end">Saldo</th>
+                        <th>Observación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (!notas.Items.Any())
+                {
+                    <tr><td colspan="14" class="notes-empty">No hay notas de pedido para los filtros seleccionados.</td></tr>
+                }
+                else
+                {
+                    @foreach (var item in notas.Items)
+                    {
+                        <tr>
+                            <td>@item.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td><strong>@item.Numero</strong></td>
+                            <td>@item.Cliente</td>
+                            <td>@item.NumeroDocumento</td>
+                            <td><span class="notes-badge @EstadoDocumentoClass(item.EstadoDocumento)">@EstadoDocumentoTexto(item.EstadoDocumento)</span></td>
+                            <td><span class="notes-badge @EstadoPagoClass(item.EstadoPago)">@EstadoPagoTexto(item.EstadoPago)</span></td>
+                            <td>@item.Vendedor</td>
+                            <td>@item.TipoVenta</td>
+                            <td class="text-end">@Money(item.Subtotal)</td>
+                            <td class="text-end">@Money(item.Igv)</td>
+                            <td class="text-end">@Money(item.Total)</td>
+                            <td class="text-end">@Money(item.TotalCobrado)</td>
+                            <td class="text-end">@Money(item.SaldoPendiente)</td>
+                            <td>@item.Observacion</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="8">TOTALES</th>
+                        <th class="text-end">@Money(notas.Items.Sum(x => x.Subtotal))</th>
+                        <th class="text-end">@Money(notas.Items.Sum(x => x.Igv))</th>
+                        <th class="text-end">@Money(notas.Items.Sum(x => x.Total))</th>
+                        <th class="text-end">@Money(notas.Items.Sum(x => x.TotalCobrado))</th>
+                        <th class="text-end">@Money(notas.Items.Sum(x => x.SaldoPendiente))</th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @await Html.PartialAsync("_Pager", notas)
+    </section>
+</section>
+
+

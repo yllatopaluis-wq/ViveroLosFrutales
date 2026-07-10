@@ -20,7 +20,11 @@ public class CotizacionRepository(ApplicationDbContext db) : ICotizacionReposito
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim();
-            query = query.Where(x => x.Serie.Contains(term) || x.Cliente!.NombreCompleto.Contains(term) || x.Cliente.NumeroDocumento.Contains(term));
+            query = query.Where(x => x.Serie.Contains(term)
+                || (x.ClienteNombre ?? string.Empty).Contains(term)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(term)
+                || x.Cliente!.NombreCompleto.Contains(term)
+                || x.Cliente.NumeroDocumento.Contains(term));
         }
 
         return query.OrderByDescending(x => x.FechaEmision)
@@ -30,9 +34,9 @@ public class CotizacionRepository(ApplicationDbContext db) : ICotizacionReposito
                 x.Serie,
                 x.Correlativo,
                 x.FechaEmision,
-                x.Cliente!.NombreCompleto,
-                x.Cliente.TipoDocumento,
-                x.Cliente.NumeroDocumento,
+                x.ClienteNombre != null && x.ClienteNombre != string.Empty ? x.ClienteNombre : x.Cliente!.NombreCompleto,
+                x.ClienteTipoDocumento ?? x.Cliente!.TipoDocumento,
+                x.ClienteNumeroDocumento != null && x.ClienteNumeroDocumento != string.Empty ? x.ClienteNumeroDocumento : x.Cliente!.NumeroDocumento,
                 x.Total,
                 x.EstadoCotizacion))
             .ToPagedAsync(request, cancellationToken);

@@ -45,6 +45,8 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
                 x.Serie.Contains(term)
                 || (x.Serie + "-" + x.Correlativo).Contains(term)
                 || (hasNumero && x.Serie == serie && x.Correlativo == correlativo)
+                || (x.ClienteNombre ?? string.Empty).Contains(term)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(term)
                 || x.Cliente!.NombreCompleto.Contains(term)
                 || x.Cliente.NumeroDocumento.Contains(term));
         }
@@ -63,7 +65,10 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
         if (!string.IsNullOrWhiteSpace(request.Cliente))
         {
             var cliente = request.Cliente.Trim();
-            query = query.Where(x => x.Cliente!.NombreCompleto.Contains(cliente) || x.Cliente.NumeroDocumento.Contains(cliente));
+            query = query.Where(x => (x.ClienteNombre ?? string.Empty).Contains(cliente)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(cliente)
+                || x.Cliente!.NombreCompleto.Contains(cliente)
+                || x.Cliente.NumeroDocumento.Contains(cliente));
         }
 
         if (request.TipoComprobante is TipoComprobante tipo)
@@ -92,8 +97,8 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
                 x.Correlativo,
                 x.Serie + "-" + x.Correlativo.ToString(),
                 x.FechaEmision,
-                x.Cliente!.NombreCompleto,
-                x.Cliente.NumeroDocumento,
+                x.ClienteNombre != null && x.ClienteNombre != string.Empty ? x.ClienteNombre : x.Cliente!.NombreCompleto,
+                x.ClienteNumeroDocumento != null && x.ClienteNumeroDocumento != string.Empty ? x.ClienteNumeroDocumento : x.Cliente!.NumeroDocumento,
                 x.Total,
                 x.EstadoSunat))
             .ToPagedAsync(request, cancellationToken);
@@ -114,6 +119,8 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
                 x.Serie.Contains(term)
                 || (x.Serie + "-" + x.Correlativo).Contains(term)
                 || (hasNumero && x.Serie == serie && x.Correlativo == correlativo)
+                || (x.ClienteNombre ?? string.Empty).Contains(term)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(term)
                 || x.Cliente!.NombreCompleto.Contains(term)
                 || x.Cliente.NumeroDocumento.Contains(term));
         }
@@ -159,9 +166,9 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
                 x.Comprobante.Serie,
                 x.Comprobante.Correlativo,
                 x.Comprobante.FechaEmision,
-                x.Comprobante.Cliente!.NombreCompleto,
-                x.Comprobante.Cliente.NumeroDocumento,
-                x.Comprobante.Direccion,
+                x.Comprobante.ClienteNombre != null && x.Comprobante.ClienteNombre != string.Empty ? x.Comprobante.ClienteNombre : x.Comprobante.Cliente!.NombreCompleto,
+                x.Comprobante.ClienteNumeroDocumento != null && x.Comprobante.ClienteNumeroDocumento != string.Empty ? x.Comprobante.ClienteNumeroDocumento : x.Comprobante.Cliente!.NumeroDocumento,
+                x.Comprobante.ClienteDireccion != null && x.Comprobante.ClienteDireccion != string.Empty ? x.Comprobante.ClienteDireccion : x.Comprobante.Direccion,
                 x.Comprobante.Total,
                 x.Comprobante.TipoComprobante == TipoComprobante.NCR ? x.Comprobante.TotalPagado : x.TotalPagado + x.TotalAplicado,
                 x.Comprobante.TipoComprobante == TipoComprobante.NCR

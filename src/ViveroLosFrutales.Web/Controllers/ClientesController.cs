@@ -29,6 +29,8 @@ public class ClientesController(ClienteService service) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(ClienteEditDto dto, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid) return View(dto);
+
         try
         {
             await service.GuardarAsync(dto, cancellationToken);

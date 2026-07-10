@@ -41,6 +41,13 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
             Igv = cotizacion.Igv,
             Total = cotizacion.Total
         };
+        comprobanteShape.ClienteTipoDocumento = cotizacion.ClienteTipoDocumentoMostrar;
+        comprobanteShape.ClienteNumeroDocumento = cotizacion.ClienteNumeroDocumentoMostrar;
+        comprobanteShape.ClienteNombre = cotizacion.ClienteNombreMostrar;
+        comprobanteShape.ClienteNombreComercial = cotizacion.ClienteNombreComercialMostrar;
+        comprobanteShape.ClienteDireccion = cotizacion.ClienteDireccionMostrar;
+        comprobanteShape.ClienteTelefono = cotizacion.ClienteTelefonoMostrar;
+        comprobanteShape.ClienteEmail = cotizacion.ClienteEmailMostrar;
 
         foreach (var detalle in cotizacion.Detalles)
         {
@@ -173,9 +180,9 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
                         row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(clientBox =>
                         {
                             clientBox.Item().Text("DATOS DEL CLIENTE").Bold().FontSize(11);
-                            clientBox.Item().PaddingTop(5).Text($"Atención: {comprobante.Cliente?.NombreCompleto ?? string.Empty}");
-                            clientBox.Item().Text($"RUC: {comprobante.Cliente?.NumeroDocumento ?? string.Empty}");
-                            clientBox.Item().Text($"Dirección: {comprobante.Direccion}");
+                            clientBox.Item().PaddingTop(5).Text($"Atención: {comprobante.ClienteNombreMostrar}");
+                            clientBox.Item().Text($"RUC: {comprobante.ClienteNumeroDocumentoMostrar}");
+                            clientBox.Item().Text($"Dirección: {comprobante.ClienteDireccionMostrar}");
                         });
                     });
 
@@ -276,10 +283,10 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         var empresaEmail = FirstNotEmpty(comprobante.EmpresaEmail, comprobante.Empresa?.Email, string.Empty);
         var firmaBytes = comprobante.Empresa?.FirmaContenido is { Length: > 0 } firma ? firma : null;
         var serie = FirstNotEmpty(comprobante.Serie, comprobante.Empresa?.SerieCotizacion);
-        var clienteDocumentoLabel = comprobante.Cliente?.TipoDocumento == TipoDocumentoCliente.RUC ? "RUC" : "Documento";
-        var clienteDocumento = comprobante.Cliente?.NumeroDocumento ?? string.Empty;
-        var clienteNombre = comprobante.Cliente?.NombreCompleto ?? string.Empty;
-        var clienteDireccion = FirstNotEmpty(comprobante.Direccion, comprobante.Cliente?.Direccion, string.Empty);
+        var clienteDocumentoLabel = comprobante.ClienteTipoDocumentoMostrar == TipoDocumentoCliente.RUC ? "RUC" : "Documento";
+        var clienteDocumento = comprobante.ClienteNumeroDocumentoMostrar;
+        var clienteNombre = comprobante.ClienteNombreMostrar;
+        var clienteDireccion = comprobante.ClienteDireccionMostrar;
         var detalles = comprobante.Detalles.ToList();
 
         Document.Create(container =>
@@ -481,11 +488,11 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         var empresaDireccion = FirstNotEmpty(comprobante.EmpresaDireccion, comprobante.Empresa?.Direccion, string.Empty);
         var empresaTelefono = FirstNotEmpty(comprobante.EmpresaTelefono, comprobante.Empresa?.Telefono, string.Empty);
         var empresaEmail = FirstNotEmpty(comprobante.EmpresaEmail, comprobante.Empresa?.Email, string.Empty);
-        var clienteDocumentoLabel = comprobante.Cliente?.TipoDocumento == TipoDocumentoCliente.RUC ? "RUC" : "DOCUMENTO";
-        var clienteDocumento = comprobante.Cliente?.NumeroDocumento ?? string.Empty;
-        var clienteNombre = comprobante.Cliente?.NombreCompleto ?? string.Empty;
+        var clienteDocumentoLabel = comprobante.ClienteTipoDocumentoMostrar == TipoDocumentoCliente.RUC ? "RUC" : "DOCUMENTO";
+        var clienteDocumento = comprobante.ClienteNumeroDocumentoMostrar;
+        var clienteNombre = comprobante.ClienteNombreMostrar;
         var moneda = FormatearMoneda(comprobante.Empresa?.MonedaPredeterminada);
-        var direccionCliente = FirstNotEmpty(comprobante.Direccion, comprobante.Cliente?.Direccion, string.Empty);
+        var direccionCliente = comprobante.ClienteDireccionMostrar;
         var exonerado = comprobante.Detalles
             .Where(x => x.ImporteIgv == 0)
             .Sum(x => x.PrecioUnitario * x.Cantidad);
@@ -1007,8 +1014,8 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
     {
         if (comprobante.TipoComprobante == Domain.Enums.TipoComprobante.COT)
         {
-            var document = comprobante.Cliente?.NumeroDocumento?.Trim() ?? "SIN_DOCUMENTO";
-            var customer = comprobante.Cliente?.NombreCompleto?.Trim() ?? "SIN_NOMBRE";
+            var document = string.IsNullOrWhiteSpace(comprobante.ClienteNumeroDocumentoMostrar) ? "SIN_DOCUMENTO" : comprobante.ClienteNumeroDocumentoMostrar.Trim();
+            var customer = string.IsNullOrWhiteSpace(comprobante.ClienteNombreMostrar) ? "SIN_NOMBRE" : comprobante.ClienteNombreMostrar.Trim();
             return NormalizeFileName($"{comprobante.TipoComprobante}{comprobante.FechaEmision:yyyyMMdd}{comprobante.Correlativo:00} - {document} {customer}.pdf");
         }
 

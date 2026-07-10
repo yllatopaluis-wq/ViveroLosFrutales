@@ -127,6 +127,7 @@ Reglas importantes:
 - Una cotización no registra cobros.
 - Una cotización no se convierte directamente en boleta o factura.
 - La conversión válida es a nota de pedido.
+- La cotizacion conserva los datos del cliente usados al guardarla. Cambios posteriores en el maestro no modifican la cotizacion ni su PDF.
 
 ### 5.2 Notas de pedido
 
@@ -155,6 +156,7 @@ Conversión a comprobante:
 - Si el cliente no tiene RUC, se genera boleta.
 - La nota debe estar activa, pagada y sin saldo pendiente.
 - Los cobros registrados en la nota se aplican al comprobante generado.
+- La nota de pedido conserva los datos del cliente de ese momento. Si proviene de una cotizacion, mantiene los datos que venian de esa cotizacion.
 
 Anulación:
 
@@ -186,6 +188,7 @@ Reglas principales:
 - Solo se puede editar si no fue impreso y no fue aceptado por SUNAT.
 - Para anular se exige motivo.
 - Si tiene cobros activos y se anula, se genera devolución pendiente.
+- El comprobante conserva los datos del cliente usados al emitirlo. Cambios posteriores en el maestro no modifican comprobantes ya emitidos ni notas de credito relacionadas.
 
 ### 5.4 Notas de crédito
 
@@ -274,6 +277,24 @@ Al guardar una compra:
 - Aumenta el stock de los productos.
 - Se registra movimiento de inventario.
 - Si queda pendiente de pago, aparece en cuentas por pagar.
+
+
+Tipos de documento de compra disponibles:
+
+- `FACTURA`.
+- `BOLETA`.
+- `LIQUIDACION COMPRA`.
+- `RECIBO`.
+- `NOTA VENTA`.
+- `PENDIENTE COMPROBANTE`.
+- `SIN DOCUMENTO`.
+
+Reglas:
+
+- `FACTURA`, `BOLETA` y `LIQUIDACION COMPRA` piden serie y numero.
+- `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no piden serie ni numero.
+- `PENDIENTE COMPROBANTE` es un tipo de documento, no un estado.
+- El costo unitario se ingresa con IGV. Si el producto esta afecto a IGV, el sistema separa base e IGV con factor `1.18`; si no esta afecto, no calcula IGV.
 
 ### 6.2 Pagos a proveedores
 
@@ -369,6 +390,19 @@ Permite revisar compras pendientes de pago a proveedores.
 ### 9.4 Devoluciones proveedor
 
 Permite consultar devoluciones o saldos relacionados con proveedores cuando aplique.
+
+
+### 9.5 Reporte de notas de pedido
+
+Ruta: `Reportes > Notas de pedido`.
+
+Permite consultar y exportar notas de pedido filtrando por cliente/documento, numero, fechas, estado de pago y estado del documento. Muestra cartillas de total de notas, total vendido, total cobrado, saldo pendiente, pendientes, parciales, pagadas y anuladas.
+
+### 9.6 Reporte de comprobantes
+
+Ruta: `Reportes > Comprobantes`.
+
+Permite consultar y exportar boletas y facturas filtrando por tipo, serie, numero, fechas, cliente, estado SUNAT, estado del comprobante, medio de pago y vendedor. Muestra cartillas de total de comprobantes, importe, IGV, gravado, exonerado, cancelado y por cobrar. La moneda se visualiza como `Soles`.
 
 ## 10. Administración
 

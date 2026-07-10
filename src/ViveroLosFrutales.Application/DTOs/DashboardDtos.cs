@@ -31,7 +31,7 @@ public record DashboardResumenDiarioDto(
     DashboardIndicadorDiarioDto Ventas,
     DashboardIndicadorDiarioDto Compras,
     DashboardIndicadorDiarioDto Gastos,
-    DashboardIndicadorDiarioDto DevolucionesPendientes);
+    DashboardIndicadorDiarioDto NotasPedido);
 
 public record DashboardIndicadorDiarioDto(string Titulo, decimal ValorHoy, decimal ValorAyer, decimal VariacionPorcentaje, bool EsMonto);
 public record DashboardSerieDto(DateTime Fecha, decimal Importe);

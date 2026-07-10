@@ -111,7 +111,13 @@ Administracion
   ErroresAplicacion
 
 Reportes
-  Reportes
+  ReporteGeneral
+  PropuestasComerciales
+  ReporteNotasPedido
+  ReporteComprobantes
+  CuentasPorPagar
+  DevolucionesProveedor
+  ReporteCaja
   EstadoCuentaClientes
 ```
 
@@ -204,6 +210,31 @@ Al guardar:
 
 La vista `Compras/Create.cshtml` usa `viveroCompraForm` en `site.js` para agregar filas y calcular totales en cliente.
 
+
+Tipos de documento de compra:
+
+- Enum: `TipoDocumentoCompra`.
+- Valores vigentes: `FACTURA`, `BOLETA`, `LIQUIDACION_COMPRA`, `RECIBO`, `NOTA_VENTA`, `PENDIENTE_COMPROBANTE`, `SIN_DOCUMENTO`.
+- Etiquetas funcionales: `FACTURA`, `BOLETA`, `LIQUIDACION COMPRA`, `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE`, `SIN DOCUMENTO`.
+- `CompraService.DocumentoRequiereSerieNumero` exige serie y numero solo para `FACTURA`, `BOLETA` y `LIQUIDACION_COMPRA`.
+- `viveroCompraDocumentoForm` oculta serie y numero para `RECIBO`, `NOTA_VENTA`, `PENDIENTE_COMPROBANTE` y `SIN_DOCUMENTO`.
+- `CompraRepository.Proyectar` muestra etiqueta funcional cuando no existe serie/numero, evitando mostrar nombres tecnicos con guion bajo.
+- `PENDIENTE_COMPROBANTE` es tipo de documento y no debe confundirse con `EstadoPagoCompra.PENDIENTE`.
+
+Calculo de costos en compras:
+
+- El costo unitario ingresado se considera costo con IGV.
+- Si el producto esta afecto a IGV, el subtotal se calcula dividiendo entre `1.18` y el IGV es la diferencia hasta el total de linea.
+- Si el producto no esta afecto a IGV, el importe de linea no genera IGV.
+
+Pagos de compras:
+
+- `EstadoPagoCompra`: `PENDIENTE`, `PARCIAL`, `PAGADO`.
+- `EstadoDocumentoCompra`: `ACTIVO`, `ANULADO`.
+- Las compras al contado crean `PagoProveedor` y `MovimientoCaja` de egreso.
+- Las compras a credito quedan con saldo pendiente y se pagan desde `RegistrarPagoProveedorAsync`.
+- `AnularCompraAsync` revierte inventario y, si habia pagos activos, genera devolucion pendiente del proveedor sin borrar la caja historica.
+
 ## 11. Cotizaciones, notas de pedido y comprobantes
 
 La implementacion actual usa entidades separadas para el flujo comercial:
@@ -253,6 +284,20 @@ Notas de pedido:
 - `NotaPedidoService.AnularAsync` recibe motivo. Si existen cobros activos no llama a `CobroClienteService.AnularAsync`; marca la nota como anulada y delega a `DevolucionService.CrearDevolucionPorAnulacionNotaPedidoAsync`.
 - La lista de notas de pedido muestra `EstadoDevolucion` desde `Devolucion` cuando existe una devolucion activa relacionada.
 
+Datos historicos del cliente:
+
+- `Cotizacion`, `NotaPedido` y `Comprobante` mantienen `ClienteId` como relacion funcional con el maestro `Cliente`.
+- Adicionalmente guardan snapshot nullable del cliente al momento de emitir o guardar el documento: `ClienteTipoDocumento`, `ClienteNumeroDocumento`, `ClienteNombre`, `ClienteNombreComercial`, `ClienteDireccion`, `ClienteTelefono` y `ClienteEmail`.
+- `ClienteTipoDocumento` se almacena como `int NULL`, porque corresponde al enum `TipoDocumentoCliente?`. No debe crearse como `nvarchar`.
+- Los helpers `ClienteNombreMostrar`, `ClienteNumeroDocumentoMostrar`, `ClienteDireccionMostrar` y equivalentes devuelven primero el snapshot; si esta vacio por tratarse de un registro antiguo, hacen fallback al maestro `Cliente`.
+- `CotizacionService.GuardarAsync` llena el snapshot desde el cliente y la direccion final del documento.
+- `CotizacionService.ConvertirANotaPedidoAsync` copia el snapshot de cotizacion hacia `NotaPedido`.
+- `NotaPedidoService.GuardarAsync` llena el snapshot desde el cliente cuando la nota se registra directamente.
+- `NotaPedidoService.ConvertirAsync` copia el snapshot de nota de pedido hacia `Comprobante`.
+- `ComprobanteService.GuardarAsync` llena el snapshot para BOL/FAC directas.
+- `ComprobanteService.EmitirNotaCreditoAsync` copia el snapshot desde el comprobante original hacia la NCR.
+- Repositorios, reportes, tablero, PDF y Nubefact deben proyectar datos de cliente con snapshot primero y fallback despues; no deben leer directamente `Cliente.NombreCompleto` cuando el documento ya tiene snapshot.
+- Los scripts `015-add-snapshot-cliente-comprobante.sql` y `016-add-snapshot-cliente-cotizacion-nota-pedido.sql` agregan estas columnas de forma idempotente sin backfill obligatorio.
 Notas de credito:
 
 - Se implementan como `Comprobante.TipoComprobante = NCR`.
@@ -607,6 +652,39 @@ Los PDF locales se guardan en la ruta configurada por `PdfOptions`.
 - Gastos e ingresos consideran `Estado = Activo`.
 - El resultado mensual y anual usa `Ventas + Ingresos - Gastos - Compras`.
 - La vista `Views/Reportes/Reporte.cshtml` contiene la matriz comparativa, indicadores y consolidado anual.
+
+
+### 16.2 Reportes de notas de pedido y comprobantes
+
+Componentes:
+
+- DTOs: `ReporteNotasPedidoRequest`, `ReporteNotasPedidoDto`, `ReporteComprobantesRequest`, `ReporteComprobantesDto`.
+- Servicio: `ReporteGeneralService.ObtenerNotasPedidoAsync` y `ReporteGeneralService.ObtenerComprobantesAsync`.
+- Repositorio: `ReporteRepository.ObtenerNotasPedidoAsync` y `ReporteRepository.ObtenerComprobantesAsync`.
+- Controlador: `ReportesController.NotasPedido`, `ExportarNotasPedido`, `Comprobantes` y `ExportarComprobantes`.
+- Vistas: `Views/Reportes/NotasPedido.cshtml` y `Views/Reportes/Comprobantes.cshtml`.
+
+Reporte de notas de pedido:
+
+- Filtra por empresa, rango de fechas, cliente/documento, numero, estado de pago calculado y estado de documento.
+- El estado de pago se calcula con cobros no anulados: pendiente, parcial o pagado.
+- El resumen se calcula en memoria despues de materializar filas filtradas para evitar agregados SQL anidados sobre subconsultas.
+- El detalle conserva columnas de vendedor y observacion.
+
+Reporte de comprobantes:
+
+- Considera `TipoComprobante.BOL` y `TipoComprobante.FAC`.
+- Filtra por tipo, serie, numero, rango de fechas, cliente, estado SUNAT, estado de documento, medio de pago y vendedor.
+- Calcula cobrado con cobros directos activos y cobros aplicados, evitando doble conteo cuando corresponde.
+- Resta notas de credito activas para calcular saldo valido.
+- La moneda se proyecta como `Soles` y la columna canal no se expone.
+- El resumen se calcula en memoria para evitar errores SQL Server de agregados sobre agregados o subconsultas.
+
+Permisos:
+
+- `PermissionCatalog` incluye `ReporteNotasPedido` y `ReporteComprobantes` bajo el grupo `Reportes`.
+- El layout muestra esos enlaces con permisos independientes de `NotasPedido` y `Comprobantes` de ventas.
+- `scripts/sql/012-sync-roles-permisos.sql` incluye ambos permisos para sincronizar bases existentes.
 
 ## 17. JavaScript de UI
 

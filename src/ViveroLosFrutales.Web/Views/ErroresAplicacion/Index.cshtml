@@ -7,8 +7,62 @@
     var fechaHasta = filtros.FechaHasta?.ToString("yyyy-MM-dd");
     var pageSize = filtros.PageSize.ToString();
 }
-<section class="comprobantes-page admin-docs-page"><form method="get" class="comprobantes-toolbar error-docs-toolbar"><label class="comprobantes-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg><input name="Search" value="@search" placeholder="Mensaje, ruta, usuario o identificador..." autocomplete="off" /></label><label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label><label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label><label class="filter-field state-field"><span>Estado</span><select name="Estado"><option value="">Todos</option><option value="1" selected="@(filtros.Estado == EstadoErrorAplicacion.PENDIENTE)">Pendiente</option><option value="2" selected="@(filtros.Estado == EstadoErrorAplicacion.REVISADO)">Revisado</option></select></label><input type="hidden" name="PageSize" value="@pageSize" /><button class="btn-search" type="submit">Buscar</button><a class="btn-export" asp-action="Index">Limpiar</a></form><div class="comprobantes-list admin-docs-list"><div class="comprobantes-head admin-docs-head"><span>Error</span><span>Usuario</span><span>Ruta</span><span>Tipo</span><span>Estado</span><span>Acciones</span></div>@if (!Model.Items.Any()) { <div class="comprobantes-empty"><strong>No hay errores</strong><span>No se encontraron errores para los filtros seleccionados.</span></div> } else { @foreach (var item in Model.Items) { <article class="comprobante-row admin-docs-row" data-csv="@item.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")|@item.Usuario|@item.Ruta|@item.TipoExcepcion|@item.Mensaje|@item.Estado"><div class="comprobante-main"><span class="comprobante-icon @(item.Estado == EstadoErrorAplicacion.PENDIENTE ? "warning" : "success")"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span class="comprobante-copy"><strong>@item.Mensaje</strong><small>@item.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</small></span></div><div class="comprobante-client"><strong>@item.Usuario</strong><small>Usuario</small></div><div class="comprobante-client"><strong>@item.Ruta</strong><small>Ruta</small></div><div class="comprobante-status"><span class="sunat-line muted">@item.TipoExcepcion.Split('.').Last()</span></div><div class="comprobante-sunat"><span class="pill @(item.Estado == EstadoErrorAplicacion.PENDIENTE ? "warning" : "success")">@item.Estado</span></div><div class="comprobante-actions"><details class="row-actions-menu"><summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary><div class="row-actions-panel"><a asp-action="Details" asp-route-id="@item.ErrorAplicacionId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg> Ver detalle</a></div></details></div></article> } }</div><partial name="_Pager" model="Model" /></section><script>
+
+<section class="comprobantes-page admin-docs-page">
+    <form method="get" class="comprobantes-toolbar error-docs-toolbar">
+        <label class="comprobantes-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <input name="Search" value="@search" placeholder="Mensaje, ruta, usuario o identificador..." autocomplete="off" />
+        </label>
+        <label class="filter-field"><span>Desde</span><input name="FechaDesde" type="date" value="@fechaDesde" /></label>
+        <label class="filter-field"><span>Hasta</span><input name="FechaHasta" type="date" value="@fechaHasta" /></label>
+        <label class="filter-field state-field"><span>Estado</span><select name="Estado"><option value="">Todos</option><option value="1" selected="@(filtros.Estado == EstadoErrorAplicacion.PENDIENTE)">Pendiente</option><option value="2" selected="@(filtros.Estado == EstadoErrorAplicacion.REVISADO)">Revisado</option></select></label>
+        <input type="hidden" name="PageSize" value="@pageSize" />
+        <button class="btn-search" type="submit">Buscar</button>
+        <a class="btn-export" asp-action="Index">Limpiar</a>
+    </form>
+
+    <div class="comprobantes-list admin-docs-list">
+        <div class="comprobantes-head admin-docs-head">
+            <span>Error</span>
+            <span>Fecha registro</span>
+            <span>Usuario</span>
+            <span>Ruta</span>
+            <span>Tipo</span>
+            <span>Acciones</span>
+        </div>
+        @if (!Model.Items.Any())
+        {
+            <div class="comprobantes-empty"><strong>No hay errores</strong><span>No se encontraron errores para los filtros seleccionados.</span></div>
+        }
+        else
+        {
+            @foreach (var item in Model.Items)
+            {
+                var fechaRegistro = item.FechaUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss");
+                <article class="comprobante-row admin-docs-row" data-csv="@fechaRegistro|@item.Usuario|@item.Ruta|@item.TipoExcepcion|@item.Mensaje">
+                    <div class="comprobante-main">
+                        <span class="comprobante-icon warning"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+                        <span class="comprobante-copy"><strong>@item.Mensaje</strong><small>Error de aplicación</small></span>
+                    </div>
+                    <div class="comprobante-client"><strong>@fechaRegistro</strong><small>Fecha registro</small></div>
+                    <div class="comprobante-client"><strong>@item.Usuario</strong><small>Usuario</small></div>
+                    <div class="comprobante-client"><strong>@item.Ruta</strong><small>Ruta</small></div>
+                    <div class="comprobante-status"><span class="sunat-line muted">@item.TipoExcepcion.Split('.').Last()</span></div>
+                    <div class="comprobante-actions">
+                        <details class="row-actions-menu">
+                            <summary aria-label="Abrir acciones"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg></summary>
+                            <div class="row-actions-panel"><a asp-action="Details" asp-route-id="@item.ErrorAplicacionId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" /><path d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z" /></svg> Ver detalle</a></div>
+                        </details>
+                    </div>
+                </article>
+            }
+        }
+    </div>
+    <partial name="_Pager" model="Model" />
+</section>
+<script>
 document.querySelectorAll('.row-actions-menu').forEach(menu => { menu.addEventListener('toggle', () => { if (!menu.open) return; document.querySelectorAll('.row-actions-menu[open]').forEach(other => { if (other !== menu) other.removeAttribute('open'); }); }); });
 document.addEventListener('click', event => { if (event.target.closest('.row-actions-menu')) return; document.querySelectorAll('.row-actions-menu[open]').forEach(menu => menu.removeAttribute('open')); });
-document.getElementById('unusedErroresCsv')?.addEventListener('click', () => { const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]')); const header = ["Fecha","Usuario","Ruta","Tipo","Mensaje","Estado"]; const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')); const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'errores.csv'; link.click(); URL.revokeObjectURL(url); });
+document.getElementById('unusedErroresCsv')?.addEventListener('click', () => { const rows = Array.from(document.querySelectorAll('.admin-docs-row[data-csv]')); const header = ["Fecha","Usuario","Ruta","Tipo","Mensaje"]; const csvRows = [header, ...rows.map(row => row.dataset.csv.split('|'))].map(cols => cols.map(value => '"' + String(value ?? '').replaceAll('"', '""') + '"').join(',')); const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'errores.csv'; link.click(); URL.revokeObjectURL(url); });
 </script>

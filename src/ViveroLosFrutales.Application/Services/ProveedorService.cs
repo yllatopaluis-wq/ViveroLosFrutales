@@ -31,10 +31,10 @@ public class ProveedorService(IProveedorRepository repository, IEmpresaContext e
         proveedor.TipoDocumento = dto.TipoDocumento;
         proveedor.NumeroDocumento = dto.NumeroDocumento.Trim();
         proveedor.RazonSocial = dto.RazonSocial.Trim();
-        proveedor.NombreComercial = dto.NombreComercial.Trim();
+        proveedor.NombreComercial = dto.NombreComercial?.Trim() ?? string.Empty;
         proveedor.Direccion = dto.Direccion.Trim();
-        proveedor.Telefono = dto.Telefono.Trim();
-        proveedor.Email = dto.Email.Trim();
+        proveedor.Telefono = dto.Telefono?.Trim() ?? string.Empty;
+        proveedor.Email = dto.Email?.Trim() ?? string.Empty;
         proveedor.Estado = dto.Estado;
         proveedor.UsuarioRegistro = empresaContext.UsuarioNombre;
 

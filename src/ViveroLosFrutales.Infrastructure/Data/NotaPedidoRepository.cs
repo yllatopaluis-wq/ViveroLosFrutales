@@ -23,7 +23,11 @@ public class NotaPedidoRepository(ApplicationDbContext db) : INotaPedidoReposito
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim();
-            query = query.Where(x => x.Serie.Contains(term) || x.Cliente!.NombreCompleto.Contains(term) || x.Cliente.NumeroDocumento.Contains(term));
+            query = query.Where(x => x.Serie.Contains(term)
+                || (x.ClienteNombre ?? string.Empty).Contains(term)
+                || (x.ClienteNumeroDocumento ?? string.Empty).Contains(term)
+                || x.Cliente!.NombreCompleto.Contains(term)
+                || x.Cliente.NumeroDocumento.Contains(term));
         }
 
         return query.OrderByDescending(x => x.Fecha)
@@ -47,7 +51,7 @@ public class NotaPedidoRepository(ApplicationDbContext db) : INotaPedidoReposito
                 x.NotaPedido.NotaPedidoId,
                 x.NotaPedido.Serie + "-" + x.NotaPedido.Correlativo,
                 x.NotaPedido.Fecha,
-                x.NotaPedido.Cliente!.NombreCompleto,
+                x.NotaPedido.ClienteNombre != null && x.NotaPedido.ClienteNombre != string.Empty ? x.NotaPedido.ClienteNombre : x.NotaPedido.Cliente!.NombreCompleto,
                 x.NotaPedido.Total,
                 x.TotalCobrado,
                 x.NotaPedido.Total - x.TotalCobrado < 0 ? 0 : x.NotaPedido.Total - x.TotalCobrado,

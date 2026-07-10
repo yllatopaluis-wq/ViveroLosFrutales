@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Application.Common;
+﻿using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -45,13 +45,13 @@ public class CotizacionService(
             if (productos.Any(x => x.ProductoId == productoId)) continue;
             var producto = await productoRepository.ObtenerAsync(empresaContext.EmpresaId, productoId, cancellationToken);
             if (producto is null) continue;
-            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.PrecioVentaSinIgv, producto.PrecioVentaConIgv, producto.Stock, producto.AfectoIgv, producto.Estado));
+            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.UnidadMedida, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
         var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
-            clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Estado));
+            clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Email, clienteSeleccionado.Estado));
         }
 
         return new CotizacionFormDataDto(
@@ -59,21 +59,29 @@ public class CotizacionService(
             new CotizacionNumeracionDto(dto.Serie, dto.Correlativo),
             clientes
                 .OrderBy(x => x.NombreCompleto)
-                .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion))
+                .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email))
                 .ToArray(),
-            productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray());
+            productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray());
+    }
+
+    private static decimal ObtenerPrecioVentaConIgv(Producto producto)
+    {
+        if (producto.PrecioVentaConIgv > 0) return producto.PrecioVentaConIgv;
+        return producto.AfectoIgv
+            ? decimal.Round(producto.PrecioVentaSinIgv * 1.18m, 2)
+            : producto.PrecioVentaSinIgv;
     }
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
     {
         var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
-        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion)).ToArray();
+        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email)).ToArray();
     }
 
     public async Task<IReadOnlyList<ComprobanteProductoOptionDto>> BuscarProductosAsync(string? search, CancellationToken cancellationToken)
     {
         var productos = await productoRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
-        return productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray();
+        return productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray();
     }
 
     public async Task<CotizacionEditDto> ObtenerParaEditarAsync(int id, CancellationToken cancellationToken)
@@ -97,10 +105,10 @@ public class CotizacionService(
             CotizacionId = cotizacion.CotizacionId,
             Numero = $"{cotizacion.Serie}-{cotizacion.Correlativo:000000}",
             FechaEmision = cotizacion.FechaEmision,
-            Cliente = cotizacion.Cliente?.NombreCompleto ?? string.Empty,
-            TipoDocumento = cotizacion.Cliente?.TipoDocumento ?? TipoDocumentoCliente.DNI,
-            Documento = cotizacion.Cliente?.NumeroDocumento ?? string.Empty,
-            Direccion = cotizacion.Direccion,
+            Cliente = cotizacion.ClienteNombreMostrar,
+            TipoDocumento = cotizacion.ClienteTipoDocumentoMostrar ?? TipoDocumentoCliente.DNI,
+            Documento = cotizacion.ClienteNumeroDocumentoMostrar,
+            Direccion = cotizacion.ClienteDireccionMostrar,
             FormaPago = cotizacion.FormaPago,
             Subtotal = cotizacion.SubTotal,
             Igv = cotizacion.Igv,
@@ -154,6 +162,7 @@ public class CotizacionService(
         cotizacion.Empresa = empresa;
         cotizacion.FechaEmision = dto.FechaEmision.Date;
         cotizacion.Direccion = string.IsNullOrWhiteSpace(dto.Direccion) ? cliente.Direccion : dto.Direccion.Trim();
+        cotizacion.AplicarSnapshotCliente(cliente, cotizacion.Direccion);
         cotizacion.FormaPago = dto.FormaPago;
         cotizacion.EmpresaRazonSocial = empresa.RazonSocial;
         cotizacion.EmpresaNombreComercial = empresa.NombreComercial;
@@ -215,6 +224,7 @@ public class CotizacionService(
                 Fecha = PeruDateTime.Today,
                 UsuarioRegistro = empresaContext.UsuarioNombre
             };
+            nota.AplicarSnapshotClienteDesde(cotizacion);
             foreach (var d in cotizacion.Detalles)
                 nota.Detalles.Add(new NotaPedidoDetalle { ProductoId = d.ProductoId, Cantidad = d.Cantidad, PrecioUnitario = d.PrecioUnitario, Subtotal = d.Importe, Igv = d.ImporteIgv, Total = d.Importe + d.ImporteIgv });
             nota.RecalcularTotales();
@@ -263,6 +273,13 @@ public class CotizacionService(
     {
         CotizacionId = c.CotizacionId,
         ClienteId = c.ClienteId,
+        ClienteTipoDocumento = c.ClienteTipoDocumentoMostrar,
+        ClienteNumeroDocumento = c.ClienteNumeroDocumentoMostrar,
+        ClienteNombre = c.ClienteNombreMostrar,
+        ClienteNombreComercial = c.ClienteNombreComercialMostrar,
+        ClienteDireccion = c.ClienteDireccionMostrar,
+        ClienteTelefono = c.ClienteTelefonoMostrar,
+        ClienteEmail = c.ClienteEmailMostrar,
         Serie = c.Serie,
         Correlativo = c.Correlativo,
         FechaEmision = c.FechaEmision,
@@ -273,3 +290,5 @@ public class CotizacionService(
         Detalles = c.Detalles.Select(x => new ComprobanteDetalleDto { ProductoId = x.ProductoId, Cantidad = x.Cantidad, PrecioUnitario = x.PrecioUnitario }).ToList()
     };
 }
+
+

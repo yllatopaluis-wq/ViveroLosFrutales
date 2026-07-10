@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -24,7 +24,7 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
 
         var items = await query.OrderBy(x => x.NombreCompleto)
             .ThenBy(x => x.ClienteId)
-            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Estado))
+            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email, x.Estado))
             .Skip(skip)
             .Take(pageSize + 1)
             .ToListAsync(cancellationToken);
@@ -46,7 +46,7 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
         return await db.Clientes.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo)
             .OrderBy(x => x.NombreCompleto)
-            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Estado))
+            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email, x.Estado))
             .ToListAsync(cancellationToken);
     }
 
@@ -65,7 +65,7 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
             .OrderBy(x => x.NombreCompleto)
             .ThenBy(x => x.ClienteId)
             .Take(Math.Clamp(take, 1, 50))
-            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Estado))
+            .Select(x => new ClienteListDto(x.ClienteId, x.NombreCompleto, x.TipoDocumento, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email, x.Estado))
             .ToListAsync(cancellationToken);
     }
 
@@ -86,3 +86,4 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
         await db.SaveChangesAsync(cancellationToken);
     }
 }
+

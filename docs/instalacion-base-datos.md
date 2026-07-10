@@ -68,3 +68,14 @@ ORDER BY e.RUC;
 ```
 
 Todos los scripts de carga son idempotentes: se pueden volver a ejecutar para verificar o completar información sin duplicar registros clave.
+
+## Actualizacion de bases existentes
+
+Para bases ya instaladas, ademas de los scripts iniciales, aplicar los parches idempotentes que correspondan a la version publicada. Para el snapshot historico del cliente ejecutar:
+
+```text
+015-add-snapshot-cliente-comprobante.sql
+016-add-snapshot-cliente-cotizacion-nota-pedido.sql
+```
+
+Estos scripts agregan columnas nullable y no modifican datos historicos existentes. `ClienteTipoDocumento` debe quedar como `int NULL` en `erp.Comprobante`, `erp.Cotizacion` y `erp.NotaPedido`; si una base previa lo tenia como `nvarchar`, el script `016` lo convierte a `int` para evitar errores de casteo al ver o imprimir documentos.

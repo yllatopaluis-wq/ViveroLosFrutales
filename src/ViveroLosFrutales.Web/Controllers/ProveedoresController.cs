@@ -30,6 +30,8 @@ public class ProveedoresController(ProveedorService service) : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(ProveedorEditDto dto, CancellationToken cancellationToken)
     {
+        if (!ModelState.IsValid) return View(dto);
+
         try
         {
             await service.GuardarAsync(dto, cancellationToken);
