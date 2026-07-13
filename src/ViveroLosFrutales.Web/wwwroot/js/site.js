@@ -1,4 +1,4 @@
-﻿window.viveroDetalleRows = function () {
+window.viveroDetalleRows = function () {
   const table = document.querySelector("#detalle tbody");
   if (!table) return;
 
@@ -139,8 +139,10 @@ window.viveroComprobanteForm = function (config) {
       document.body.appendChild(results);
     }
     let timer;
+    let clienteSearchRequest = 0;
 
     function cerrarResultados() {
+      clienteSearchRequest++;
       results.hidden = true;
     }
 
@@ -156,7 +158,9 @@ window.viveroComprobanteForm = function (config) {
     }
 
     async function actualizar() {
+      const requestId = ++clienteSearchRequest;
       const items = await buscarClientesRemoto(clienteSearch.value);
+      if (requestId !== clienteSearchRequest) return;
       pintarResultados(items);
       resolverCliente();
     }
@@ -192,6 +196,8 @@ window.viveroComprobanteForm = function (config) {
     const data = await response.json();
     serie.value = data.serie || data.Serie || "";
     correlativo.value = data.correlativo || data.Correlativo || "";
+    const numero = document.querySelector(".quote-number");
+    if (numero) numero.textContent = `${serie.value}-${correlativo.value}`;
   }
 
   function productoOptions(selectedId) {
@@ -518,6 +524,13 @@ window.viveroProductoGridSearch = function (config) {
   if (!search || !results || !add) return;
   if (results.parentElement !== document.body) document.body.appendChild(results);
 
+  const gridColumns = Array.isArray(config?.columns) && config.columns.length ? config.columns : ["Producto", "Unidad", "Stock", "Cantidad", "PrecioUnitario", "DescuentoPorcentaje", "TotalLinea"];
+  const productBehavior = config?.behavior || {};
+  const priceFieldName = config?.priceFieldName || "PrecioUnitario";
+  const unitFieldName = config?.unitFieldName || null;
+  const mostrarItemProducto = productBehavior.mostrarItem !== false && productBehavior.MostrarItem !== false;
+  const mostrarAccionProducto = productBehavior.mostrarAccion !== false && productBehavior.MostrarAccion !== false;
+  const cantidadInicialProducto = Math.max(Number(productBehavior.cantidadInicial || productBehavior.CantidadInicial || 1), 0.01);
   let itemsActuales = [];
   let indiceActivo = -1;
   let punteroEnResultados = false;
@@ -618,13 +631,18 @@ window.viveroProductoGridSearch = function (config) {
     indiceActivo = -1;
   }
 
+  function cerrarResultadosPorScroll(event) {
+    if (event?.target && results.contains(event.target)) return;
+    cerrarResultados();
+  }
   function renumerar() {
     body.querySelectorAll("tr").forEach((row, index) => {
       const number = row.querySelector(".quote-row-number");
       if (number) number.textContent = String(index + 1);
       row.querySelector(".producto-select")?.setAttribute("name", `Detalles[${index}].ProductoId`);
       row.querySelector(".cantidad-input")?.setAttribute("name", `Detalles[${index}].Cantidad`);
-      row.querySelector(".precio-input")?.setAttribute("name", `Detalles[${index}].PrecioUnitario`);
+      if (unitFieldName) row.querySelector(".unidad-input")?.setAttribute("name", `Detalles[${index}].${unitFieldName}`);
+      row.querySelector(".precio-input")?.setAttribute("name", `Detalles[${index}].${priceFieldName}`);
     });
   }
 
@@ -669,45 +687,67 @@ window.viveroProductoGridSearch = function (config) {
     if (totalOutput) totalOutput.textContent = formatMoney(exonerado + gravado + igv);
   }
 
+  function celdaProducto(field, index, producto) {
+    const cantidadInicial = cantidadInicialProducto;
+    const precioReadonly = productBehavior.permitirEditarPrecio === false || productBehavior.PermitirEditarPrecio === false ? " readonly" : "";
+    const descuentoReadonly = productBehavior.permitirDescuento === false || productBehavior.PermitirDescuento === false ? " readonly" : "";
+    switch (field) {
+      case "Codigo":
+        return `<td data-field="Codigo"><input value="${escapeHtml(codigoProducto(producto))}" class="form-control form-control-sm codigo-input" readonly /></td>`;
+      case "Producto":
+        return `<td data-field="Producto"><input class="form-control form-control-sm producto-search" value="${escapeHtml(textoProducto(producto))}" readonly /><input name="Detalles[${index}].ProductoId" class="producto-select" type="hidden" value="${escapeHtml(producto?.id || "")}" /></td>`;
+      case "Unidad":
+        return `<td data-field="Unidad"><input ${unitFieldName ? `name="Detalles[${index}].${unitFieldName}"` : ""} value="${escapeHtml(unidadProducto(producto))}" class="form-control form-control-sm unidad-input" readonly /></td>`;
+      case "Stock":
+        return `<td data-field="Stock"><input value="${stockProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end stock-input" readonly /></td>`;
+      case "Cantidad":
+        return `<td data-field="Cantidad"><input name="Detalles[${index}].Cantidad" value="${cantidadInicial}" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>`;
+      case "PrecioUnitario":
+        return `<td data-field="PrecioUnitario"><input name="Detalles[${index}].${priceFieldName}" value="${precioProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0"${precioReadonly} /></td>`;
+      case "DescuentoPorcentaje":
+        return `<td data-field="DescuentoPorcentaje"><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100"${descuentoReadonly} /></td>`;
+      case "TotalLinea":
+        return `<td data-field="TotalLinea"><input value="0.00" class="form-control form-control-sm text-end line-total" readonly /></td>`;
+      default:
+        return "";
+    }
+  }
+
   function crearFila(producto) {
     const index = body.querySelectorAll("tr").length;
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td class="quote-row-number">${index + 1}</td>
-      <td>
-        <input class="form-control form-control-sm producto-search" value="${escapeHtml(textoProducto(producto))}" readonly />
-        <input name="Detalles[${index}].ProductoId" class="producto-select" type="hidden" value="${escapeHtml(producto?.id || "")}" />
-      </td>
-      <td><input value="${escapeHtml(unidadProducto(producto))}" class="form-control form-control-sm unidad-input" readonly /></td>
-      <td><input value="${stockProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end stock-input" readonly /></td>
-      <td><input name="Detalles[${index}].Cantidad" value="1" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
-      <td><input name="Detalles[${index}].PrecioUnitario" value="${precioProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
-      <td><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100" /></td>
-      <td><input value="0.00" class="form-control form-control-sm text-end line-total" readonly /></td>
-      <td class="text-center"><button type="button" class="icon-btn danger remove-row" title="Quitar fila" aria-label="Quitar fila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button></td>`;
+      ${mostrarItemProducto ? `<td class="quote-row-number">${index + 1}</td>` : ""}
+      ${gridColumns.map((field) => celdaProducto(field, index, producto)).join("")}
+      ${mostrarAccionProducto ? `<td class="text-center"><button type="button" class="icon-btn danger remove-row" title="Quitar fila" aria-label="Quitar fila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button></td>` : ""}`;
     body.appendChild(row);
     enlazarFila(row);
     return row;
   }
-
   function aplicarProducto(row, producto) {
     if (!row || !producto) return;
-    row.querySelector(".producto-select").value = producto.id;
-    row.querySelector(".producto-search").value = textoProducto(producto);
-    row.querySelector(".unidad-input").value = unidadProducto(producto);
-    row.querySelector(".stock-input").value = stockProducto(producto).toFixed(2);
+    const productoSelect = row.querySelector(".producto-select");
+    if (productoSelect) productoSelect.value = producto.id;
+    const productoSearch = row.querySelector(".producto-search");
+    if (productoSearch) productoSearch.value = textoProducto(producto);
+    const unidadInput = row.querySelector(".unidad-input");
+    if (unidadInput) unidadInput.value = unidadProducto(producto);
+    const stockInput = row.querySelector(".stock-input");
+    if (stockInput) stockInput.value = stockProducto(producto).toFixed(2);
     const cantidad = row.querySelector(".cantidad-input");
     const precio = row.querySelector(".precio-input");
     const descuento = row.querySelector(".descuento-input");
-    if (cantidad && Number(cantidad.value || 0) <= 0) cantidad.value = "1";
-    if (precio) precio.value = precioProducto(producto).toFixed(2);
+    if (cantidad && Number(cantidad.value || 0) <= 0) cantidad.value = String(cantidadInicialProducto).replace(/\.00$/, "");
+    if (precio && !precio.readOnly) precio.value = precioProducto(producto).toFixed(2);
+    else if (precio) precio.value = precioProducto(producto).toFixed(2);
     if (descuento && descuento.value === "") descuento.value = "0";
     recalcular();
   }
 
   function agregarProducto(producto) {
     if (!producto) return;
-    let row = Array.from(body.querySelectorAll("tr")).find((item) => String(productoIdDeFila(item)) === String(producto.id));
+    const unirDuplicados = productBehavior.unirProductosDuplicados !== false && productBehavior.UnirProductosDuplicados !== false;
+    let row = unirDuplicados ? Array.from(body.querySelectorAll("tr")).find((item) => String(productoIdDeFila(item)) === String(producto.id)) : null;
     if (row) {
       const cantidad = row.querySelector(".cantidad-input");
       cantidad.value = (Number(cantidad.value || 0) + 1).toFixed(2).replace(/\.00$/, "");
@@ -751,7 +791,7 @@ window.viveroProductoGridSearch = function (config) {
       ? items.map((producto, index) => {
           const sku = skuProducto(producto);
           const codigoBarras = codigoBarrasProducto(producto);
-          const meta = [`Código: ${codigoProducto(producto)}`, sku ? `SKU: ${sku}` : "SKU: -", codigoBarras ? `CB: ${codigoBarras}` : "", `Stock: ${stockProducto(producto).toFixed(2)} ${unidadProducto(producto)}`].filter(Boolean).join(" | ");
+          const meta = [`C�digo: ${codigoProducto(producto)}`, sku ? `SKU: ${sku}` : "SKU: -", codigoBarras ? `CB: ${codigoBarras}` : "", `Stock: ${stockProducto(producto).toFixed(2)} ${unidadProducto(producto)}`].filter(Boolean).join(" | ");
           return `<button type="button" class="producto-search-option${index === 0 ? " active" : ""}" data-id="${escapeHtml(producto.id)}"><strong>${escapeHtml(textoProducto(producto))}</strong><span>${escapeHtml(meta)}</span><em>Precio: ${formatMoney(precioProducto(producto))}</em></button>`;
         }).join("")
       : '<div class="producto-search-empty">Sin coincidencias</div>';
@@ -868,19 +908,28 @@ window.viveroProductoGridSearch = function (config) {
     cerrarResultados();
     search.focus();
   });
-  window.addEventListener("scroll", cerrarResultados, true);
+  window.addEventListener("scroll", cerrarResultadosPorScroll, true);
   window.addEventListener("resize", cerrarResultados);
 };window.viveroStartSunatSync = function (url, empresaId) {
   const key = `viveroSunatSyncStarted:${empresaId || "default"}`;
   if (!url || sessionStorage.getItem(key) === "true") return;
   sessionStorage.setItem(key, "true");
 
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon(url, new Blob([], { type: "application/x-www-form-urlencoded" }));
+  const start = function () {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(url, new Blob([], { type: "application/x-www-form-urlencoded" }));
+      return;
+    }
+
+    fetch(url, { method: "POST", keepalive: true }).catch(() => {});
+  };
+
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(start, { timeout: 4000 });
     return;
   }
 
-  fetch(url, { method: "POST", keepalive: true }).catch(() => {});
+  window.setTimeout(start, 1500);
 };
 
 window.viveroCompraForm = function () {
@@ -1177,13 +1226,4 @@ window.viveroCompraDocumentoForm = function () {
   tipoDocumento.addEventListener("input", sincronizarDocumento);
   sincronizarDocumento();
 };
-
-
-
-
-
-
-
-
-
 

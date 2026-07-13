@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -16,6 +16,7 @@ public class NotaPedidoService(
     CobroClienteService cobroClienteService,
     DevolucionService devolucionService,
     IPdfService pdfService,
+    IFormularioConfiguracionService formularioConfiguracionService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<NotaPedidoListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -61,7 +62,8 @@ public class NotaPedidoService(
             Productos = productos
                 .OrderBy(x => x.Nombre)
                 .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
-                .ToArray()
+                .ToArray(),
+            FormularioConfiguracion = await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoNotaPedido, empresaContext.EmpresaId, null, cancellationToken)
         };
     }
 
@@ -92,7 +94,7 @@ public class NotaPedidoService(
         {
             var producto = await productoRepository.ObtenerAsync(empresaContext.EmpresaId, productoId, cancellationToken);
             if (producto is null) continue;
-            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.UnidadMedida, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.Stock, producto.AfectoIgv, producto.Estado));
+            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.UnidadMedida, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.PrecioCompra, producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
         return productos;
@@ -116,6 +118,8 @@ public class NotaPedidoService(
             Serie = nota.Serie,
             Correlativo = nota.Correlativo,
             Fecha = nota.Fecha,
+            FormaPago = nota.FormaPago,
+            Observacion = nota.Observacion,
             Detalles = nota.Detalles.Select(x => new NotaPedidoDetalleEditDto
             {
                 ProductoId = x.ProductoId,
@@ -220,6 +224,8 @@ public class NotaPedidoService(
         nota.ClienteId = dto.ClienteId;
         nota.CotizacionId = dto.CotizacionId;
         nota.Fecha = dto.Fecha.Date;
+        nota.FormaPago = dto.FormaPago;
+        nota.Observacion = dto.Observacion?.Trim() ?? string.Empty;
 
         foreach (var item in detallesValidos)
         {
@@ -274,7 +280,7 @@ public class NotaPedidoService(
             Correlativo = nota.Correlativo,
             FechaEmision = nota.Fecha,
             Direccion = nota.ClienteDireccionMostrar,
-            FormaPago = FormaPago.Contado,
+            FormaPago = nota.FormaPago,
             EmpresaRazonSocial = empresa.RazonSocial,
             EmpresaNombreComercial = empresa.NombreComercial,
             EmpresaRuc = empresa.RUC,
@@ -286,7 +292,8 @@ public class NotaPedidoService(
             Total = nota.Total,
             TotalPagado = nota.TotalCobrado,
             SaldoPendiente = nota.SaldoPendiente,
-            EstadoSunat = EstadoSunat.NoAplica
+            EstadoSunat = EstadoSunat.NoAplica,
+            CondicionesVenta = nota.Observacion
         };
         comprobanteShape.AplicarSnapshotClienteDesde(nota);
 
@@ -377,11 +384,11 @@ public class NotaPedidoService(
         }
         if (nota.EstadoPago != EstadoPagoNotaPedido.PAGADO || nota.SaldoPendiente > 0)
         {
-            throw new InvalidOperationException("No es posible convertir la Nota de Pedido porque aÃºn tiene saldo pendiente.");
+            throw new InvalidOperationException("No es posible convertir la Nota de Pedido porque aún tiene saldo pendiente.");
         }
         if (pagoAdicional > 0)
         {
-            throw new InvalidOperationException("No es posible convertir la Nota de Pedido porque aÃºn tiene saldo pendiente.");
+            throw new InvalidOperationException("No es posible convertir la Nota de Pedido porque aún tiene saldo pendiente.");
         }
 
         var cliente = nota.Cliente ?? await clienteRepository.ObtenerAsync(empresaContext.EmpresaId, nota.ClienteId, cancellationToken)
@@ -403,7 +410,7 @@ public class NotaPedidoService(
             Cliente = cliente,
             Direccion = nota.ClienteDireccionMostrar,
             FechaEmision = PeruDateTime.Today,
-            FormaPago = FormaPago.Contado,
+            FormaPago = nota.FormaPago,
             Empresa = empresa,
             EmpresaRazonSocial = empresa.RazonSocial,
             EmpresaNombreComercial = empresa.NombreComercial,
@@ -412,6 +419,7 @@ public class NotaPedidoService(
             EmpresaTelefono = empresa.Telefono,
             EmpresaEmail = empresa.Email,
             EstadoSunat = EstadoSunat.Pendiente,
+            CondicionesVenta = nota.Observacion,
             UsuarioRegistro = empresaContext.UsuarioNombre
         };
         comprobante.AplicarSnapshotClienteDesde(nota);
@@ -529,5 +537,4 @@ public class NotaPedidoService(
         return decimal.Round(saldo < 0 ? 0 : saldo, 2);
     }
 }
-
 

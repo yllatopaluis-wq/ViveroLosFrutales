@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Enums;
@@ -51,7 +51,7 @@ public class SunatPendingSyncService(IServiceScopeFactory scopeFactory, ILogger<
                 && (x.TipoComprobante == TipoComprobante.BOL || x.TipoComprobante == TipoComprobante.FAC)
                 && !string.IsNullOrEmpty(x.NubefactRespuesta))
             .OrderBy(x => x.FechaRegistro)
-            .Take(50)
+            .Take(10)
             .ToListAsync();
 
         foreach (var comprobante in comprobantes)

@@ -1,4 +1,4 @@
-# Documentacion tecnica - Vivero Los Frutales
+﻿# Documentacion tecnica - Vivero Los Frutales
 
 ## 1. Arquitectura
 
@@ -519,7 +519,7 @@ La busqueda textual se aplica sobre cliente/proveedor, documento, medio de pago 
 - `Gasto.MovimientoCajaId` e `Ingreso.MovimientoCajaId` guardan la relacion principal; `MovimientoCaja.OrigenId` conserva la referencia funcional al registro origen.
 - `scripts/sql/001-create-database.sql` crea las tablas y relaciones finales; `003-cargar-categorias-financieras.sql` carga las categorias iniciales por empresa despues de registrar empresas con `002-cargar-empresa-inicial.sql`.
 
-## 14.2 TesorerÃƒÂ­a, Caja y Bancos
+## 14.2 TesorerÃƒÆ’Ã‚Â­a, Caja y Bancos
 
 Componentes principales:
 
@@ -534,7 +534,7 @@ Componentes principales:
 
 Tabla principal:
 
-- `erp.CuentaFinanciera`: almacena las cuentas donde estÃƒÂ¡ el dinero de la empresa.
+- `erp.CuentaFinanciera`: almacena las cuentas donde estÃƒÆ’Ã‚Â¡ el dinero de la empresa.
 
 Campos funcionales:
 
@@ -558,15 +558,15 @@ Relaciones con dinero:
 
 Regla de compatibilidad:
 
-- `CuentaFinancieraService.ResolverCuentaIdAsync` usa la cuenta seleccionada si existe y estÃƒÂ¡ activa.
-- Si no se envÃƒÂ­a cuenta, asegura y usa `Caja principal` por empresa.
+- `CuentaFinancieraService.ResolverCuentaIdAsync` usa la cuenta seleccionada si existe y estÃƒÆ’Ã‚Â¡ activa.
+- Si no se envÃƒÆ’Ã‚Â­a cuenta, asegura y usa `Caja principal` por empresa.
 
-CÃƒÂ¡lculo de Caja y Bancos:
+CÃƒÆ’Ã‚Â¡lculo de Caja y Bancos:
 
 - `CuentaFinancieraRepository.ObtenerCajaBancosAsync` agrupa movimientos activos por cuenta.
-- Los movimientos sin cuenta se imputan a `Caja principal` para compatibilidad histÃƒÂ³rica.
+- Los movimientos sin cuenta se imputan a `Caja principal` para compatibilidad histÃƒÆ’Ã‚Â³rica.
 - El saldo por cuenta usa `SaldoInicial + Ingresos activos - Egresos activos`.
-- El resumen separa efectivo, bancos y billeteras segÃƒÂºn `TipoCuentaFinanciera`.
+- El resumen separa efectivo, bancos y billeteras segÃƒÆ’Ã‚Âºn `TipoCuentaFinanciera`.
 
 Transferencias:
 
@@ -580,7 +580,7 @@ Migraciones y scripts:
 
 - `20260627090000_AddCuentaFinancieraCajaBancos`: crea `CuentaFinanciera`, agrega `CuentaFinancieraId` y hace backfill a `Caja principal`.
 - `20260627103000_AddTransferenciasFinancieras`: crea `TransferenciaFinanciera`.
-- `scripts/sql/008-fix-tesoreria-cuentas-financieras.sql`: parche idempotente para bases que ya tenÃƒÂ­an la tabla antes de las columnas de auditorÃƒÂ­a/anulaciÃƒÂ³n.
+- `scripts/sql/008-fix-tesoreria-cuentas-financieras.sql`: parche idempotente para bases que ya tenÃƒÆ’Ã‚Â­an la tabla antes de las columnas de auditorÃƒÆ’Ã‚Â­a/anulaciÃƒÆ’Ã‚Â³n.
 
 ## 15. Nubefact
 
@@ -645,8 +645,8 @@ Los PDF locales se guardan en la ruta configurada por `PdfOptions`.
 
 ### 16.1 Reporte general anual
 
-- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez aÃƒÂ±os.
-- `ReporteRepository` agrega por empresa, aÃƒÂ±o y mes las ventas, ingresos, gastos y compras.
+- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez aÃƒÆ’Ã‚Â±os.
+- `ReporteRepository` agrega por empresa, aÃƒÆ’Ã‚Â±o y mes las ventas, ingresos, gastos y compras.
 - Ventas incluye BOL/FAC activas y resta NCR activas.
 - Compras considera documentos con `EstadoDocumento = ACTIVO`.
 - Gastos e ingresos consideran `Estado = Activo`.
@@ -763,6 +763,62 @@ El sistema usa dos conceptos de rol:
 
 Para login multiempresa no basta con crear el usuario en `erp.AspNetUsers`; debe existir al menos una fila en `erp.UsuarioEmpresa` para la empresa seleccionada. El script `007` asocia el usuario inicial a las empresas con RUC `20615082997` y `20615619273` cuando estan activas.
 
+
+## Motor configurable de documentos
+
+El motor de configuracion de documentos permite definir, por empresa y tipo de documento, la estructura visual de formularios comerciales.
+
+Tipos soportados:
+
+- `COTIZACION`.
+- `NOTA_PEDIDO`.
+- `COMPROBANTE`.
+- `NOTA_CREDITO`.
+- `COMPRA`.
+
+Componentes principales:
+
+- `FormularioConfiguracionService`: normaliza el tipo de documento, entrega catalogos controlados y fusiona configuracion persistida con valores por defecto.
+- `DocumentoConfiguracionService`: arma el DTO editable para la vista y valida/normaliza bloques, campos y comportamiento de productos antes de guardar.
+- `DocumentoConfiguracionRepository`: obtiene y persiste `FormularioConfiguracion`, `FormularioBloqueConfiguracion`, `FormularioCampoConfiguracion` y `FormularioBloqueProductoConfiguracion`.
+- `ConfiguracionDocumentosController`: expone la pantalla de administracion y guarda cambios por empresa activa.
+- `Views/ConfiguracionDocumentos/Index.cshtml`: renderiza la UI de configuracion con pestanas de documento, panel de estructura y tabla de campos.
+
+Entidades de configuracion:
+
+- `FormularioConfiguracion`: cabecera por tipo de documento, empresa y version.
+- `FormularioBloqueConfiguracion`: visibilidad, titulo, orden y estado colapsado de cada bloque.
+- `FormularioCampoConfiguracion`: etiqueta, visibilidad, obligatoriedad, solo lectura, orden, ancho y valor por defecto de cada campo.
+- `FormularioBloqueProductoConfiguracion`: comportamiento de grillas de productos, como cantidad inicial, union de duplicados, edicion de precio, descuento, stock y bloqueo sin stock.
+
+Catalogos controlados:
+
+- Los campos no son libres: cada tipo de documento define su catalogo en `FormularioConfiguracionService`.
+- `ValidarCampo` impide ocultar campos no ocultables, marcar obligatorios no permitidos o cambiar solo lectura en campos de sistema.
+- `AplicarCatalogo` conserva metadatos tecnicos del campo y normaliza ancho/visibilidad antes de guardar.
+
+Bloques por documento:
+
+- Cotizacion: `GENERAL`, `CLIENTE`, `PRODUCTOS`, `OBSERVACIONES`, `CONDICIONES`, `TOTALES`, `ACCIONES`.
+- Nota de pedido: `GENERAL`, `CLIENTE`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
+- Comprobante: `GENERAL`, `CLIENTE`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
+- Compra: `GENERAL`, `PROVEEDOR`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
+- Nota de credito: `GENERAL`, `ORIGEN`, `PRODUCTOS`, `TOTALES`, `ACCIONES`.
+
+Nota de credito en el motor:
+
+- Tipo normalizado: `NOTA_CREDITO`.
+- `GENERAL`: serie, numero, fecha de emision, motivo y sustento/descripcion.
+- `ORIGEN`: comprobante, cliente, documento, fecha de emision, total original, NC emitidas y saldo disponible.
+- `PRODUCTOS`: producto, cantidad original, cantidad NC, precio y total NC.
+- `TOTALES`: subtotal exonerado, subtotal gravado, descuento, IGV y total NC.
+
+Reglas de UI:
+
+- La vista de configuracion conserva `name`/`asp-for` por indice para mantener el model binding de `DocumentoConfiguracionEditDto`.
+- Los bloques se seleccionan con atributos `data-config-block` y `data-config-field-panel`.
+- Si el JavaScript no se ejecuta, los paneles de campos quedan visibles por defecto para evitar que el usuario pierda acceso a la configuracion.
+- El panel izquierdo muestra estructura compacta sin iconos para ahorrar espacio; el input de orden se presenta como control pequeno centrado.
 ## 20. Build y pruebas
 
 Comandos:
@@ -790,3 +846,4 @@ Remove-Item -LiteralPath .codex-build -Recurse -Force
 - Registrar errores de Nubefact con solicitud y respuesta.
 - No exponer token Nubefact en vistas.
 - Mantener scripts SQL idempotentes con `IF OBJECT_ID` y `COL_LENGTH`.
+

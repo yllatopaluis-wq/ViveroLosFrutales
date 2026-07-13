@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -70,6 +70,10 @@ public class IngresosController(IngresoService service) : Controller
     private async Task<IngresoEditDto> PrepararFormularioAsync(IngresoEditDto dto, CancellationToken cancellationToken)
     {
         dto.CuentasFinancieras = await service.ListarCuentasFinancierasAsync(cancellationToken);
+        dto.Proveedores = await service.ListarProveedoresAsync(cancellationToken);
+        dto.FormularioConfiguracion = await service.ObtenerFormularioConfiguracionAsync(cancellationToken);
         return dto;
     }
 }
+
+

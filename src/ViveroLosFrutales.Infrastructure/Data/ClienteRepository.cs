@@ -14,8 +14,14 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
         var query = db.Clientes.AsNoTracking().Where(x => x.EmpresaId == empresaId);
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-            var term = request.Search.Trim();
-            query = query.Where(x => x.NombreCompleto.Contains(term) || x.NumeroDocumento.Contains(term));
+            foreach (var term in SearchTerms(request.Search))
+            {
+                query = query.Where(x =>
+                    x.NombreCompleto.Contains(term) ||
+                    x.NumeroDocumento.Contains(term) ||
+                    (x.Telefono != null && x.Telefono.Contains(term)) ||
+                    (x.Email != null && x.Email.Contains(term)));
+            }
         }
 
         var page = request.Page < 1 ? 1 : request.Page;
@@ -57,8 +63,14 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            var term = search.Trim();
-            query = query.Where(x => x.NombreCompleto.Contains(term) || x.NumeroDocumento.Contains(term));
+            foreach (var term in SearchTerms(search))
+            {
+                query = query.Where(x =>
+                    x.NombreCompleto.Contains(term) ||
+                    x.NumeroDocumento.Contains(term) ||
+                    (x.Telefono != null && x.Telefono.Contains(term)) ||
+                    (x.Email != null && x.Email.Contains(term)));
+            }
         }
 
         return await query
@@ -85,5 +97,11 @@ public class ClienteRepository(ApplicationDbContext db) : IClienteRepository
         if (cliente.ClienteId == 0) db.Clientes.Add(cliente);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    private static string[] SearchTerms(string search) =>
+        search.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
 }
 

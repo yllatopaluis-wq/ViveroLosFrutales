@@ -1,168 +1,385 @@
 ﻿@model CompraFormDataDto
+@using System.Text.Json
 @{
-    ViewData["Title"] = "Registrar Compra";
+    ViewData["Title"] = "Registrar compra";
+    var proveedorSeleccionado = Model.Proveedores.FirstOrDefault(x => x.ProveedorId == Model.Compra.ProveedorId);
+    var proveedorTexto = proveedorSeleccionado is null ? string.Empty : $"{proveedorSeleccionado.RazonSocial} - {proveedorSeleccionado.NumeroDocumento}";
+    var proveedoresJson = JsonSerializer.Serialize(Model.Proveedores.Select(x => new
+    {
+        id = x.ProveedorId,
+        nombre = x.RazonSocial,
+        documento = x.NumeroDocumento,
+        telefono = x.TipoDocumento.ToString(),
+        email = x.RazonSocial,
+        direccion = x.Direccion,
+        texto = $"{x.RazonSocial} - {x.NumeroDocumento}"
+    }));
+    var productosJson = JsonSerializer.Serialize(Model.Productos.Select(x => new
+    {
+        id = x.ProductoId,
+        nombre = x.Nombre,
+        categoria = x.Categoria,
+        codigo = $"PROD-{x.ProductoId:D6}",
+        sku = string.Empty,
+        codigoBarras = string.Empty,
+        unidad = x.UnidadMedida,
+        precio = x.PrecioCompra,
+        precioCompra = x.PrecioCompra,
+        stock = x.Stock,
+        afectoIgv = x.AfectoIgv,
+        texto = string.IsNullOrWhiteSpace(x.Categoria) ? x.Nombre : $"{x.Nombre} ({x.Categoria})"
+    }));
     var detalles = Model.Compra.Detalles.Count == 0 ? new List<CompraDetalleEditDto> { new() } : Model.Compra.Detalles;
+    var bloques = Model.FormularioConfiguracion.Bloques.ToDictionary(x => x.Bloque, x => x, StringComparer.OrdinalIgnoreCase);
+    var campos = Model.FormularioConfiguracion.Campos.ToDictionary(x => $"{x.Bloque}:{x.Campo}", x => x, StringComparer.OrdinalIgnoreCase);
+    bool BloqueVisible(string bloque) => !bloques.TryGetValue(bloque, out var config) || config.Visible;
+    FormularioCampoDto Campo(string bloque, string campo, string etiquetaDefault, int ordenDefault = 999, string anchoDefault = "3") =>
+        campos.TryGetValue($"{bloque}:{campo}", out var config)
+            ? config
+            : new FormularioCampoDto(bloque, campo, etiquetaDefault, true, false, false, ordenDefault, anchoDefault, null);
+    bool CampoVisible(string bloque, string campo) => Campo(bloque, campo, campo).Visible;
+    string Etiqueta(string bloque, string campo, string fallback) => Campo(bloque, campo, fallback).Etiqueta;
+    bool Obligatorio(string bloque, string campo) => Campo(bloque, campo, campo).Obligatorio;
+    bool SoloLectura(string bloque, string campo) => Campo(bloque, campo, campo).SoloLectura;
+    int Ancho(string bloque, string campo, string fallback = "3")
+    {
+        var raw = Campo(bloque, campo, campo, 999, fallback).Ancho;
+        if (string.Equals(raw, "full", StringComparison.OrdinalIgnoreCase)) return 12;
+        return int.TryParse(raw, out var ancho) && ancho is >= 1 and <= 12 ? ancho : int.Parse(fallback);
+    }
+    string ColClass(string bloque, string campo, string fallback = "3") => $"col-12 col-md-{Ancho(bloque, campo, fallback)}";
+    string RequiredMark(string bloque, string campo) => Obligatorio(bloque, campo) ? " *" : string.Empty;
+    var generalFields = Model.FormularioConfiguracion.Campos
+        .Where(x => string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase) && x.Visible)
+        .OrderBy(x => x.Orden)
+        .ToList();
+    var productBehavior = Model.FormularioConfiguracion.ProductoComportamiento;
+    var productFields = Model.FormularioConfiguracion.Campos
+        .Where(x => string.Equals(x.Bloque, "PRODUCTOS", StringComparison.OrdinalIgnoreCase)
+            && x.Visible
+            && !string.Equals(x.Campo, "BuscadorProducto", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(x.Campo, "AgregarProducto", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(x.Campo, "Item", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(x.Campo, "Accion", StringComparison.OrdinalIgnoreCase)
+            && (productBehavior.MostrarStock || !string.Equals(x.Campo, "Stock", StringComparison.OrdinalIgnoreCase)))
+        .OrderBy(x => x.Orden)
+        .ToList();
+    var mostrarItemProducto = CampoVisible("PRODUCTOS", "Item");
+    var mostrarAccionProducto = CampoVisible("PRODUCTOS", "Accion");
+    var mostrarBuscadorProducto = CampoVisible("PRODUCTOS", "BuscadorProducto");
+    var mostrarAgregarProducto = CampoVisible("PRODUCTOS", "AgregarProducto");
+    var productWidthUnits = Math.Max(1, productFields.Sum(x => Ancho("PRODUCTOS", x.Campo, "1")));
+    string ProductColWidth(FormularioCampoDto field) => $"{Math.Round(Ancho("PRODUCTOS", field.Campo, "1") * 88m / productWidthUnits, 2)}%";
+    var productColumnsJson = JsonSerializer.Serialize(productFields.Select(x => x.Campo));
+    var productBehaviorJson = JsonSerializer.Serialize(new { cantidadInicial = productBehavior.CantidadInicial, unirProductosDuplicados = productBehavior.UnirProductosDuplicados, permitirEditarPrecio = productBehavior.PermitirEditarPrecio && !SoloLectura("PRODUCTOS", "PrecioUnitario"), permitirDescuento = productBehavior.PermitirDescuento && CampoVisible("PRODUCTOS", "DescuentoPorcentaje") && !SoloLectura("PRODUCTOS", "DescuentoPorcentaje"), mostrarStock = productBehavior.MostrarStock, bloquearSinStock = productBehavior.BloquearSinStock, mostrarItem = mostrarItemProducto, mostrarAccion = mostrarAccionProducto });
+
+    var subtotalExonerado = 0m;
+    var subtotalGravado = 0m;
+    foreach (var detalle in detalles)
+    {
+        var importe = decimal.Round(detalle.Cantidad * detalle.CostoUnitario, 2);
+        var producto = Model.Productos.FirstOrDefault(x => x.ProductoId == detalle.ProductoId);
+        if (producto?.AfectoIgv == true) subtotalGravado += decimal.Round(importe / 1.18m, 2);
+        else subtotalExonerado += importe;
+    }
+    var totalGravado = detalles.Sum(detalle =>
+    {
+        var producto = Model.Productos.FirstOrDefault(x => x.ProductoId == detalle.ProductoId);
+        return producto?.AfectoIgv == true ? decimal.Round(detalle.Cantidad * detalle.CostoUnitario, 2) : 0m;
+    });
+    var igvCalculado = decimal.Round(totalGravado - subtotalGravado, 2);
+    var totalCalculado = subtotalExonerado + subtotalGravado + igvCalculado;
 }
 
-<form asp-action="Create" method="post" class="document-form compra-form">
+<form asp-action="Create" method="post" class="document-form comprobante-form quote-form compra-form">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger"></div>
 
-    <section class="document-section">
-        <div class="document-section-heading">
-            <span class="document-section-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg>
-            </span>
-            <h3>Informaci&oacute;n de la compra</h3>
+    <section class="quote-panel quote-header-panel @(BloqueVisible("GENERAL") ? "" : "d-none")">
+        <div class="quote-panel-title">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <strong>@(bloques.TryGetValue("GENERAL", out var generalBlock) ? generalBlock.Titulo : "Informacion general")</strong>
         </div>
-
-        <fieldset class="document-grid compra-main-grid">
-            <label class="span-2">
-                <span>Proveedor <b>*</b></span>
-                <select asp-for="Compra.ProveedorId" name="ProveedorId" class="form-select">
-                    <option value="">Seleccione proveedor</option>
-                    @foreach (var proveedor in Model.Proveedores)
-                    {
-                        <option value="@proveedor.ProveedorId" selected="@(Model.Compra.ProveedorId == proveedor.ProveedorId)">@proveedor.RazonSocial - @proveedor.NumeroDocumento</option>
-                    }
-                </select>
-            </label>
-            <label>
-                <span>Tipo documento <b>*</b></span>
-                <select asp-for="Compra.TipoDocumento" name="TipoDocumento" class="form-select" id="tipoDocumentoCompra">
-                    <option value="@TipoDocumentoCompra.FACTURA">FACTURA</option>
-                    <option value="@TipoDocumentoCompra.BOLETA">BOLETA</option>
-                    <option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option>
-                    <option value="@TipoDocumentoCompra.RECIBO">RECIBO</option>
-                    <option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option>
-                    <option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option>
-                    <option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option>
-                </select>
-            </label>
-            <label>
-                <span>Fecha <b>*</b></span>
-                <input asp-for="Compra.Fecha" name="Fecha" class="form-control" type="date" />
-            </label>
-            <label class="compra-document-number-field">
-                <span>Serie <b>*</b></span>
-                <input asp-for="Compra.Serie" name="Serie" class="form-control" id="serieCompra" />
-            </label>
-            <label class="compra-document-number-field">
-                <span>N&uacute;mero <b>*</b></span>
-                <input asp-for="Compra.Numero" name="Numero" class="form-control" id="numeroCompra" />
-            </label>
-            <label>
-                <span>Forma de pago <b>*</b></span>
-                <select asp-for="Compra.FormaPago" name="FormaPago" asp-items="Html.GetEnumSelectList<FormaPagoCompra>()" class="form-select"></select>
-            </label>
-            <label>
-                <span>Medio de pago <b>*</b></span>
-                <select asp-for="Compra.MedioPago" name="MedioPago" class="form-select" id="medioPagoCompra">
-                    <option value="EFECTIVO">Efectivo</option>
-                    <option value="TRANSFERENCIA">Transferencia</option>
-                    <option value="YAPE">Yape</option>
-                    <option value="TARJETA DEBITO">Tarjeta d&eacute;bito</option>
-                    <option value="TARJETA CREDITO">Tarjeta cr&eacute;dito</option>
-</select>
-            </label>
-            <label id="cuentaFinancieraCompraWrap">
-                <span>Cuenta destino</span>
-                <select asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra">
-                    <option value="">Caja principal</option>
-                    @foreach (var cuenta in Model.CuentasFinancieras)
-                    {
-                        <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
-                    }
-                </select>
-            </label>
-            <label class="span-4">
-                <span>Observaci&oacute;n</span>
-                <input asp-for="Compra.Observacion" name="Observacion" class="form-control" />
-            </label>
-        </fieldset>
+        <div class="row g-2 quote-general-row">
+            @foreach (var field in generalFields)
+            {
+                switch (field.Campo)
+                {
+                    case "TipoDocumento":
+                        <label class="@ColClass("GENERAL", "TipoDocumento", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "TipoDocumento")</span><select asp-for="Compra.TipoDocumento" name="TipoDocumento" class="form-select" id="tipoDocumentoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@TipoDocumentoCompra.FACTURA">FACTURA</option><option value="@TipoDocumentoCompra.BOLETA">BOLETA</option><option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option><option value="@TipoDocumentoCompra.RECIBO">RECIBO</option><option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option><option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option><option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option></select></label>
+                        if (field.SoloLectura) { <input asp-for="Compra.TipoDocumento" name="TipoDocumento" type="hidden" /> }
+                        break;
+                    case "Serie":
+                        <label class="@ColClass("GENERAL", "Serie", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Serie")</span><input asp-for="Compra.Serie" name="Serie" class="form-control" id="serieCompra" readonly="@(field.SoloLectura)" /></label>
+                        break;
+                    case "Numero":
+                        <label class="@ColClass("GENERAL", "Numero", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Numero")</span><input asp-for="Compra.Numero" name="Numero" class="form-control text-end" id="numeroCompra" readonly="@(field.SoloLectura)" /></label>
+                        break;
+                    case "Fecha":
+                        <label class="@ColClass("GENERAL", "Fecha", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Fecha")</span><input asp-for="Compra.Fecha" name="Fecha" class="form-control" type="date" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
+                        break;
+                    case "FormaPago":
+                        <label class="@ColClass("GENERAL", "FormaPago", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "FormaPago")</span><select asp-for="Compra.FormaPago" name="FormaPago" class="form-select" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@FormaPagoCompra.CONTADO">Contado</option><option value="@FormaPagoCompra.CREDITO">Credito</option></select></label>
+                        if (field.SoloLectura) { <input asp-for="Compra.FormaPago" name="FormaPago" type="hidden" /> }
+                        break;
+                    case "MedioPago":
+                        <label class="@ColClass("GENERAL", "MedioPago", "3")" id="medioPagoCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "MedioPago")</span><select asp-for="Compra.MedioPago" name="MedioPago" class="form-select" id="medioPagoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="YAPE">Yape</option><option value="TARJETA DEBITO">Tarjeta debito</option><option value="TARJETA CREDITO">Tarjeta credito</option></select></label>
+                        break;
+                    case "CuentaDestino":
+                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra" disabled="@(field.SoloLectura)"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        break;
+                }
+            }
+        </div>
+        @if (!CampoVisible("GENERAL", "TipoDocumento")) { <input asp-for="Compra.TipoDocumento" name="TipoDocumento" type="hidden" /> }
+        @if (!CampoVisible("GENERAL", "Serie")) { <input asp-for="Compra.Serie" name="Serie" type="hidden" id="serieCompra" /> }
+        @if (!CampoVisible("GENERAL", "Numero")) { <input asp-for="Compra.Numero" name="Numero" type="hidden" id="numeroCompra" /> }
+        @if (!CampoVisible("GENERAL", "MedioPago")) { <input asp-for="Compra.MedioPago" name="MedioPago" type="hidden" id="medioPagoCompra" /> }
+        @if (!CampoVisible("GENERAL", "CuentaDestino")) { <input asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" type="hidden" id="cuentaFinancieraCompra" /> }
     </section>
 
-    <section class="document-section">
-        <div class="document-section-heading">
-            <span class="document-section-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg>
-            </span>
-            <h3>Detalle de productos</h3>
+    <section class="quote-panel @(BloqueVisible("PROVEEDOR") ? "" : "d-none")">
+        <div class="quote-panel-title">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span>
+            <strong>@(bloques.TryGetValue("PROVEEDOR", out var proveedorBlock) ? proveedorBlock.Titulo : "Proveedor")</strong>
+        </div>
+        @if (CampoVisible("PROVEEDOR", "ProveedorBuscador"))
+        {
+            <div class="quote-client-search">
+                <input class="form-control" id="proveedorSearch" value="@proveedorTexto" placeholder="Buscar proveedor por razon social, documento o telefono..." autocomplete="off" required="@(Obligatorio("PROVEEDOR", "ProveedorBuscador"))" />
+                <div class="producto-search-results proveedor-search-results" id="proveedorSearchResults" hidden></div>
+                <input asp-for="Compra.ProveedorId" name="ProveedorId" type="hidden" id="proveedorId" />
+            </div>
+        }
+        else
+        {
+            <input asp-for="Compra.ProveedorId" name="ProveedorId" type="hidden" id="proveedorId" />
+        }
+        <div class="quote-client-summary quote-client-summary-line">
+            @if (CampoVisible("PROVEEDOR", "ProveedorRazonSocial")) { <div class="client-name-block"><span>@Etiqueta("PROVEEDOR", "ProveedorRazonSocial", "Razon social")</span><strong id="proveedorResumenNombre">@(proveedorSeleccionado?.RazonSocial ?? "Seleccione proveedor")</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorTipoDocumento")) { <div><span>@Etiqueta("PROVEEDOR", "ProveedorTipoDocumento", "Tipo documento")</span><strong id="proveedorResumenTipoDocumento">@(proveedorSeleccionado is null ? "-" : proveedorSeleccionado.TipoDocumento.ToString())</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorNumeroDocumento")) { <div><span>@Etiqueta("PROVEEDOR", "ProveedorNumeroDocumento", "Numero documento")</span><strong id="proveedorResumenDocumento">@(proveedorSeleccionado?.NumeroDocumento ?? "-")</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorDireccion")) { <div><span>@Etiqueta("PROVEEDOR", "ProveedorDireccion", "Direccion")</span><strong id="proveedorResumenDireccion">@(string.IsNullOrWhiteSpace(proveedorSeleccionado?.Direccion) ? "-" : proveedorSeleccionado.Direccion)</strong></div> }
+            <input id="proveedorDireccion" value="@(proveedorSeleccionado?.Direccion ?? string.Empty)" type="hidden" />
+        </div>
+    </section>
+
+    <section class="quote-panel @(BloqueVisible("PRODUCTOS") ? "" : "d-none")">
+        <div class="quote-panel-title">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span>
+            <strong>@(bloques.TryGetValue("PRODUCTOS", out var productosBlock) ? productosBlock.Titulo : "Detalle de productos")</strong>
+        </div>
+        <div class="quote-product-picker @((mostrarBuscadorProducto || mostrarAgregarProducto) ? "" : "d-none")" data-product-grid-picker>
+            <div class="producto-search-wrap quote-product-search @(mostrarBuscadorProducto ? "" : "d-none")">
+                <input class="form-control producto-grid-search" placeholder="@Etiqueta("PRODUCTOS", "BuscadorProducto", "Buscar producto")" autocomplete="off" />
+                <button type="button" class="producto-search-toggle" aria-label="Mostrar productos">v</button>
+                <div class="producto-search-results" hidden></div>
+            </div>
+            <button type="button" class="document-more-btn product-grid-add @(mostrarAgregarProducto ? "" : "d-none")">+ @Etiqueta("PRODUCTOS", "AgregarProducto", "Agregar producto")</button>
         </div>
 
-        <fieldset class="document-detail-fieldset">
-            <div class="document-detail-table-wrap">
-                <table class="table table-sm data-grid detalle-grid document-detail-table compra-detail-table" id="compraDetalle">
+        <fieldset class="document-detail-fieldset quote-detail-fieldset">
+            <div class="document-detail-table-wrap quote-detail-table-wrap">
+                <table class="table table-sm data-grid detalle-grid document-detail-table quote-detail-table compra-detail-table" id="detalle" data-show-totals="true" data-product-picker-owned="true">
                     <colgroup>
-                        <col class="detalle-producto" />
-                        <col class="detalle-cantidad" />
-                        <col class="detalle-precio" />
-                        <col class="detalle-total" />
-                        <col class="detalle-accion" />
+                        @if (mostrarItemProducto) { <col class="detalle-item" style="width:34px" /> }
+                        @foreach (var field in productFields) { <col data-field="@field.Campo" style="width:@ProductColWidth(field)" /> }
+                        @if (mostrarAccionProducto) { <col class="detalle-accion" style="width:52px" /> }
                     </colgroup>
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="text-end">Cantidad</th>
-                            <th class="text-end">Costo unitario</th>
-                            <th class="text-end">Importe</th>
-                            <th class="text-center">Acci&oacute;n</th>
-                        </tr>
-                    </thead>
+                    <thead><tr>
+                        @if (mostrarItemProducto) { <th>@Etiqueta("PRODUCTOS", "Item", "#")</th> }
+                        @foreach (var field in productFields)
+                        {
+                            var align = field.Campo is "Stock" or "Cantidad" or "PrecioUnitario" or "DescuentoPorcentaje" or "TotalLinea" ? "text-end" : string.Empty;
+                            <th class="@align" data-field="@field.Campo">@field.Etiqueta</th>
+                        }
+                        @if (mostrarAccionProducto) { <th class="text-center">@Etiqueta("PRODUCTOS", "Accion", "Accion")</th> }
+                    </tr></thead>
                     <tbody>
                     @for (var i = 0; i < detalles.Count; i++)
                     {
-                        var detalle = detalles[i];
+                        var productoSeleccionado = Model.Productos.FirstOrDefault(x => x.ProductoId == detalles[i].ProductoId);
+                        var codigo = productoSeleccionado is null ? string.Empty : $"PROD-{productoSeleccionado.ProductoId:D6}";
                         <tr>
-                            <td>
-                                <select name="Detalles[@i].ProductoId" class="form-select form-select-sm producto-select">
-                                    <option value="">Seleccione producto</option>
-                                    @foreach (var producto in Model.Productos)
-                                    {
-                                        <option value="@producto.ProductoId" data-afecto-igv="@producto.AfectoIgv" selected="@(detalle.ProductoId == producto.ProductoId)">
-                                            @producto.Nombre (@producto.Categoria)
-                                        </option>
-                                    }
-                                </select>
-                                <input name="Detalles[@i].UnidadMedida" value="@detalle.UnidadMedida" type="hidden" />
-                            </td>
-                            <td><input name="Detalles[@i].Cantidad" value="@detalle.Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
-                            <td><input name="Detalles[@i].CostoUnitario" value="@detalle.CostoUnitario" class="form-control form-control-sm text-end costo-input" type="number" step="0.01" min="0" /></td>
-                            <td><input value="@((detalle.Cantidad * detalle.CostoUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
-                            <td class="text-center">
-                                <button type="button" class="icon-btn primary add-row" title="Agregar fila" aria-label="Agregar fila">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
-                                </button>
-                            </td>
+                            @if (mostrarItemProducto) { <td class="quote-row-number">@(i + 1)</td> }
+                            @foreach (var field in productFields)
+                            {
+                                switch (field.Campo)
+                                {
+                                    case "Codigo":
+                                        <td data-field="Codigo"><input value="@codigo" class="form-control form-control-sm codigo-input" readonly /></td>
+                                        break;
+                                    case "Producto":
+                                        <td data-field="Producto"><input class="form-control form-control-sm producto-search" value="@(productoSeleccionado is null ? string.Empty : string.IsNullOrWhiteSpace(productoSeleccionado.Categoria) ? productoSeleccionado.Nombre : $"{productoSeleccionado.Nombre} ({productoSeleccionado.Categoria})")" readonly /><input name="Detalles[@i].ProductoId" class="producto-select" type="hidden" value="@detalles[i].ProductoId" /></td>
+                                        break;
+                                    case "Unidad":
+                                        <td data-field="Unidad"><input name="Detalles[@i].UnidadMedida" value="@(string.IsNullOrWhiteSpace(detalles[i].UnidadMedida) ? productoSeleccionado?.UnidadMedida ?? "NIU" : detalles[i].UnidadMedida)" class="form-control form-control-sm unidad-input" readonly /></td>
+                                        break;
+                                    case "Stock":
+                                        <td data-field="Stock"><input value="@((productoSeleccionado?.Stock ?? 0m).ToString("N2"))" class="form-control form-control-sm text-end stock-input" readonly /></td>
+                                        break;
+                                    case "Cantidad":
+                                        <td data-field="Cantidad"><input name="Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                        break;
+                                    case "PrecioUnitario":
+                                        <td data-field="PrecioUnitario"><input name="Detalles[@i].CostoUnitario" value="@detalles[i].CostoUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                        break;
+                                    case "DescuentoPorcentaje":
+                                        <td data-field="DescuentoPorcentaje"><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100" readonly="@(field.SoloLectura)" /></td>
+                                        break;
+                                    case "TotalLinea":
+                                        <td data-field="TotalLinea"><input value="@((detalles[i].Cantidad * detalles[i].CostoUnitario).ToString("N2"))" class="form-control form-control-sm text-end line-total" readonly /></td>
+                                        break;
+                                }
+                            }
+                            @if (mostrarAccionProducto) { <td class="text-center"><button type="button" class="icon-btn danger remove-row" title="Quitar fila" aria-label="Quitar fila"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button></td> }
                         </tr>
                     }
                     </tbody>
                 </table>
             </div>
         </fieldset>
-
-        <div class="document-total-strip compra-total-strip" aria-label="Totales de compra">
-            <div><span>Subtotal</span><strong id="compraSubtotal">S/ 0.00</strong></div>
-            <div><span>IGV</span><strong id="compraIgv">S/ 0.00</strong></div>
-            <div class="grand-total"><span>Total</span><strong id="compraTotal">S/ 0.00</strong></div>
-            <div><span>Total pagado</span><strong id="compraPagado">S/ 0.00</strong></div>
-            <div><span>Saldo pendiente</span><strong id="compraSaldo">S/ 0.00</strong></div>
-            <div><span>Estado pago</span><strong id="compraEstadoPago">Pendiente</strong></div>
-        </div>
     </section>
 
-    <div class="document-bottom-actions">
-        <button class="document-save-btn">Guardar</button>
-        <a class="document-more-btn" asp-action="Index">Volver</a>
+    <section class="quote-panel quote-observations-panel @(BloqueVisible("OBSERVACIONES") && CampoVisible("OBSERVACIONES", "Observacion") ? "" : "d-none")">
+        <div class="quote-panel-title">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg></span>
+            <strong>@(bloques.TryGetValue("OBSERVACIONES", out var observacionesBlock) ? observacionesBlock.Titulo : "Observaciones")</strong>
+        </div>
+        <textarea asp-for="Compra.Observacion" name="Observacion" class="form-control quote-observations-input" rows="2" placeholder="@Etiqueta("OBSERVACIONES", "Observacion", "Observaciones")"></textarea>
+    </section>
+
+    <div class="document-total-strip quote-total-strip @(BloqueVisible("TOTALES") ? "" : "d-none")" aria-label="Totales de compra">
+        @if (CampoVisible("TOTALES", "SubtotalExonerado")) { <div><span>@Etiqueta("TOTALES", "SubtotalExonerado", "Subtotal exonerado")</span><strong id="comprobanteSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "SubtotalGravado")) { <div><span>@Etiqueta("TOTALES", "SubtotalGravado", "Subtotal gravado")</span><strong id="comprobanteSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "Descuento")) { <div><span>@Etiqueta("TOTALES", "Descuento", "Descuento")</span><strong id="comprobanteDescuento">S/ 0.00</strong></div> }
+        @if (CampoVisible("TOTALES", "Igv")) { <div><span>@Etiqueta("TOTALES", "Igv", "IGV (18%)")</span><strong id="comprobanteIgv">S/ @igvCalculado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "Total")) { <div class="grand-total"><span>@Etiqueta("TOTALES", "Total", "Total")</span><strong id="comprobanteTotal">S/ @totalCalculado.ToString("N2")</strong></div> }
+    </div>
+
+    <div class="document-bottom-actions quote-bottom-actions @(BloqueVisible("ACCIONES") ? "" : "d-none")">
+        @if (CampoVisible("ACCIONES", "Guardar")) { <button type="submit" class="document-save-btn">@Etiqueta("ACCIONES", "Guardar", "Guardar compra")</button> }
+        @if (CampoVisible("ACCIONES", "Volver")) { <a class="document-more-btn" asp-action="Index">@Etiqueta("ACCIONES", "Volver", "Volver")</a> }
     </div>
 </form>
 
 @section Scripts {
     <script>
-        window.viveroCompraForm();
+        (() => {
+            const proveedores = @Html.Raw(proveedoresJson);
+            const search = document.getElementById('proveedorSearch');
+            const results = document.getElementById('proveedorSearchResults');
+            const proveedorId = document.getElementById('proveedorId');
+            const resumenNombre = document.getElementById('proveedorResumenNombre');
+            const resumenTipo = document.getElementById('proveedorResumenTipoDocumento');
+            const resumenDocumento = document.getElementById('proveedorResumenDocumento');
+            const resumenDireccion = document.getElementById('proveedorResumenDireccion');
+            const direccionInput = document.getElementById('proveedorDireccion');
+            if (!search || !results || !proveedorId) return;
+
+            if (results.parentElement !== document.body) document.body.appendChild(results);
+            let activeIndex = -1;
+            let currentItems = [];
+            let pointerInResults = false;
+            const normalizar = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+            const escapeHtml = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+
+            const filtrar = () => {
+                const term = normalizar(search.value);
+                return proveedores.filter((proveedor) => !term
+                    || normalizar(proveedor.texto).includes(term)
+                    || normalizar(proveedor.nombre).includes(term)
+                    || normalizar(proveedor.documento).includes(term)
+                    || normalizar(proveedor.direccion).includes(term)).slice(0, 25);
+            };
+
+            const cerrar = () => {
+                results.hidden = true;
+                activeIndex = -1;
+            };
+
+            const posicionar = () => {
+                const rect = search.getBoundingClientRect();
+                results.style.left = `${rect.left}px`;
+                results.style.top = `${rect.bottom + 4}px`;
+                results.style.width = `${rect.width}px`;
+            };
+
+            const pintar = () => {
+                currentItems = filtrar();
+                activeIndex = currentItems.length ? 0 : -1;
+                posicionar();
+                results.innerHTML = currentItems.length
+                    ? currentItems.map((proveedor, index) => `<button type="button" class="producto-search-option${index === 0 ? ' active' : ''}" data-id="${escapeHtml(proveedor.id)}"><strong>${escapeHtml(proveedor.nombre)}</strong><span>${escapeHtml(proveedor.telefono || '-')} | ${escapeHtml(proveedor.documento || '-')}</span><em>${escapeHtml(proveedor.direccion || '-')}</em></button>`).join('')
+                    : '<div class="producto-search-empty">Sin coincidencias</div>';
+                results.hidden = false;
+            };
+
+            const activar = (index) => {
+                if (!currentItems.length) return;
+                activeIndex = (index + currentItems.length) % currentItems.length;
+                results.querySelectorAll('.producto-search-option').forEach((item, itemIndex) => {
+                    item.classList.toggle('active', itemIndex === activeIndex);
+                    if (itemIndex === activeIndex) item.scrollIntoView({ block: 'nearest' });
+                });
+            };
+
+            const seleccionar = (proveedor) => {
+                if (!proveedor) return;
+                proveedorId.value = proveedor.id;
+                search.value = proveedor.texto || `${proveedor.nombre} - ${proveedor.documento}`;
+                if (resumenNombre) resumenNombre.textContent = proveedor.nombre || 'Seleccione proveedor';
+                if (resumenTipo) resumenTipo.textContent = proveedor.telefono || '-';
+                if (resumenDocumento) resumenDocumento.textContent = proveedor.documento || '-';
+                if (resumenDireccion) resumenDireccion.textContent = proveedor.direccion || '-';
+                if (direccionInput) direccionInput.value = proveedor.direccion || '';
+                cerrar();
+            };
+
+            const resolver = () => {
+                const exacto = proveedores.find((proveedor) => normalizar(proveedor.texto) === normalizar(search.value));
+                if (exacto) seleccionar(exacto);
+            };
+
+            search.addEventListener('input', () => {
+                proveedorId.value = '';
+                pintar();
+            });
+            search.addEventListener('focus', pintar);
+            search.addEventListener('blur', () => window.setTimeout(() => {
+                if (!pointerInResults) {
+                    resolver();
+                    cerrar();
+                }
+            }, 150));
+            search.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex + 1); }
+                if (event.key === 'ArrowUp') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex - 1); }
+                if (event.key === 'Enter') { event.preventDefault(); seleccionar(currentItems[activeIndex] || currentItems[0]); }
+                if (event.key === 'Escape') { event.preventDefault(); cerrar(); }
+            });
+            results.addEventListener('pointerenter', () => { pointerInResults = true; });
+            results.addEventListener('pointerleave', () => { pointerInResults = false; });
+            results.addEventListener('mousedown', (event) => {
+                const option = event.target.closest('.producto-search-option');
+                if (!option) return;
+                event.preventDefault();
+                seleccionar(proveedores.find((proveedor) => String(proveedor.id) === String(option.dataset.id)));
+            });
+            window.addEventListener('resize', cerrar);
+            window.addEventListener('scroll', (event) => { if (!results.contains(event.target)) cerrar(); }, true);
+        })();
+        window.viveroProductoGridSearch({
+            productos: @Html.Raw(productosJson),
+            tableSelector: '#detalle',
+            columns: @Html.Raw(productColumnsJson),
+            behavior: @Html.Raw(productBehaviorJson),
+            priceFieldName: 'CostoUnitario',
+            unitFieldName: 'UnidadMedida'
+        });
         window.viveroCompraDocumentoForm?.();
         const formaPagoCompra = document.querySelector('[name="FormaPago"]');
-        const medioPagoCompraWrap = document.getElementById('medioPagoCompra')?.closest('label');
+        const medioPagoCompraWrap = document.getElementById('medioPagoCompraWrap');
         const medioPagoCompra = document.getElementById('medioPagoCompra');
         const cuentaFinancieraCompraWrap = document.getElementById('cuentaFinancieraCompraWrap');
         const cuentaFinancieraCompra = document.getElementById('cuentaFinancieraCompra');
@@ -181,3 +398,4 @@
         });
     </script>
 }
+

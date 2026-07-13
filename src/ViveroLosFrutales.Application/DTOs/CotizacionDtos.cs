@@ -36,7 +36,13 @@ public class CotizacionEditDto
 
 public record CotizacionNumeracionDto(string Serie, int Correlativo);
 public record CotizacionResultadoDto(int CotizacionId, string Serie, int Correlativo, decimal Total, string PdfUrl, CotizacionEstado Estado);
-public record CotizacionFormDataDto(CotizacionEditDto Cotizacion, CotizacionNumeracionDto Numeracion, IReadOnlyCollection<ComprobanteClienteOptionDto> Clientes, IReadOnlyCollection<ComprobanteProductoOptionDto> Productos);
+public record CotizacionFormDataDto(
+    CotizacionEditDto Cotizacion,
+    CotizacionNumeracionDto Numeracion,
+    IReadOnlyCollection<ComprobanteClienteOptionDto> Clientes,
+    IReadOnlyCollection<ComprobanteProductoOptionDto> Productos,
+    FormularioConfiguracionDto FormularioConfiguracion,
+    CondicionComercialPlantillaDto CondicionesComerciales);
 
 public class CotizacionDetalleViewDto
 {
@@ -55,3 +61,4 @@ public class CotizacionDetalleViewDto
     public bool TieneDocumentosRelacionados { get; set; }
     public IReadOnlyList<NotaPedidoDetalleDto> Detalles { get; set; } = Array.Empty<NotaPedidoDetalleDto>();
 }
+

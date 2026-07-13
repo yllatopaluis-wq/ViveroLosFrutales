@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -30,6 +30,7 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
         producto.AfectoIgv = dto.AfectoIgv;
         producto.PrecioVentaConIgv = decimal.Round(dto.PrecioVentaConIgv, 2);
         producto.PrecioVentaSinIgv = CalcularPrecioSinIgv(producto.PrecioVentaConIgv, producto.AfectoIgv);
+        producto.PrecioCompra = decimal.Round(dto.PrecioCompra, 2);
         producto.TieneDetraccion = dto.TieneDetraccion;
         producto.PorcentajeDetraccion = dto.TieneDetraccion ? dto.PorcentajeDetraccion : 0;
         producto.UsuarioRegistro = empresaContext.UsuarioNombre;
@@ -50,6 +51,7 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
         if (string.IsNullOrWhiteSpace(dto.Categoria)) throw new InvalidOperationException("Seleccione una categoria.");
         if (string.IsNullOrWhiteSpace(dto.Nombre)) throw new InvalidOperationException("El nombre del producto es obligatorio.");
         if (dto.PrecioVentaConIgv < 0) throw new InvalidOperationException("El precio de venta no puede ser negativo.");
+        if (dto.PrecioCompra < 0) throw new InvalidOperationException("El precio de compra no puede ser negativo.");
         if (!EsCategoriaServicio(dto.Categoria) && dto.Stock < 0) throw new InvalidOperationException("El stock no puede ser negativo.");
         if (dto.TieneDetraccion && dto.PorcentajeDetraccion <= 0) throw new InvalidOperationException("Ingrese el porcentaje de detraccion.");
     }
@@ -83,6 +85,7 @@ public class ProductoService(IProductoRepository repository, IEmpresaContext emp
         AfectoIgv = producto.AfectoIgv,
         PrecioVentaSinIgv = producto.PrecioVentaSinIgv,
         PrecioVentaConIgv = producto.PrecioVentaConIgv,
+        PrecioCompra = producto.PrecioCompra,
         TieneDetraccion = producto.TieneDetraccion,
         PorcentajeDetraccion = producto.PorcentajeDetraccion,
         Estado = producto.Estado

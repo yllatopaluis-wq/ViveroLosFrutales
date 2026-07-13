@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
@@ -87,6 +87,10 @@ public static class DatabaseSeeder
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.Producto', 'U') IS NOT NULL AND COL_LENGTH('erp.Producto', 'PrecioCompra') IS NULL
+BEGIN
+    ALTER TABLE erp.Producto ADD PrecioCompra decimal(18,2) NOT NULL CONSTRAINT DF_Producto_PrecioCompra DEFAULT 0;
+END;
 IF OBJECT_ID('erp.CuentaFinanciera', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('erp.CuentaFinanciera', 'FechaModificacion') IS NULL
@@ -325,6 +329,18 @@ BEGIN
     IF COL_LENGTH('erp.MovimientoCaja', 'ClienteId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ClienteId int NULL;
     IF COL_LENGTH('erp.MovimientoCaja', 'ProveedorId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ProveedorId int NULL;
 END;
+IF OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.Gasto', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Gasto ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Gasto_DocumentoReferencia DEFAULT N'';
+    IF COL_LENGTH('erp.Gasto', 'ClienteId') IS NULL ALTER TABLE erp.Gasto ADD ClienteId int NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Gasto_EmpresaId_ClienteId' AND object_id = OBJECT_ID('erp.Gasto')) CREATE INDEX IX_Gasto_EmpresaId_ClienteId ON erp.Gasto(EmpresaId, ClienteId);
+END;
+IF OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.Ingreso', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Ingreso ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Ingreso_DocumentoReferencia DEFAULT N'';
+    IF COL_LENGTH('erp.Ingreso', 'ProveedorId') IS NULL ALTER TABLE erp.Ingreso ADD ProveedorId int NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Ingreso_EmpresaId_ProveedorId' AND object_id = OBJECT_ID('erp.Ingreso')) CREATE INDEX IX_Ingreso_EmpresaId_ProveedorId ON erp.Ingreso(EmpresaId, ProveedorId);
+END;
 IF OBJECT_ID('erp.CategoriaGasto', 'U') IS NULL
 BEGIN
     CREATE TABLE erp.CategoriaGasto (
@@ -353,6 +369,7 @@ BEGIN
 END;
 IF OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
 BEGIN
+    IF COL_LENGTH('erp.Gasto', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Gasto ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Gasto_DocumentoReferencia DEFAULT N'';
     IF COL_LENGTH('erp.Gasto', 'CategoriaGastoId') IS NULL ALTER TABLE erp.Gasto ADD CategoriaGastoId int NULL;
     IF COL_LENGTH('erp.Gasto', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Gasto ADD MovimientoCajaId int NULL;
     IF COL_LENGTH('erp.Gasto', 'MotivoAnulacion') IS NULL ALTER TABLE erp.Gasto ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Gasto_MotivoAnulacion DEFAULT N'';
@@ -360,6 +377,7 @@ BEGIN
 END;
 IF OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
 BEGIN
+    IF COL_LENGTH('erp.Ingreso', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Ingreso ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Ingreso_DocumentoReferencia DEFAULT N'';
     IF COL_LENGTH('erp.Ingreso', 'CategoriaIngresoId') IS NULL ALTER TABLE erp.Ingreso ADD CategoriaIngresoId int NULL;
     IF COL_LENGTH('erp.Ingreso', 'MedioPago') IS NULL ALTER TABLE erp.Ingreso ADD MedioPago nvarchar(80) NOT NULL CONSTRAINT DF_Ingreso_MedioPago DEFAULT N'EFECTIVO';
     IF COL_LENGTH('erp.Ingreso', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Ingreso ADD MovimientoCajaId int NULL;
@@ -524,8 +542,6 @@ END;");
         await db.SaveChangesAsync();
     }
 }
-
-
 
 
 
