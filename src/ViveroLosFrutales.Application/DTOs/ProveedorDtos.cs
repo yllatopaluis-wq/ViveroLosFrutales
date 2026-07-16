@@ -3,7 +3,7 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
-public record ProveedorListDto(int ProveedorId, TipoDocumentoCliente TipoDocumento, string NumeroDocumento, string RazonSocial, string NombreComercial, string Telefono, EstadoRegistro Estado);
+public record ProveedorListDto(int ProveedorId, TipoDocumentoCliente TipoDocumento, string NumeroDocumento, string RazonSocial, string NombreComercial, string Direccion, string Telefono, EstadoRegistro Estado);
 
 public class ProveedorEditDto
 {
@@ -24,3 +24,4 @@ public class ProveedorEditDto
     public string? Email { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
 }
+

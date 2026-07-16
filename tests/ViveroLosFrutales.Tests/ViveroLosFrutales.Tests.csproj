@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -12,5 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\ViveroLosFrutales.Domain\ViveroLosFrutales.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ViveroLosFrutales.Application\ViveroLosFrutales.Application.csproj" />
   </ItemGroup>
 </Project>
+

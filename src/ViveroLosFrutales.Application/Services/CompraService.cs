@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -14,6 +14,7 @@ public class CompraService(
     IPagoProveedorRepository pagoProveedorRepository,
     DevolucionService devolucionService,
     CuentaFinancieraService cuentaFinancieraService,
+    IFormularioConfiguracionService formularioConfiguracionService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<CompraListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -30,7 +31,8 @@ public class CompraService(
         Proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
         Productos = await productoRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
         CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken),
-        Compra = new CompraEditDto { Fecha = PeruDateTime.Today, FormaPago = FormaPagoCompra.CREDITO }
+        Compra = new CompraEditDto { Fecha = PeruDateTime.Today, FormaPago = FormaPagoCompra.CONTADO },
+        FormularioConfiguracion = await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoCompra, empresaContext.EmpresaId, null, cancellationToken)
     };
 
     public async Task<CompraDetalleViewDto> ObtenerDetalleAsync(int id, CancellationToken cancellationToken)
@@ -56,7 +58,7 @@ public class CompraService(
         {
             if (string.IsNullOrWhiteSpace(dto.Serie) || string.IsNullOrWhiteSpace(dto.Numero))
             {
-                throw new InvalidOperationException("Serie y número son obligatorios para el tipo de documento seleccionado.");
+                throw new InvalidOperationException("Serie y n�mero son obligatorios para el tipo de documento seleccionado.");
             }
         }
         else
@@ -364,5 +366,4 @@ public class CompraService(
             x.EstadoPago == PagoProveedorEstado.ACTIVO && compra.EstadoDocumento == EstadoDocumentoCompra.ACTIVO)).ToList()
     };
 }
-
 

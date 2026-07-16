@@ -1,4 +1,4 @@
-# Documentacion funcional - Vivero Los Frutales
+﻿# Documentacion funcional - Vivero Los Frutales
 
 ## 1. Objetivo
 
@@ -52,6 +52,39 @@ Roles base:
 
 El modulo `Administracion > Errores de aplicacion` permite consultar excepciones no controladas, filtrar por fecha, estado o texto, revisar el detalle tecnico y marcar cada incidencia como revisada con una observacion.
 
+
+## Configuracion de documentos
+
+El modulo `Administracion > Configuracion de documentos` permite personalizar la estructura de los formularios comerciales por empresa.
+
+Documentos configurables:
+
+- Cotizacion.
+- Nota de pedido.
+- Comprobante.
+- Nota de credito.
+- Compra.
+
+La pantalla muestra una cabecera de configuracion, pestanas por tipo de documento, un panel izquierdo con la estructura del formulario y un panel derecho con los campos del bloque seleccionado.
+
+Desde el panel de estructura se puede:
+
+- Activar o desactivar bloques del formulario.
+- Definir el orden de cada bloque.
+- Seleccionar el bloque que se desea configurar.
+
+Desde el panel de campos se puede:
+
+- Cambiar la etiqueta visible del campo.
+- Mostrar u ocultar campos permitidos.
+- Marcar campos obligatorios cuando el catalogo lo permite.
+- Marcar campos de solo lectura cuando el campo no sea de sistema.
+- Cambiar el orden de los campos.
+- Definir el ancho visual del campo dentro del formulario.
+
+El bloque `Detalle de productos` tambien permite configurar columnas de la grilla. En cotizacion, nota de pedido, comprobante y compra controla columnas como producto, unidad, stock, cantidad, precio, descuento y total. En nota de credito controla producto, cantidad original, cantidad NC, precio y total NC.
+
+La configuracion se guarda por empresa activa. Si una empresa no tiene configuracion propia, el sistema usa la configuracion estandar del documento.
 ## 5. Empresas
 
 El mantenimiento de empresas permite registrar:
@@ -523,11 +556,11 @@ Reglas:
 - Para cobros aplicados desde nota de pedido a comprobante, el documento se muestra como `NP002-000002 -> F002-000006`.
 - Para devoluciones de clientes, el egreso se muestra con el cliente y documento origen de la devolucion.
 
-## 18.1 TesorerÃ­a
+## 18.1 TesorerÃƒÂ­a
 
-El mÃ³dulo TesorerÃ­a centraliza la informaciÃ³n de dinero real de la empresa.
+El mÃƒÂ³dulo TesorerÃƒÂ­a centraliza la informaciÃƒÂ³n de dinero real de la empresa.
 
-Opciones del menÃº:
+Opciones del menÃƒÂº:
 
 - Caja.
 - Caja y Bancos.
@@ -539,7 +572,7 @@ Opciones del menÃº:
 
 ### Cuentas financieras
 
-Las cuentas financieras representan dÃ³nde estÃ¡ fÃ­sicamente o bancariamente el dinero:
+Las cuentas financieras representan dÃƒÂ³nde estÃƒÂ¡ fÃƒÂ­sicamente o bancariamente el dinero:
 
 - Caja: efectivo interno.
 - Banco: cuenta bancaria.
@@ -550,17 +583,17 @@ Datos principales:
 - Nombre.
 - Tipo.
 - Banco.
-- NÃºmero de cuenta.
+- NÃƒÂºmero de cuenta.
 - Moneda.
 - Saldo inicial.
 - Fecha de saldo inicial.
 - Estado activo/anulado.
 
-El sistema crea o usa una cuenta por defecto llamada `Caja principal` cuando una operaciÃ³n no indica cuenta financiera.
+El sistema crea o usa una cuenta por defecto llamada `Caja principal` cuando una operaciÃƒÂ³n no indica cuenta financiera.
 
 ### Caja y Bancos
 
-La pantalla responde la pregunta: Â¿cuÃ¡nto dinero real tiene la empresa?
+La pantalla responde la pregunta: Ã‚Â¿cuÃƒÂ¡nto dinero real tiene la empresa?
 
 Muestra:
 
@@ -587,7 +620,7 @@ Registran cuenta financiera:
 - Pagos a proveedores.
 - Devoluciones.
 
-Esto permite saber a quÃ© caja, banco o billetera ingresÃ³ o de dÃ³nde saliÃ³ el dinero.
+Esto permite saber a quÃƒÂ© caja, banco o billetera ingresÃƒÂ³ o de dÃƒÂ³nde saliÃƒÂ³ el dinero.
 
 ### Transferencias
 
@@ -599,7 +632,7 @@ Formulario:
 - Cuenta origen.
 - Cuenta destino.
 - Monto.
-- ObservaciÃ³n.
+- ObservaciÃƒÂ³n.
 
 Reglas:
 
@@ -665,7 +698,7 @@ No muestra el campo hash en la lista principal.
 
 ## 22. Reportes y filtros
 
-El Reporte General presenta un comparativo anual con meses en filas y aÃ±os en columnas. Permite seleccionar hasta diez aÃ±os y cambiar el indicador entre:
+El Reporte General presenta un comparativo anual con meses en filas y aÃƒÂ±os en columnas. Permite seleccionar hasta diez aÃƒÂ±os y cambiar el indicador entre:
 
 - Resultado neto.
 - Ventas netas.
@@ -673,7 +706,7 @@ El Reporte General presenta un comparativo anual con meses en filas y aÃ±os en
 - Gastos.
 - Compras.
 
-Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃƒÂ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
 
 
 Reportes operativos disponibles:
@@ -716,27 +749,27 @@ Esto aplica a listas como comprobantes, cotizaciones, empresas, categorias y otr
 
 ## 24. Datos iniciales de salida
 
-La instalaciÃ³n inicial deja preparadas dos empresas activas:
+La instalaciÃƒÂ³n inicial deja preparadas dos empresas activas:
 
 - `20615082997`: VIVERO LOS FRUTALES LIMA SAC.
 - `20615619273`: VIVERO LOS FRUTALES HUARAL SAC.
 
-El usuario inicial para ingreso y configuraciÃ³n es:
+El usuario inicial para ingreso y configuraciÃƒÂ³n es:
 
 ```text
 Usuario: admin
 Password: Admin1234
 ```
 
-Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesiÃ³n debe seleccionar una empresa. DespuÃ©s del primer ingreso se debe cambiar la contraseÃ±a desde el mÃ³dulo de usuarios.
+Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesiÃƒÂ³n debe seleccionar una empresa. DespuÃƒÂ©s del primer ingreso se debe cambiar la contraseÃƒÂ±a desde el mÃƒÂ³dulo de usuarios.
 
 Los productos se cargan por empresa desde el catalogo Nubefact. El sistema mantiene stock, precios, unidad, afectacion IGV y detraccion por producto y empresa. Los clientes tambien se cargan por empresa, por lo que cada empresa mantiene su propio padron comercial.
 
-## 25. Sitio pÃºblico
+## 25. Sitio pÃƒÂºblico
 
-La soluciÃ³n incluye un sitio pÃºblico separado del ERP.
+La soluciÃƒÂ³n incluye un sitio pÃƒÂºblico separado del ERP.
 
-El sitio pÃºblico presenta contenido institucional y comercial:
+El sitio pÃƒÂºblico presenta contenido institucional y comercial:
 
 - Inicio.
 - Nosotros.
@@ -744,5 +777,6 @@ El sitio pÃºblico presenta contenido institucional y comercial:
 - Servicios.
 - Contacto.
 
-El catÃ¡logo pÃºblico se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuraciÃ³n. Es una aplicaciÃ³n web independiente para publicaciÃ³n externa.
+El catÃƒÂ¡logo pÃƒÂºblico se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuraciÃƒÂ³n. Es una aplicaciÃƒÂ³n web independiente para publicaciÃƒÂ³n externa.
+
 

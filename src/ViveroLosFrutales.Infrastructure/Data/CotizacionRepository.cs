@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -46,6 +46,7 @@ public class CotizacionRepository(ApplicationDbContext db) : ICotizacionReposito
         db.Cotizaciones.Include(x => x.Detalles).ThenInclude(x => x.Producto)
             .Include(x => x.Cliente)
             .Include(x => x.Empresa)
+            .Include(x => x.CondicionesSnapshot)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.CotizacionId == id, cancellationToken);
 
     public async Task<int> SiguienteCorrelativoAsync(int empresaId, string serie, CancellationToken cancellationToken)
@@ -87,3 +88,4 @@ public class CotizacionRepository(ApplicationDbContext db) : ICotizacionReposito
         });
     }
 }
+

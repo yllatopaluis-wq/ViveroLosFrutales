@@ -2,6 +2,12 @@
 
 namespace ViveroLosFrutales.Application.DTOs;
 
+internal static class FormularioConfiguracionServiceDefaults
+{
+    public static FormularioConfiguracionDto NotaPedido() => ViveroLosFrutales.Application.Services.FormularioConfiguracionService.Defaults("NOTA_PEDIDO");
+    public static FormularioConfiguracionDto Comprobante() => ViveroLosFrutales.Application.Services.FormularioConfiguracionService.Defaults("COMPROBANTE");
+}
+
 public record NotaPedidoListDto(
     int NotaPedidoId,
     string Numero,
@@ -23,6 +29,8 @@ public class NotaPedidoEditDto
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
+    public FormaPago FormaPago { get; set; } = FormaPago.Contado;
+    public string Observacion { get; set; } = string.Empty;
     public List<NotaPedidoDetalleEditDto> Detalles { get; set; } = new() { new NotaPedidoDetalleEditDto() };
 }
 
@@ -38,6 +46,7 @@ public class NotaPedidoFormDataDto
     public NotaPedidoEditDto NotaPedido { get; set; } = new();
     public IReadOnlyList<ComprobanteClienteOptionDto> Clientes { get; set; } = Array.Empty<ComprobanteClienteOptionDto>();
     public IReadOnlyList<ComprobanteProductoOptionDto> Productos { get; set; } = Array.Empty<ComprobanteProductoOptionDto>();
+    public FormularioConfiguracionDto FormularioConfiguracion { get; set; } = FormularioConfiguracionServiceDefaults.NotaPedido();
 }
 
 public record AnularNotaPedidoResultadoDto(bool GeneroDevolucion, decimal MontoDevolucion, string Mensaje);
@@ -170,4 +179,5 @@ public class RegistrarDevolucionDto
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
     public string Observacion { get; set; } = string.Empty;
 }
+
 

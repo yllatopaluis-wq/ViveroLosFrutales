@@ -2753,6 +2753,9 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                     b.Property<decimal>("PrecioVentaConIgv")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("PrecioCompra")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("PrecioVentaSinIgv")
                         .HasColumnType("decimal(18,2)");
 
@@ -4376,3 +4379,4 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
         }
     }
 }
+

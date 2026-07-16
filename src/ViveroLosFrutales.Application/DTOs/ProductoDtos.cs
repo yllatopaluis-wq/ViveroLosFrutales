@@ -1,8 +1,8 @@
-﻿using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
-public record ProductoListDto(int ProductoId, string Categoria, string Nombre, string UnidadMedida, decimal PrecioVentaSinIgv, decimal PrecioVentaConIgv, decimal Stock, bool AfectoIgv, EstadoRegistro Estado);
+public record ProductoListDto(int ProductoId, string Categoria, string Nombre, string UnidadMedida, decimal PrecioVentaSinIgv, decimal PrecioVentaConIgv, decimal PrecioCompra, decimal Stock, bool AfectoIgv, EstadoRegistro Estado);
 
 public class ProductoEditDto
 {
@@ -14,6 +14,7 @@ public class ProductoEditDto
     public bool AfectoIgv { get; set; } = true;
     public decimal PrecioVentaSinIgv { get; set; }
     public decimal PrecioVentaConIgv { get; set; }
+    public decimal PrecioCompra { get; set; }
     public bool TieneDetraccion { get; set; }
     public decimal PorcentajeDetraccion { get; set; }
     public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;

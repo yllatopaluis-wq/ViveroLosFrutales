@@ -12,6 +12,7 @@ public class Producto : EmpresaEntity
     public bool AfectoIgv { get; set; } = true;
     public decimal PrecioVentaSinIgv { get; set; }
     public decimal PrecioVentaConIgv { get; set; }
+    public decimal PrecioCompra { get; set; }
     public bool TieneDetraccion { get; set; }
     public decimal PorcentajeDetraccion { get; set; }
     public Empresa? Empresa { get; set; }
@@ -21,3 +22,4 @@ public class Producto : EmpresaEntity
         PrecioVentaConIgv = AfectoIgv ? decimal.Round(PrecioVentaSinIgv * 1.18m, 2) : PrecioVentaSinIgv;
     }
 }
+
