@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -35,6 +35,7 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
                 || (x.Comprobante != null && (x.Comprobante.Serie + "-" + x.Comprobante.Correlativo).Contains(term))
                 || (x.NotaCredito != null && (x.NotaCredito.Serie + "-" + x.NotaCredito.Correlativo).Contains(term))
                 || (x.Compra != null && x.Compra.Documento.Contains(term))
+                || (x.OrdenCompra != null && (x.OrdenCompra.Serie + "-" + x.OrdenCompra.Correlativo).Contains(term))
                 || x.Observacion.Contains(term)
                 || x.MotivoGeneracion.Contains(term));
         }
@@ -55,7 +56,13 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
                         ? "Nota de Credito"
                         : x.Origen == OrigenDevolucion.ANULACION_COMPRA
                             ? "Anulacion Compra"
-                            : "Anulacion Comprobante",
+                            : x.Origen == OrigenDevolucion.ANULACION_COMPROBANTE
+                                ? "Anulacion Comprobante"
+                                : x.Origen == OrigenDevolucion.ANULACION_ORDEN_COMPRA
+                                    ? "Anulacion Orden Compra"
+                                    : x.Origen == OrigenDevolucion.CIERRE_ORDEN_CON_SALDO
+                                        ? "Cierre Orden con Saldo"
+                                        : "Saldo a Favor Proveedor",
                 x.NotaPedido != null
                     ? x.NotaPedido.Serie + "-" + x.NotaPedido.Correlativo.ToString()
                     : x.NotaCredito != null
@@ -64,7 +71,9 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
                             ? x.Comprobante.Serie + "-" + x.Comprobante.Correlativo.ToString()
                             : x.Compra != null
                                 ? x.Compra.Documento
-                                : "-",
+                                : x.OrdenCompra != null
+                                    ? x.OrdenCompra.Serie + "-" + x.OrdenCompra.Correlativo.ToString()
+                                    : "-",
                 x.MontoOriginal,
                 x.MontoDevuelto,
                 x.MontoPendiente,
@@ -100,7 +109,9 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
                             ? x.Comprobante.Serie + "-" + x.Comprobante.Correlativo.ToString()
                             : x.Compra != null
                                 ? x.Compra.Documento
-                                : "-",
+                                : x.OrdenCompra != null
+                                    ? x.OrdenCompra.Serie + "-" + x.OrdenCompra.Correlativo.ToString()
+                                    : "-",
                 x.MontoPendiente,
                 x.Origen == OrigenDevolucion.ANULACION_NOTA_PEDIDO
                     ? "Anulacion de nota de pedido"
@@ -108,7 +119,9 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
                         ? "Nota de credito"
                         : x.Origen == OrigenDevolucion.ANULACION_COMPRA
                             ? "Anulacion de compra"
-                            : "Anulacion de comprobante"))
+                            : x.Origen == OrigenDevolucion.ANULACION_COMPROBANTE
+                                ? "Anulacion de comprobante"
+                                : "Devolucion proveedor"))
             .ToListAsync(cancellationToken);
 
         return new DevolucionAlertasDto
@@ -126,6 +139,8 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
             .Include(x => x.Comprobante)
             .Include(x => x.NotaCredito)
             .Include(x => x.Compra)
+            .Include(x => x.OrdenCompra)
+            .Include(x => x.PagoProveedor)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.DevolucionId == id, cancellationToken);
 
     public Task<bool> ExisteActivaPorNotaPedidoAsync(int empresaId, int notaPedidoId, CancellationToken cancellationToken) =>
@@ -169,3 +184,4 @@ public class DevolucionRepository(ApplicationDbContext db) : IDevolucionReposito
         await db.SaveChangesAsync(cancellationToken);
     }
 }
+

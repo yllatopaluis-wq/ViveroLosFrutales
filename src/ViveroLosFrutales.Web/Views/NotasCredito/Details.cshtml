@@ -1,0 +1,108 @@
+﻿@model ComprobanteFormDataDto
+@{
+    var nota = Model.Comprobante;
+    ViewData["Title"] = "Detalle Nota de Credito";
+    var numero = $"{nota.Serie}-{nota.Correlativo:000000}";
+    var cliente = string.IsNullOrWhiteSpace(nota.ClienteNombre) ? "-" : nota.ClienteNombre;
+    var documentoCliente = string.IsNullOrWhiteSpace(nota.ClienteNumeroDocumento) ? "-" : nota.ClienteNumeroDocumento;
+    var direccionCliente = string.IsNullOrWhiteSpace(nota.ClienteDireccion) ? nota.Direccion : nota.ClienteDireccion;
+    var detalles = nota.Detalles ?? new List<ComprobanteDetalleDto>();
+    var estadoClase = nota.Estado == EstadoRegistro.Activo ? string.Empty : "danger";
+    var sunatClase = nota.EstadoSunat == EstadoSunat.Aceptado ? string.Empty : nota.EstadoSunat == EstadoSunat.Pendiente ? "warning" : "info";
+    var origen = string.IsNullOrWhiteSpace(nota.ComprobanteReferenciaNumero) ? "-" : nota.ComprobanteReferenciaNumero;
+}
+
+@functions {
+    private static string TipoNotaTexto(TipoComprobante tipo) => tipo switch
+    {
+        TipoComprobante.NCR => "Nota de credito",
+        _ => tipo.ToString()
+    };
+
+    private static string EstadoRegistroTexto(EstadoRegistro estado) =>
+        estado == EstadoRegistro.Activo ? "ACTIVA" : "ANULADA";
+}
+
+<section class="ds-document-shell">
+    <header class="ds-document-header">
+        <div class="ds-document-title">
+            <div class="ds-document-eyebrow">
+                <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+                <span>Detalle Nota de Credito</span>
+            </div>
+            <div class="ds-document-number-row"><h1 class="ds-document-number">@numero</h1><span class="ds-status @estadoClase">@EstadoRegistroTexto(nota.Estado)</span></div>
+            <span class="ds-document-subtitle">@cliente</span>
+        </div>
+        <div class="ds-document-actions">
+            <form asp-action="Imprimir" method="post" class="icon-form" target="_blank">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@nota.ComprobanteId" />
+                <button type="submit" class="ds-action ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v7H6z" /></svg> Imprimir PDF</button>
+            </form>
+            <a class="ds-action ghost" asp-action="Index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg> Volver</a>
+        </div>
+    </header>
+
+    <div class="ds-kpi-grid">
+        <article class="ds-kpi orange"><div class="ds-kpi-copy"><small>Total nota de credito</small><strong>S/ @nota.Total.ToString("N2")</strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 8v8" /><path d="M8 12h8" /><circle cx="12" cy="12" r="9" /></svg></span></article>
+        <article class="ds-kpi"><div class="ds-kpi-copy"><small>Comprobante origen</small><strong>@origen</strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /></svg></span></article>
+        <article class="ds-kpi blue"><div class="ds-kpi-copy"><small>Fecha de emision</small><strong>@nota.FechaEmision.ToString("dd/MM/yyyy")</strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M8 2v4M16 2v4" /><path d="M3 10h18" /><path d="M5 4h14v17H5z" /></svg></span></article>
+        <article class="ds-kpi neutral"><div class="ds-kpi-copy"><small>SUNAT</small><strong><span class="ds-status @sunatClase">@nota.EstadoSunat</span></strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></span></article>
+    </div>
+
+    <section class="ds-panel">
+        <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6" /></svg></span><strong>Informacion general</strong></div>
+        <div class="ds-info-grid">
+            <div class="ds-field"><span>Tipo</span><strong>@TipoNotaTexto(nota.TipoComprobante)</strong></div>
+            <div class="ds-field"><span>Serie</span><strong>@nota.Serie</strong></div>
+            <div class="ds-field"><span>Numero</span><strong>@nota.Correlativo.ToString("000000")</strong></div>
+            <div class="ds-field"><span>Documento origen</span><strong>@origen</strong></div>
+            <div class="ds-field wide"><span>Motivo</span><strong>@(string.IsNullOrWhiteSpace(nota.MotivoNotaCredito) ? "-" : nota.MotivoNotaCredito)</strong></div>
+            <div class="ds-field"><span>Estado</span><strong><span class="ds-status @estadoClase">@EstadoRegistroTexto(nota.Estado)</span></strong></div>
+            <div class="ds-field"><span>Impresion</span><strong>@(nota.DocumentoImpreso ? "IMPRESO" : "NO IMPRESO")</strong></div>
+        </div>
+    </section>
+
+    <section class="ds-panel">
+        <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span><strong>Cliente</strong></div>
+        <div class="ds-info-grid compact">
+            <div class="ds-field wide"><span>Cliente</span><strong>@cliente</strong></div>
+            <div class="ds-field"><span>Documento</span><strong>@documentoCliente</strong></div>
+            <div class="ds-field"><span>Telefono</span><strong>@(string.IsNullOrWhiteSpace(nota.ClienteTelefono) ? "-" : nota.ClienteTelefono)</strong></div>
+            <div class="ds-field"><span>Email</span><strong>@(string.IsNullOrWhiteSpace(nota.ClienteEmail) ? "-" : nota.ClienteEmail)</strong></div>
+            <div class="ds-field full"><span>Direccion</span><strong>@(string.IsNullOrWhiteSpace(direccionCliente) ? "-" : direccionCliente)</strong></div>
+        </div>
+    </section>
+
+    <div class="ds-document-content">
+        <section class="ds-panel ds-products-panel">
+            <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span><strong>Detalle de productos</strong></div>
+            <div class="ds-table-wrap">
+                <table class="ds-table">
+                    <thead><tr><th>#</th><th>Producto</th><th class="text-end">Cantidad NC</th><th class="text-end">Precio unitario</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    @{ var index = 1; }
+                    @foreach (var item in detalles)
+                    {
+                        var totalLinea = decimal.Round(item.Cantidad * item.PrecioUnitario, 2);
+                        <tr><td>@index</td><td><strong>@(string.IsNullOrWhiteSpace(item.Producto) ? $"Producto {item.ProductoId}" : item.Producto)</strong></td><td class="text-end">@item.Cantidad.ToString("N2")</td><td class="text-end">S/ @item.PrecioUnitario.ToString("N2")</td><td class="text-end"><strong>S/ @totalLinea.ToString("N2")</strong></td></tr>
+                        index++;
+                    }
+                    <tr class="ds-total-row"><td colspan="2">Totales</td><td class="text-end">@detalles.Sum(x => x.Cantidad).ToString("N2")</td><td></td><td class="text-end">S/ @nota.Total.ToString("N2")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="ds-tabs-panel">
+            <div class="ds-tabs">
+                <input type="radio" name="notaCreditoTabs" id="notaCreditoTabSustento" checked />
+                <label for="notaCreditoTabSustento">Sustento</label>
+                <input type="radio" name="notaCreditoTabs" id="notaCreditoTabRelacionados" />
+                <label for="notaCreditoTabRelacionados">Documentos relacionados</label>
+                <div class="ds-tab-content ds-tab-sustento"><div class="ds-note-card">@(string.IsNullOrWhiteSpace(nota.MotivoNotaCredito) ? "Sin sustento registrado." : nota.MotivoNotaCredito)</div></div>
+                <div class="ds-tab-content ds-tab-relacionados"><div class="ds-note-card">@(string.IsNullOrWhiteSpace(origen) || origen == "-" ? "No hay documento origen relacionado." : $"Documento origen: {origen}")</div></div>
+            </div>
+        </section>
+    </div>
+</section>

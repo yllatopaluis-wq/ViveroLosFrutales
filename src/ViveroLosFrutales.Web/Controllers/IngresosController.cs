@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -10,6 +10,21 @@ public class IngresosController(IngresoService service) : Controller
     public async Task<IActionResult> Index([FromQuery] SearchRequest request, CancellationToken cancellationToken) =>
         View(await service.BuscarAsync(request, cancellationToken));
 
+
+    public async Task<IActionResult> BuscarClientes(string? search, CancellationToken cancellationToken)
+    {
+        var clientes = await service.BuscarClientesAsync(search, cancellationToken);
+        return Json(clientes.Select(x => new
+        {
+            id = x.ClienteId,
+            nombre = x.NombreCompleto,
+            documento = x.NumeroDocumento,
+            telefono = x.Telefono,
+            email = x.Email,
+            direccion = x.Direccion,
+            texto = $"{x.NombreCompleto} - {x.NumeroDocumento}"
+        }));
+    }
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
         ViewBag.CategoriasIngreso = await service.ListarCategoriasAsync(cancellationToken);
@@ -70,6 +85,10 @@ public class IngresosController(IngresoService service) : Controller
     private async Task<IngresoEditDto> PrepararFormularioAsync(IngresoEditDto dto, CancellationToken cancellationToken)
     {
         dto.CuentasFinancieras = await service.ListarCuentasFinancierasAsync(cancellationToken);
+        dto.Clientes = await service.ListarClientesAsync(cancellationToken);
+        dto.FormularioConfiguracion = await service.ObtenerFormularioConfiguracionAsync(cancellationToken);
         return dto;
     }
 }
+
+

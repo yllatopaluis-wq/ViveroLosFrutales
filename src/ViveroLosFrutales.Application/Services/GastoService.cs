@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -6,7 +6,7 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.Services;
 
-public class GastoService(IGastoRepository repository, CuentaFinancieraService cuentaFinancieraService, IEmpresaContext empresaContext)
+public class GastoService(IGastoRepository repository, CuentaFinancieraService cuentaFinancieraService, IProveedorRepository proveedorRepository, IFormularioConfiguracionService formularioConfiguracionService, IEmpresaContext empresaContext)
 {
     public Task<PagedResult<GastoListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
@@ -16,6 +16,26 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
 
     public Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarCuentasFinancierasAsync(CancellationToken cancellationToken) =>
         cuentaFinancieraService.ListarActivasAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<ProveedorListDto>> ListarProveedoresAsync(CancellationToken cancellationToken) =>
+        await BuscarProveedoresAsync(null, cancellationToken);
+
+    public async Task<IReadOnlyList<ProveedorListDto>> BuscarProveedoresAsync(string? search, CancellationToken cancellationToken)
+    {
+        var proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            proveedores = proveedores.Where(x => x.RazonSocial.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.NumeroDocumento.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.NombreComercial.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.Telefono.Contains(term, StringComparison.OrdinalIgnoreCase)).Take(20).ToArray();
+        }
+        return proveedores.Take(20).ToArray();
+    }
+
+    public Task<FormularioConfiguracionDto> ObtenerFormularioConfiguracionAsync(CancellationToken cancellationToken) =>
+        formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoGasto, empresaContext.EmpresaId, null, cancellationToken);
 
     public async Task<GastoEditDto?> ObtenerAsync(int id, CancellationToken cancellationToken)
     {
@@ -47,8 +67,10 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
             gasto.CategoriaGastoId = categoria?.CategoriaGastoId;
             gasto.Categoria = nombreCategoria;
             gasto.Descripcion = dto.Descripcion.Trim();
+            gasto.DocumentoReferencia = dto.DocumentoReferencia?.Trim() ?? string.Empty;
             gasto.Importe = decimal.Round(dto.Importe, 2);
             gasto.MedioPago = dto.MedioPago.Trim().ToUpperInvariant();
+            gasto.ProveedorId = dto.ProveedorId;
             gasto.CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken);
             gasto.Observacion = dto.Observacion?.Trim() ?? string.Empty;
             gasto.Estado = EstadoRegistro.Activo;
@@ -103,13 +125,19 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
         CategoriaGastoId = gasto.CategoriaGastoId,
         Categoria = gasto.Categoria,
         Descripcion = gasto.Descripcion,
+        DocumentoReferencia = gasto.DocumentoReferencia,
         Importe = gasto.Importe,
         MedioPago = gasto.MedioPago,
+        ProveedorId = gasto.ProveedorId,
         CuentaFinancieraId = gasto.CuentaFinancieraId,
         Observacion = gasto.Observacion,
         Estado = gasto.Estado
     };
 }
+
+
+
+
 
 
 

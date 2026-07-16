@@ -1,4 +1,5 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Services;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
@@ -40,10 +41,17 @@ public class ComprobanteEditDto
     public string ClienteEmail { get; set; } = string.Empty;
     public int? CotizacionId { get; set; }
     public int? NotaPedidoId { get; set; }
+    public string DocumentoOrigen { get; set; } = string.Empty;
+    public int? ComprobanteReferenciaId { get; set; }
+    public string ComprobanteReferenciaNumero { get; set; } = string.Empty;
+    public string MotivoNotaCredito { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public DateTime FechaEmision { get; set; } = PeruDateTime.Today;
     public FormaPago FormaPago { get; set; } = FormaPago.Contado;
     public EstadoPagoComprobante EstadoPago { get; set; } = EstadoPagoComprobante.PENDIENTE;
+    public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
+    public EstadoSunat EstadoSunat { get; set; } = EstadoSunat.NoAplica;
+    public bool DocumentoImpreso { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
     public int? CuentaFinancieraId { get; set; }
 
@@ -86,6 +94,10 @@ public class NotaCreditoEditDto
     public string Cliente { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public decimal TotalCobradoOrigen { get; set; }
+    public decimal TotalNotasCreditoEmitidas { get; set; }
+    public decimal SaldoDisponible { get; set; }
+    public string DocumentoCliente { get; set; } = string.Empty;
+    public string SustentoDescripcion { get; set; } = string.Empty;
     public decimal NuevoTotalValido { get; set; }
     public decimal MontoDevolucionEstimado { get; set; }
     public string Motivo { get; set; } = string.Empty;
@@ -100,6 +112,7 @@ public class NotaCreditoDetalleDto
     public decimal CantidadOriginal { get; set; }
     public decimal Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }
+    public bool AfectoIgv { get; set; }
     public decimal Total => decimal.Round(Cantidad * PrecioUnitario, 2);
 }
 
@@ -129,6 +142,7 @@ public class NotaCreditoCreatePageDto
 {
     public NotaCreditoEditDto NotaCredito { get; set; } = new();
     public PagedResult<NotaCreditoOrigenDto>? Origenes { get; set; }
+    public FormularioConfiguracionDto FormularioConfiguracion { get; set; } = FormularioConfiguracionService.Defaults(FormularioConfiguracionService.TipoNotaCredito);
 }
 public record ComprobanteNumeracionDto(string Serie, int Correlativo);
 public record ComprobanteClienteOptionDto(int ClienteId, string NombreCompleto, string NumeroDocumento, string Direccion, string Telefono, string Email);
@@ -138,7 +152,11 @@ public record ComprobanteFormDataDto(
     ComprobanteNumeracionDto Numeracion,
     IReadOnlyCollection<ComprobanteClienteOptionDto> Clientes,
     IReadOnlyCollection<ComprobanteProductoOptionDto> Productos,
-    IReadOnlyCollection<CuentaFinancieraOptionDto> CuentasFinancieras);
+    IReadOnlyCollection<CuentaFinancieraOptionDto> CuentasFinancieras,
+    FormularioConfiguracionDto FormularioConfiguracion);
+
+
+
 
 
 

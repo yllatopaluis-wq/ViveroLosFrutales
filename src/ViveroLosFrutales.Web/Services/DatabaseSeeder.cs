@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
@@ -87,6 +87,10 @@ public static class DatabaseSeeder
         await db.Database.ExecuteSqlRawAsync(@"
 IF SCHEMA_ID(N'erp') IS NULL
     EXEC(N'CREATE SCHEMA erp');
+IF OBJECT_ID('erp.Producto', 'U') IS NOT NULL AND COL_LENGTH('erp.Producto', 'PrecioCompra') IS NULL
+BEGIN
+    ALTER TABLE erp.Producto ADD PrecioCompra decimal(18,2) NOT NULL CONSTRAINT DF_Producto_PrecioCompra DEFAULT 0;
+END;
 IF OBJECT_ID('erp.CuentaFinanciera', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('erp.CuentaFinanciera', 'FechaModificacion') IS NULL
@@ -281,6 +285,11 @@ BEGIN
     IF COL_LENGTH('erp.Compra', 'Serie') IS NULL ALTER TABLE erp.Compra ADD Serie nvarchar(20) NOT NULL CONSTRAINT DF_Compra_Serie DEFAULT N'';
     IF COL_LENGTH('erp.Compra', 'Numero') IS NULL ALTER TABLE erp.Compra ADD Numero nvarchar(30) NOT NULL CONSTRAINT DF_Compra_Numero DEFAULT N'';
     IF COL_LENGTH('erp.Compra', 'FormaPago') IS NULL ALTER TABLE erp.Compra ADD FormaPago int NOT NULL CONSTRAINT DF_Compra_FormaPago DEFAULT 2;
+    IF COL_LENGTH('erp.Compra', 'FechaVencimiento') IS NULL ALTER TABLE erp.Compra ADD FechaVencimiento datetime2 NULL;
+    IF COL_LENGTH('erp.Compra', 'Moneda') IS NULL ALTER TABLE erp.Compra ADD Moneda nvarchar(20) NOT NULL CONSTRAINT DF_Compra_Moneda DEFAULT N'Soles';
+    IF COL_LENGTH('erp.Compra', 'TipoCambio') IS NULL ALTER TABLE erp.Compra ADD TipoCambio decimal(18,4) NOT NULL CONSTRAINT DF_Compra_TipoCambio DEFAULT 1;
+    IF COL_LENGTH('erp.Compra', 'DiasCredito') IS NULL ALTER TABLE erp.Compra ADD DiasCredito int NOT NULL CONSTRAINT DF_Compra_DiasCredito DEFAULT 0;
+    IF COL_LENGTH('erp.Compra', 'EstadoEntrega') IS NULL ALTER TABLE erp.Compra ADD EstadoEntrega int NOT NULL CONSTRAINT DF_Compra_EstadoEntrega DEFAULT 3;
     IF COL_LENGTH('erp.Compra', 'Observacion') IS NULL ALTER TABLE erp.Compra ADD Observacion nvarchar(500) NOT NULL CONSTRAINT DF_Compra_Observacion DEFAULT N'';
     IF COL_LENGTH('erp.Compra', 'TotalPagado') IS NULL ALTER TABLE erp.Compra ADD TotalPagado decimal(18,2) NOT NULL CONSTRAINT DF_Compra_TotalPagado DEFAULT 0;
     IF COL_LENGTH('erp.Compra', 'SaldoPendiente') IS NULL ALTER TABLE erp.Compra ADD SaldoPendiente decimal(18,2) NOT NULL CONSTRAINT DF_Compra_SaldoPendiente DEFAULT 0;
@@ -294,6 +303,11 @@ END;
 IF OBJECT_ID('erp.CompraDetalle', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('erp.CompraDetalle', 'UnidadMedida') IS NULL ALTER TABLE erp.CompraDetalle ADD UnidadMedida nvarchar(20) NOT NULL CONSTRAINT DF_CompraDetalle_UnidadMedida DEFAULT N'';
+    IF COL_LENGTH('erp.CompraDetalle', 'CantidadRecibida') IS NULL
+    BEGIN
+        ALTER TABLE erp.CompraDetalle ADD CantidadRecibida decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_CantidadRecibida DEFAULT 0;
+        EXEC sp_executesql N'UPDATE erp.CompraDetalle SET CantidadRecibida = Cantidad;';
+    END;
     IF COL_LENGTH('erp.CompraDetalle', 'Igv') IS NULL ALTER TABLE erp.CompraDetalle ADD Igv decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_Igv DEFAULT 0;
     IF COL_LENGTH('erp.CompraDetalle', 'TotalLinea') IS NULL ALTER TABLE erp.CompraDetalle ADD TotalLinea decimal(18,2) NOT NULL CONSTRAINT DF_CompraDetalle_TotalLinea DEFAULT 0;
     EXEC sp_executesql N'UPDATE erp.CompraDetalle SET TotalLinea = Importe + Igv WHERE TotalLinea = 0;';
@@ -304,7 +318,7 @@ BEGIN
         PagoProveedorId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PagoProveedor PRIMARY KEY,
         EmpresaId int NOT NULL,
         ProveedorId int NOT NULL,
-        CompraId int NOT NULL,
+        CompraId int NULL,
         FechaPago datetime2 NOT NULL,
         Monto decimal(18,2) NOT NULL,
         MedioPago nvarchar(80) NOT NULL CONSTRAINT DF_PagoProveedor_MedioPago DEFAULT N'EFECTIVO',
@@ -324,6 +338,18 @@ IF OBJECT_ID('erp.MovimientoCaja', 'U') IS NOT NULL
 BEGIN
     IF COL_LENGTH('erp.MovimientoCaja', 'ClienteId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ClienteId int NULL;
     IF COL_LENGTH('erp.MovimientoCaja', 'ProveedorId') IS NULL ALTER TABLE erp.MovimientoCaja ADD ProveedorId int NULL;
+END;
+IF OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.Gasto', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Gasto ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Gasto_DocumentoReferencia DEFAULT N'';
+    IF COL_LENGTH('erp.Gasto', 'ProveedorId') IS NULL ALTER TABLE erp.Gasto ADD ProveedorId int NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Gasto_EmpresaId_ProveedorId' AND object_id = OBJECT_ID('erp.Gasto')) CREATE INDEX IX_Gasto_EmpresaId_ProveedorId ON erp.Gasto(EmpresaId, ProveedorId);
+END;
+IF OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.Ingreso', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Ingreso ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Ingreso_DocumentoReferencia DEFAULT N'';
+    IF COL_LENGTH('erp.Ingreso', 'ClienteId') IS NULL ALTER TABLE erp.Ingreso ADD ClienteId int NULL;
+    IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Ingreso_EmpresaId_ClienteId' AND object_id = OBJECT_ID('erp.Ingreso')) CREATE INDEX IX_Ingreso_EmpresaId_ClienteId ON erp.Ingreso(EmpresaId, ClienteId);
 END;
 IF OBJECT_ID('erp.CategoriaGasto', 'U') IS NULL
 BEGIN
@@ -353,6 +379,7 @@ BEGIN
 END;
 IF OBJECT_ID('erp.Gasto', 'U') IS NOT NULL
 BEGIN
+    IF COL_LENGTH('erp.Gasto', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Gasto ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Gasto_DocumentoReferencia DEFAULT N'';
     IF COL_LENGTH('erp.Gasto', 'CategoriaGastoId') IS NULL ALTER TABLE erp.Gasto ADD CategoriaGastoId int NULL;
     IF COL_LENGTH('erp.Gasto', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Gasto ADD MovimientoCajaId int NULL;
     IF COL_LENGTH('erp.Gasto', 'MotivoAnulacion') IS NULL ALTER TABLE erp.Gasto ADD MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_Gasto_MotivoAnulacion DEFAULT N'';
@@ -360,6 +387,7 @@ BEGIN
 END;
 IF OBJECT_ID('erp.Ingreso', 'U') IS NOT NULL
 BEGIN
+    IF COL_LENGTH('erp.Ingreso', 'DocumentoReferencia') IS NULL ALTER TABLE erp.Ingreso ADD DocumentoReferencia nvarchar(120) NOT NULL CONSTRAINT DF_Ingreso_DocumentoReferencia DEFAULT N'';
     IF COL_LENGTH('erp.Ingreso', 'CategoriaIngresoId') IS NULL ALTER TABLE erp.Ingreso ADD CategoriaIngresoId int NULL;
     IF COL_LENGTH('erp.Ingreso', 'MedioPago') IS NULL ALTER TABLE erp.Ingreso ADD MedioPago nvarchar(80) NOT NULL CONSTRAINT DF_Ingreso_MedioPago DEFAULT N'EFECTIVO';
     IF COL_LENGTH('erp.Ingreso', 'MovimientoCajaId') IS NULL ALTER TABLE erp.Ingreso ADD MovimientoCajaId int NULL;
@@ -452,8 +480,124 @@ BEGIN
     CREATE INDEX IX_ErrorAplicacion_EmpresaId_FechaUtc ON erp.ErrorAplicacion(EmpresaId, FechaUtc);
     CREATE INDEX IX_ErrorAplicacion_EmpresaId_Estado ON erp.ErrorAplicacion(EmpresaId, Estado);
 END;");
-    }
+        await db.Database.ExecuteSqlRawAsync(@"
+IF OBJECT_ID('erp.OrdenCompra', 'U') IS NULL
+BEGIN
+    CREATE TABLE erp.OrdenCompra (
+        OrdenCompraId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_OrdenCompra PRIMARY KEY,
+        EmpresaId int NOT NULL,
+        ProveedorId int NOT NULL,
+        Serie nvarchar(20) NOT NULL,
+        Correlativo int NOT NULL,
+        Fecha datetime2 NOT NULL,
+        Moneda nvarchar(20) NOT NULL CONSTRAINT DF_OrdenCompra_Moneda DEFAULT N'Soles',
+        FechaEntregaEsperada datetime2 NULL,
+        LugarEntrega nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_LugarEntrega DEFAULT N'',
+        FormaPago int NOT NULL CONSTRAINT DF_OrdenCompra_FormaPago DEFAULT 2,
+        CondicionPago nvarchar(120) NOT NULL CONSTRAINT DF_OrdenCompra_CondicionPago DEFAULT N'',
+        Observacion nvarchar(1000) NOT NULL CONSTRAINT DF_OrdenCompra_Observacion DEFAULT N'',
+        CondicionEntrega nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_CondicionEntrega DEFAULT N'',
+        Garantia nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_Garantia DEFAULT N'',
+        PorcentajeAdelanto decimal(5,2) NOT NULL CONSTRAINT DF_OrdenCompra_PorcentajeAdelanto DEFAULT 0,
+        PlazoDias int NOT NULL CONSTRAINT DF_OrdenCompra_PlazoDias DEFAULT 0,
+        SubTotal decimal(18,2) NOT NULL,
+        Igv decimal(18,2) NOT NULL,
+        Total decimal(18,2) NOT NULL,
+        TotalFacturado decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_TotalFacturado DEFAULT 0,
+        TotalPagado decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_TotalPagado DEFAULT 0,
+        TotalAplicado decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_TotalAplicado DEFAULT 0,
+        TotalDevuelto decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_TotalDevuelto DEFAULT 0,
+        SaldoDisponible decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_SaldoDisponible DEFAULT 0,
+        PendienteFacturar decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompra_PendienteFacturar DEFAULT 0,
+        EstadoDocumento int NOT NULL CONSTRAINT DF_OrdenCompra_EstadoDocumento DEFAULT 1,
+        EstadoAprobacion int NOT NULL CONSTRAINT DF_OrdenCompra_EstadoAprobacion DEFAULT 3,
+        EstadoFacturacion int NOT NULL CONSTRAINT DF_OrdenCompra_EstadoFacturacion DEFAULT 1,
+        EstadoRecepcion int NOT NULL CONSTRAINT DF_OrdenCompra_EstadoRecepcion DEFAULT 1,
+        EstadoFinanciero int NOT NULL CONSTRAINT DF_OrdenCompra_EstadoFinanciero DEFAULT 1,
+        FechaAnulacion datetime2 NULL,
+        MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_OrdenCompra_MotivoAnulacion DEFAULT N'',
+        UsuarioAnulacion nvarchar(120) NOT NULL CONSTRAINT DF_OrdenCompra_UsuarioAnulacion DEFAULT N'',
+        ProveedorTipoDocumento nvarchar(30) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorTipoDocumento DEFAULT N'',
+        ProveedorNumeroDocumento nvarchar(20) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorNumeroDocumento DEFAULT N'',
+        ProveedorRazonSocial nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorRazonSocial DEFAULT N'',
+        ProveedorNombreComercial nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorNombreComercial DEFAULT N'',
+        ProveedorDireccion nvarchar(500) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorDireccion DEFAULT N'',
+        ProveedorTelefono nvarchar(40) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorTelefono DEFAULT N'',
+        ProveedorEmail nvarchar(120) NOT NULL CONSTRAINT DF_OrdenCompra_ProveedorEmail DEFAULT N'',
+        FechaRegistro datetime2 NOT NULL CONSTRAINT DF_OrdenCompra_FechaRegistro DEFAULT SYSUTCDATETIME(),
+        UsuarioRegistro nvarchar(max) NOT NULL CONSTRAINT DF_OrdenCompra_UsuarioRegistro DEFAULT N'system',
+        Estado int NOT NULL CONSTRAINT DF_OrdenCompra_Estado DEFAULT 1,
+        RowVersion rowversion NOT NULL
+    );
+    CREATE UNIQUE INDEX UX_OrdenCompra_Empresa_Serie_Correlativo ON erp.OrdenCompra(EmpresaId, Serie, Correlativo);
+    CREATE INDEX IX_OrdenCompra_Empresa_Proveedor ON erp.OrdenCompra(EmpresaId, ProveedorId);
+END;
+IF OBJECT_ID('erp.OrdenCompra', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.OrdenCompra', 'CondicionPago') IS NULL ALTER TABLE erp.OrdenCompra ADD CondicionPago nvarchar(120) NOT NULL CONSTRAINT DF_OrdenCompra_CondicionPago DEFAULT N'';
+    IF COL_LENGTH('erp.OrdenCompra', 'Garantia') IS NULL ALTER TABLE erp.OrdenCompra ADD Garantia nvarchar(250) NOT NULL CONSTRAINT DF_OrdenCompra_Garantia DEFAULT N'';
+END;
+IF OBJECT_ID('erp.OrdenCompraDetalle', 'U') IS NULL
+BEGIN
+    CREATE TABLE erp.OrdenCompraDetalle (
+        OrdenCompraDetalleId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_OrdenCompraDetalle PRIMARY KEY,
+        OrdenCompraId int NOT NULL,
+        ProductoId int NOT NULL,
+        UnidadMedida nvarchar(20) NOT NULL CONSTRAINT DF_OrdenCompraDetalle_Unidad DEFAULT N'',
+        Cantidad decimal(18,2) NOT NULL,
+        CostoUnitario decimal(18,2) NOT NULL,
+        Subtotal decimal(18,2) NOT NULL,
+        Igv decimal(18,2) NOT NULL,
+        Total decimal(18,2) NOT NULL,
+        Orden int NOT NULL CONSTRAINT DF_OrdenCompraDetalle_Orden DEFAULT 0,
+        CantidadFacturada decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompraDetalle_CantidadFacturada DEFAULT 0,
+        CantidadRecibida decimal(18,2) NOT NULL CONSTRAINT DF_OrdenCompraDetalle_CantidadRecibida DEFAULT 0
+    );
+    CREATE INDEX IX_OrdenCompraDetalle_OrdenCompra ON erp.OrdenCompraDetalle(OrdenCompraId);
+END;
+IF OBJECT_ID('erp.Compra', 'U') IS NOT NULL AND COL_LENGTH('erp.Compra', 'OrdenCompraId') IS NULL
+    ALTER TABLE erp.Compra ADD OrdenCompraId int NULL;
+IF OBJECT_ID('erp.PagoProveedor', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.PagoProveedor', 'OrdenCompraId') IS NULL ALTER TABLE erp.PagoProveedor ADD OrdenCompraId int NULL;
+    IF EXISTS (
+        SELECT 1
+        FROM sys.columns c
+        INNER JOIN sys.objects o ON o.object_id = c.object_id
+        INNER JOIN sys.schemas s ON s.schema_id = o.schema_id
+        WHERE s.name = 'erp' AND o.name = 'PagoProveedor' AND c.name = 'CompraId' AND c.is_nullable = 0
+    )
+    BEGIN
+        ALTER TABLE erp.PagoProveedor ALTER COLUMN CompraId int NULL;
+    END
+END;
+IF OBJECT_ID('erp.PagoProveedorAplicacion', 'U') IS NULL
+BEGIN
+    CREATE TABLE erp.PagoProveedorAplicacion (
+        PagoProveedorAplicacionId int IDENTITY(1,1) NOT NULL CONSTRAINT PK_PagoProveedorAplicacion PRIMARY KEY,
+        EmpresaId int NOT NULL,
+        PagoProveedorId int NOT NULL,
+        CompraId int NULL,
+        MontoAplicado decimal(18,2) NOT NULL,
+        FechaAplicacion datetime2 NOT NULL,
+        Estado int NOT NULL CONSTRAINT DF_PagoProveedorAplicacion_EstadoAplicacion DEFAULT 1,
+        MotivoAnulacion nvarchar(500) NOT NULL CONSTRAINT DF_PagoProveedorAplicacion_Motivo DEFAULT N'',
+        FechaAnulacion datetime2 NULL,
+        UsuarioRegistro nvarchar(120) NOT NULL CONSTRAINT DF_PagoProveedorAplicacion_UsuarioRegistro DEFAULT N'',
+        UsuarioAnulacion nvarchar(120) NOT NULL CONSTRAINT DF_PagoProveedorAplicacion_UsuarioAnulacion DEFAULT N'',
+        RowVersion rowversion NOT NULL
+    );
+    CREATE INDEX IX_PagoProveedorAplicacion_Empresa_Pago ON erp.PagoProveedorAplicacion(EmpresaId, PagoProveedorId);
+    CREATE INDEX IX_PagoProveedorAplicacion_Empresa_Compra ON erp.PagoProveedorAplicacion(EmpresaId, CompraId);
+END;
+IF OBJECT_ID('erp.Devolucion', 'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH('erp.Devolucion', 'OrdenCompraId') IS NULL ALTER TABLE erp.Devolucion ADD OrdenCompraId int NULL;
+    IF COL_LENGTH('erp.Devolucion', 'PagoProveedorId') IS NULL ALTER TABLE erp.Devolucion ADD PagoProveedorId int NULL;
+END;");
 
+
+    }
     private static async Task EnsurePermissionsAsync(ApplicationDbContext db)
     {
         var catalogo = PermissionCatalog.All().ToArray();

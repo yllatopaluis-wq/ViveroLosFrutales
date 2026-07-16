@@ -1,0 +1,288 @@
+﻿@model DocumentoConfiguracionEditDto
+@using ViveroLosFrutales.Application.Services
+@{
+    ViewData["Title"] = "Configuracion de documentos";
+    Model.TipoDocumento = FormularioConfiguracionService.NormalizarTipoDocumento(Model.TipoDocumento);
+    var documentoNombre = FormularioConfiguracionService.NombreDocumento(Model.TipoDocumento);
+    var esCotizacion = string.Equals(Model.TipoDocumento, FormularioConfiguracionService.TipoCotizacion, StringComparison.OrdinalIgnoreCase);
+    var esCompra = string.Equals(Model.TipoDocumento, FormularioConfiguracionService.TipoCompra, StringComparison.OrdinalIgnoreCase);
+    var bloqueActivo = Model.Bloques.OrderBy(x => x.Orden).FirstOrDefault()?.Bloque ?? "GENERAL";
+    var documentos = new[]
+    {
+        new { Tipo = FormularioConfiguracionService.TipoCotizacion, Nombre = "Cotizacion", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoNotaPedido, Nombre = "Nota de pedido", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoComprobante, Nombre = "Comprobante", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoNotaCredito, Nombre = "Nota de credito", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoCompra, Nombre = "Compra", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoOrdenCompra, Nombre = "Orden de compra", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoGasto, Nombre = "Gasto", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoIngreso, Nombre = "Ingreso", Enabled = true },
+        new { Tipo = "GUIA_REMISION", Nombre = "Guia de remision", Enabled = false },
+        new { Tipo = "NOTA_DEBITO", Nombre = "Nota de debito", Enabled = false }
+    };
+    string AnchoTexto(string value) => value switch
+    {
+        "1" => "1/12 - Minimo",
+        "2" => "1/6 - Chico",
+        "3" => "1/4 - Pequeno",
+        "4" => "1/3 - Medio",
+        "5" => "5/12",
+        "6" => "1/2 - Grande",
+        "8" => "2/3 - Amplio",
+        "9" => "3/4 - Ancho",
+        "12" => "Completo",
+        _ => value
+    };
+    string BloqueDescripcion(string bloque) => bloque.ToUpperInvariant() switch
+    {
+        "GENERAL" => "Datos principales del documento",
+        "CLIENTE" => "Informacion del cliente",
+        "PROVEEDOR" => "Informacion del proveedor",
+        "ORIGEN" => "Documento relacionado",
+        "PRODUCTOS" => "Productos o servicios",
+        "OBSERVACIONES" => "Notas y observaciones",
+        "CONDICIONES" => "Textos comerciales",
+        "TOTALES" => "Resumen y totales",
+        "ACCIONES" => "Botones del formulario",
+        _ => "Seccion del formulario"
+    };
+}
+
+<section class="document-config-shell">
+    <header class="document-config-hero">
+        <div class="document-config-hero-copy">
+            <span class="document-config-hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5" /><path d="M9 12h6M9 16h4" /><path d="M18 18l3 3" /></svg></span>
+            <div>
+                <h1>Configuracion de documentos</h1>
+                <p>Personaliza los campos y el orden de cada documento segun las necesidades de tu empresa.</p>
+            </div>
+        </div>
+        <a class="document-config-help" asp-controller="Configuracion" asp-action="Index">
+            <span aria-hidden="true">?</span>
+            <strong>Volver</strong>
+        </a>
+    </header>
+
+    <nav class="document-config-type-switch" role="tablist" aria-label="Tipo de formulario">
+        @foreach (var doc in documentos)
+        {
+            var active = string.Equals(Model.TipoDocumento, doc.Tipo, StringComparison.OrdinalIgnoreCase);
+            var cssClass = active ? "document-config-type active" : doc.Enabled ? "document-config-type" : "document-config-type disabled";
+            if (doc.Enabled)
+            {
+                <a class="@cssClass" asp-action="Index" asp-route-tipoDocumento="@doc.Tipo" aria-selected="@(active ? "true" : "false")">@doc.Nombre</a>
+            }
+            else
+            {
+                <span class="@cssClass" aria-disabled="true">@doc.Nombre</span>
+            }
+        }
+    </nav>
+
+    @if (TempData["Success"] is string success)
+    {
+        <div class="alert alert-success py-2">@success</div>
+    }
+
+    <form method="post" class="dense-form document-config-form" data-document-config-form>
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input asp-for="TipoDocumento" type="hidden" />
+
+        <div class="document-config-namebar">
+            <label>Documento<input class="form-control form-control-sm" value="@documentoNombre" readonly /></label>
+            <label>Nombre de configuracion<input asp-for="Nombre" class="form-control form-control-sm" /></label>
+        </div>
+
+        <section class="document-config-layout">
+            <aside class="document-config-card document-config-blocks">
+                <div class="document-config-card-head">
+                    <div>
+                        <h2>Estructura del formulario</h2>
+                        <p>Activa o desactiva secciones y define su orden.</p>
+                    </div>
+                </div>
+                <div class="document-config-block-list" role="tablist" aria-label="Bloques del formulario">
+                    @for (var i = 0; i < Model.Bloques.Count; i++)
+                    {
+                        var bloque = Model.Bloques[i];
+                        var selected = string.Equals(bloque.Bloque, bloqueActivo, StringComparison.OrdinalIgnoreCase);
+                        <article class="document-config-block @(selected ? "active" : string.Empty)" data-config-block="@bloque.Bloque">
+                            <span class="document-config-drag" aria-hidden="true">::</span>
+                            <label class="document-config-block-visible" title="Visible">
+                                <input asp-for="Bloques[i].Visible" />
+                                <span aria-hidden="true"></span>
+                            </label>
+                            <button type="button" class="document-config-block-select" data-config-block-button="@bloque.Bloque" aria-selected="@(selected ? "true" : "false")">
+                                <span class="document-config-block-copy"><strong>@bloque.Titulo</strong><small>@BloqueDescripcion(bloque.Bloque)</small></span>
+                            </button>
+                            <input asp-for="Bloques[i].Bloque" type="hidden" />
+                            <input asp-for="Bloques[i].Titulo" type="hidden" />
+                            <input asp-for="Bloques[i].Colapsado" type="hidden" />
+                            <input asp-for="Bloques[i].Orden" class="form-control form-control-sm text-end document-config-order" type="number" min="1" aria-label="Orden @bloque.Titulo" />
+                        </article>
+                    }
+                </div>
+                <button type="button" class="document-config-add-section" disabled>+ Agregar seccion personalizada</button>
+            </aside>
+
+            <section class="document-config-card document-config-fields">
+                @foreach (var bloque in Model.Bloques.OrderBy(x => x.Orden))
+                {
+                    var campos = Model.Campos
+                        .Select((campo, index) => new { campo, index })
+                        .Where(x => string.Equals(x.campo.Bloque, bloque.Bloque, StringComparison.OrdinalIgnoreCase))
+                        .OrderBy(x => x.campo.Orden)
+                        .ToList();
+                    var esProductos = string.Equals(bloque.Bloque, "PRODUCTOS", StringComparison.OrdinalIgnoreCase);
+                    <div class="document-config-field-panel @(string.Equals(bloque.Bloque, bloqueActivo, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty)" data-config-field-panel="@bloque.Bloque">
+                        <div class="document-config-card-head document-config-fields-head">
+                            <div>
+                                <h2>@(esProductos ? "Columnas de detalle de productos" : $"Campos de {bloque.Titulo.ToLowerInvariant()}")</h2>
+                                <p>Selecciona los campos que deseas mostrar y define su configuracion.</p>
+                            </div>
+                            <button type="button" class="document-config-reset" disabled>Restablecer valores</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle document-config-field-table">
+                                <thead>
+                                    <tr>
+                                        <th>Campo</th>
+                                        <th>Etiqueta</th>
+                                        <th class="text-center">Visible</th>
+                                        @if (!esProductos)
+                                        {
+                                            <th class="text-center">Obligatorio</th>
+                                        }
+                                        <th class="text-center">Solo lectura</th>
+                                        <th class="text-end">Orden</th>
+                                        <th>Ancho</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach (var item in campos)
+                                {
+                                    var i = item.index;
+                                    var campo = item.campo;
+                                    <tr>
+                                        <td class="document-config-field-name">
+                                            <strong>@campo.Campo</strong>
+                                            <small>@campo.Campo.ToLowerInvariant()</small>
+                                            <input asp-for="Campos[i].Bloque" type="hidden" />
+                                            <input asp-for="Campos[i].Campo" type="hidden" />
+                                            <input asp-for="Campos[i].Ocultable" type="hidden" />
+                                            <input asp-for="Campos[i].PuedeSerObligatorio" type="hidden" />
+                                            <input asp-for="Campos[i].PuedeSerSoloLectura" type="hidden" />
+                                            <input asp-for="Campos[i].EsCampoSistema" type="hidden" />
+                                            <input asp-for="Campos[i].TipoVisual" type="hidden" />
+                                            <input asp-for="Campos[i].ValorDefecto" type="hidden" />
+                                        </td>
+                                        <td><input asp-for="Campos[i].Etiqueta" class="form-control form-control-sm" /></td>
+                                        <td class="text-center document-config-check-cell">
+                                            <input asp-for="Campos[i].Visible" class="form-check-input" disabled="@(!campo.Ocultable)" />
+                                            @if (!campo.Ocultable) { <input asp-for="Campos[i].Visible" type="hidden" value="true" /> }
+                                        </td>
+                                        @if (!esProductos)
+                                        {
+                                            <td class="text-center document-config-check-cell"><input asp-for="Campos[i].Obligatorio" class="form-check-input" disabled="@(!campo.PuedeSerObligatorio)" />@if (!campo.PuedeSerObligatorio) { <input asp-for="Campos[i].Obligatorio" type="hidden" value="@(campo.Obligatorio.ToString().ToLowerInvariant())" /> }</td>
+                                        }
+                                        else
+                                        {
+                                            <input asp-for="Campos[i].Obligatorio" type="hidden" />
+                                        }
+                                        <td class="text-center document-config-check-cell"><input asp-for="Campos[i].SoloLectura" class="form-check-input" disabled="@(!campo.PuedeSerSoloLectura || campo.EsCampoSistema)" />@if (!campo.PuedeSerSoloLectura || campo.EsCampoSistema) { <input asp-for="Campos[i].SoloLectura" type="hidden" value="@(campo.SoloLectura.ToString().ToLowerInvariant())" /> }</td>
+                                        <td><input asp-for="Campos[i].Orden" class="form-control form-control-sm text-end document-config-order" type="number" min="1" /></td>
+                                        <td>
+                                            <select asp-for="Campos[i].Ancho" class="form-select form-select-sm document-config-width-select">
+                                                @foreach (var ancho in FormularioConfiguracionService.AnchosPermitidos)
+                                                {
+                                                    <option value="@ancho">@AnchoTexto(ancho)</option>
+                                                }
+                                            </select>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (esProductos)
+                        {
+                            <div class="document-config-product-behavior">
+                                <strong>Comportamiento del bloque Productos de @documentoNombre</strong>
+                                <div class="form-grid cols-3">
+                                    <label class="form-check form-switch compact-switch"><input asp-for="ProductoComportamiento.UnirProductosDuplicados" class="form-check-input" /><span>Unir productos duplicados</span></label>
+                                    <label class="compact-field">Cantidad inicial<input asp-for="ProductoComportamiento.CantidadInicial" class="form-control form-control-sm text-end" type="number" min="0.01" step="0.01" /></label>
+                                    <label class="form-check form-switch compact-switch"><input asp-for="ProductoComportamiento.PermitirEditarPrecio" class="form-check-input" /><span>Permitir editar precio</span></label>
+                                    <label class="form-check form-switch compact-switch"><input asp-for="ProductoComportamiento.PermitirDescuento" class="form-check-input" /><span>Permitir descuento</span></label>
+                                    <label class="form-check form-switch compact-switch"><input asp-for="ProductoComportamiento.MostrarStock" class="form-check-input" /><span>Mostrar stock</span></label>
+                                    <label class="form-check form-switch compact-switch"><input asp-for="ProductoComportamiento.BloquearSinStock" class="form-check-input" /><span>@(esCompra ? "Bloquear compra sin stock" : "Bloquear venta sin stock")</span></label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        </section>
+
+        @if (esCotizacion)
+        {
+            <section class="document-config-card document-config-conditions">
+                <div class="document-config-card-head">
+                    <div>
+                        <h2>Condiciones comerciales</h2>
+                        <p>Textos predeterminados para cotizaciones.</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle document-config-field-table">
+                        <thead><tr><th>Etiqueta</th><th>Texto</th><th class="text-center">Visible</th><th class="text-end">Orden</th></tr></thead>
+                        <tbody>
+                        @for (var i = 0; i < Model.Condiciones.Count; i++)
+                        {
+                            <tr>
+                                <td><input asp-for="Condiciones[i].Etiqueta" class="form-control form-control-sm" /></td>
+                                <td><textarea asp-for="Condiciones[i].Texto" class="form-control form-control-sm" rows="2"></textarea></td>
+                                <td class="text-center"><input asp-for="Condiciones[i].Visible" class="form-check-input" /></td>
+                                <td><input asp-for="Condiciones[i].Orden" class="form-control form-control-sm text-end document-config-order" type="number" min="1" /></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+
+        <div class="document-config-actions">
+            <button class="document-save-btn">Guardar configuracion de @documentoNombre</button>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.querySelector('[data-document-config-form]');
+            if (!form) return;
+
+            const activarBloque = (bloque) => {
+                form.querySelectorAll('[data-config-block]').forEach((item) => item.classList.toggle('active', item.dataset.configBlock === bloque));
+                form.querySelectorAll('[data-config-block-button]').forEach((item) => item.setAttribute('aria-selected', item.dataset.configBlockButton === bloque ? 'true' : 'false'));
+                form.querySelectorAll('[data-config-field-panel]').forEach((panel) => {
+                    panel.classList.toggle('active', panel.dataset.configFieldPanel === bloque);
+                });
+            };
+
+            form.classList.add('js-document-config-ready');
+            activarBloque(form.querySelector('[data-config-block].active')?.dataset.configBlock || 'GENERAL');
+
+            form.querySelectorAll('[data-config-block-button]').forEach((button) => {
+                button.addEventListener('click', () => activarBloque(button.dataset.configBlockButton));
+            });
+        })();
+    </script>
+}
+
+
+
+
+

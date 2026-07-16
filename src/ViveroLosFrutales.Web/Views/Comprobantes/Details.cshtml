@@ -1,0 +1,169 @@
+@model ComprobanteFormDataDto
+@{
+    var comprobante = Model.Comprobante;
+    ViewData["Title"] = "Detalle Comprobante";
+    var numero = $"{comprobante.Serie}-{comprobante.Correlativo:000000}";
+    var cliente = string.IsNullOrWhiteSpace(comprobante.ClienteNombre) ? "-" : comprobante.ClienteNombre;
+    var documentoCliente = string.IsNullOrWhiteSpace(comprobante.ClienteNumeroDocumento) ? "-" : comprobante.ClienteNumeroDocumento;
+    var direccionCliente = string.IsNullOrWhiteSpace(comprobante.ClienteDireccion) ? comprobante.Direccion : comprobante.ClienteDireccion;
+    var estadoPagoTexto = EstadoPagoTexto(comprobante.EstadoPago);
+    var estadoPagoClase = comprobante.EstadoPago == EstadoPagoComprobante.PAGADO ? string.Empty : comprobante.EstadoPago == EstadoPagoComprobante.PAGO_PARCIAL ? "warning" : "info";
+    var estadoSunatTexto = EstadoSunatTexto(comprobante.EstadoSunat);
+    var estadoSunatClase = EstadoSunatClase(comprobante.EstadoSunat);
+    var puedeRegistrarPago = comprobante.TipoComprobante != TipoComprobante.NCR && comprobante.EstadoPago != EstadoPagoComprobante.PAGADO && comprobante.SaldoPendiente > 0;
+    var detalles = comprobante.Detalles ?? new List<ComprobanteDetalleDto>();
+    var subtotalExonerado = 0m;
+    var subtotalGravado = 0m;
+    var totalLineas = 0m;
+    foreach (var detalle in detalles)
+    {
+        var totalLinea = decimal.Round(detalle.Cantidad * detalle.PrecioUnitario, 2);
+        totalLineas += totalLinea;
+        var producto = Model.Productos.FirstOrDefault(x => x.ProductoId == detalle.ProductoId);
+        if (producto?.AfectoIgv == true)
+        {
+            subtotalGravado += decimal.Round(totalLinea / 1.18m, 2);
+        }
+        else
+        {
+            subtotalExonerado += totalLinea;
+        }
+    }
+    var igvCalculado = decimal.Round(totalLineas - subtotalExonerado - subtotalGravado, 2);
+    var estadoDocumentoClase = comprobante.TipoComprobante == TipoComprobante.NCR ? "info" : string.Empty;
+}
+
+@functions {
+    private static string EstadoPagoTexto(EstadoPagoComprobante estado) => estado switch
+    {
+        EstadoPagoComprobante.PENDIENTE => "PENDIENTE",
+        EstadoPagoComprobante.PAGO_PARCIAL => "PARCIAL",
+        EstadoPagoComprobante.PAGADO => "PAGADO",
+        _ => estado.ToString()
+    };
+
+    private static string EstadoSunatTexto(EstadoSunat estado) => estado switch
+    {
+        EstadoSunat.Aceptado => "SUNAT OK",
+        EstadoSunat.Pendiente => "PENDIENTE",
+        EstadoSunat.Observado => "OBSERVADO",
+        EstadoSunat.Rechazado => "RECHAZADO",
+        EstadoSunat.Anulado => "ANULADO",
+        EstadoSunat.NoAplica => "NO APLICA",
+        _ => estado.ToString().ToUpperInvariant()
+    };
+
+    private static string EstadoSunatClase(EstadoSunat estado) => estado switch
+    {
+        EstadoSunat.Aceptado => string.Empty,
+        EstadoSunat.Pendiente => "warning",
+        EstadoSunat.Observado => "warning",
+        EstadoSunat.Rechazado => "danger",
+        EstadoSunat.Anulado => "danger",
+        _ => "info"
+    };
+
+    private static string TipoComprobanteTexto(TipoComprobante tipo) => tipo switch
+    {
+        TipoComprobante.BOL => "Boleta",
+        TipoComprobante.FAC => "Factura",
+        TipoComprobante.NCR => "Nota de credito",
+        _ => tipo.ToString()
+    };
+}
+
+<section class="ds-document-shell">
+    <header class="ds-document-header">
+        <div class="ds-document-title">
+            <div class="ds-document-eyebrow">
+                <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+                <span>Detalle Comprobante</span>
+            </div>
+            <h1 class="ds-document-number">@numero</h1>
+            <span class="ds-document-subtitle">@cliente</span>
+        </div>
+        <div class="ds-document-actions">
+            @if (puedeRegistrarPago)
+            {
+                <a class="ds-action primary" asp-action="RegistrarPago" asp-route-id="@comprobante.ComprobanteId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg> Registrar pago</a>
+            }
+            <a class="ds-action outline" asp-action="Edit" asp-route-id="@comprobante.ComprobanteId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg> Editar</a>
+            <form asp-action="Imprimir" method="post" class="icon-form" target="_blank">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@comprobante.ComprobanteId" />
+                <button type="submit" class="ds-action ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v7H6z" /></svg> Imprimir PDF</button>
+            </form>
+            @if (comprobante.TipoComprobante != TipoComprobante.NCR)
+            {
+                <a class="ds-action ghost" asp-action="NotaCredito" asp-route-id="@comprobante.ComprobanteId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z" /><path d="M9 14h6" /><path d="M12 11v6" /></svg> Generar nota de credito</a>
+            }
+            <a class="ds-action ghost" asp-action="Index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg> Volver</a>
+        </div>
+    </header>
+
+    <div class="ds-kpi-grid">
+        <article class="ds-kpi"><div class="ds-kpi-copy"><small>Total</small><strong>S/ @comprobante.Total.ToString("N2")</strong><em>Pagado S/ @comprobante.TotalPagado.ToString("N2")</em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z" /><path d="M16 11h4" /></svg></span></article>
+        <article class="ds-kpi orange"><div class="ds-kpi-copy"><small>Saldo pendiente</small><strong>S/ @comprobante.SaldoPendiente.ToString("N2")</strong><em>Por cobrar</em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 8v8" /><path d="M8 12h8" /><circle cx="12" cy="12" r="9" /></svg></span></article>
+        <article class="ds-kpi blue"><div class="ds-kpi-copy"><small>Estado pago</small><strong><span class="ds-status @estadoPagoClase">@estadoPagoTexto</span></strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></span></article>
+        <article class="ds-kpi neutral"><div class="ds-kpi-copy"><small>Estado SUNAT</small><strong><span class="ds-status @estadoSunatClase">@estadoSunatTexto</span></strong></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M20 16.5a4 4 0 0 0-3.8-5 5 5 0 0 0-9.4-1.7A3.5 3.5 0 0 0 7.5 17H19" /></svg></span></article>
+    </div>
+    <section class="ds-panel">
+        <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6" /></svg></span><strong>Informacion general</strong></div>
+        <div class="ds-info-grid">
+            <div class="ds-field"><span>Tipo</span><strong>@TipoComprobanteTexto(comprobante.TipoComprobante)</strong></div>
+            <div class="ds-field"><span>Serie</span><strong>@comprobante.Serie</strong></div>
+            <div class="ds-field"><span>Numero</span><strong>@comprobante.Correlativo.ToString("000000")</strong></div>
+            <div class="ds-field"><span>Fecha de emision</span><strong>@comprobante.FechaEmision.ToString("dd/MM/yyyy")</strong></div>
+            <div class="ds-field"><span>Forma de pago</span><strong>@comprobante.FormaPago</strong></div>
+            <div class="ds-field"><span>Medio de pago</span><strong>@comprobante.MedioPago</strong></div>
+            <div class="ds-field"><span>Estado pago</span><strong><span class="ds-status @estadoPagoClase">@estadoPagoTexto</span></strong></div>
+            <div class="ds-field"><span>Documento origen</span><strong>@(string.IsNullOrWhiteSpace(comprobante.DocumentoOrigen) ? string.Empty : comprobante.DocumentoOrigen)</strong></div>
+        </div>
+    </section>
+
+    <section class="ds-panel">
+        <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span><strong>Cliente</strong></div>
+        <div class="ds-info-grid compact">
+            <div class="ds-field wide"><span>Cliente</span><strong>@cliente</strong></div>
+            <div class="ds-field"><span>Documento</span><strong>@documentoCliente</strong></div>
+            <div class="ds-field"><span>Telefono</span><strong>@(string.IsNullOrWhiteSpace(comprobante.ClienteTelefono) ? "-" : comprobante.ClienteTelefono)</strong></div>
+            <div class="ds-field"><span>Email</span><strong>@(string.IsNullOrWhiteSpace(comprobante.ClienteEmail) ? "-" : comprobante.ClienteEmail)</strong></div>
+            <div class="ds-field full"><span>Direccion</span><strong>@(string.IsNullOrWhiteSpace(direccionCliente) ? "-" : direccionCliente)</strong></div>
+        </div>
+    </section>
+
+    <div class="ds-document-content">
+        <section class="ds-panel ds-products-panel">
+            <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span><strong>Detalle de productos</strong></div>
+            <div class="ds-table-wrap">
+                <table class="ds-table">
+                    <thead><tr><th>#</th><th>Producto</th><th>Unidad</th><th class="text-end">Cantidad</th><th class="text-end">Precio unitario</th><th class="text-end">Subtotal</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    @{ var index = 1; }
+                    @foreach (var item in detalles)
+                    {
+                        var producto = Model.Productos.FirstOrDefault(x => x.ProductoId == item.ProductoId);
+                        var totalLinea = decimal.Round(item.Cantidad * item.PrecioUnitario, 2);
+                        var subtotalLinea = producto?.AfectoIgv == true ? decimal.Round(totalLinea / 1.18m, 2) : totalLinea;
+                        var igvLinea = decimal.Round(totalLinea - subtotalLinea, 2);
+                        <tr><td>@index</td><td><strong>@item.Producto</strong></td><td>@(producto?.UnidadMedida ?? "-")</td><td class="text-end">@item.Cantidad.ToString("N2")</td><td class="text-end">S/ @item.PrecioUnitario.ToString("N2")</td><td class="text-end">S/ @subtotalLinea.ToString("N2")</td><td class="text-end">S/ @igvLinea.ToString("N2")</td><td class="text-end"><strong>S/ @totalLinea.ToString("N2")</strong></td></tr>
+                        index++;
+                    }
+                    <tr class="ds-total-row"><td colspan="3">Totales</td><td class="text-end">@detalles.Sum(x => x.Cantidad).ToString("N2")</td><td></td><td class="text-end">S/ @comprobante.Subtotal.ToString("N2")</td><td class="text-end">S/ @comprobante.Igv.ToString("N2")</td><td class="text-end">S/ @comprobante.Total.ToString("N2")</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="ds-tabs-panel">
+            <div class="ds-tabs">
+                <input type="radio" name="comprobanteTabs" id="comprobanteTabObservaciones" checked />
+                <label for="comprobanteTabObservaciones">Observaciones</label>
+                <input type="radio" name="comprobanteTabs" id="comprobanteTabDocumentos" />
+                <label for="comprobanteTabDocumentos">Documentos relacionados</label>
+                <div class="ds-tab-content ds-tab-observaciones"><div class="ds-note-card">@(string.IsNullOrWhiteSpace(comprobante.CondicionesVenta) ? "Sin observaciones registradas." : comprobante.CondicionesVenta)</div></div>
+                <div class="ds-tab-content ds-tab-documentos"><div class="ds-note-card">@(comprobante.NotaPedidoId is not null ? $"Nota de pedido #{comprobante.NotaPedidoId}" : comprobante.CotizacionId is not null ? $"Cotizacion #{comprobante.CotizacionId}" : "No hay documentos relacionados.")</div></div>
+            </div>
+        </section>
+    </div>
+</section>

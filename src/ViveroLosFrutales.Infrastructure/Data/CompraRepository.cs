@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -38,10 +38,22 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
     public Task<Compra?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken) =>
         db.Compras
             .Include(x => x.Proveedor)
+            .Include(x => x.OrdenCompra)
             .Include(x => x.Detalles).ThenInclude(x => x.Producto)
             .Include(x => x.Pagos).ThenInclude(x => x.CuentaFinanciera)
+            .Include(x => x.PagoAplicaciones).ThenInclude(x => x.PagoProveedor)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.CompraId == id, cancellationToken);
 
+
+    public async Task<IReadOnlyList<CompraListDto>> ListarPorOrdenCompraAsync(int empresaId, int ordenCompraId, CancellationToken cancellationToken)
+    {
+        var query = db.Compras.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.OrdenCompraId == ordenCompraId)
+            .OrderByDescending(x => x.Fecha)
+            .ThenByDescending(x => x.CompraId);
+
+        return await Proyectar(query).ToListAsync(cancellationToken);
+    }
     public Task<bool> ExisteDocumentoAsync(int empresaId, int proveedorId, TipoDocumentoCompra tipoDocumento, string serie, string numero, int? excluirCompraId, CancellationToken cancellationToken)
     {
         serie = serie?.Trim() ?? string.Empty;
@@ -74,14 +86,15 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
         {
             var producto = await db.Productos.FirstAsync(x => x.EmpresaId == compra.EmpresaId && x.ProductoId == detalle.ProductoId, cancellationToken);
             var stockAnterior = producto.Stock;
-            producto.Stock += detalle.Cantidad;
+            if (detalle.CantidadRecibida <= 0) continue;
+            producto.Stock += detalle.CantidadRecibida;
             db.MovimientosInventario.Add(new MovimientoInventario
             {
                 EmpresaId = compra.EmpresaId,
                 ProductoId = producto.ProductoId,
                 Tipo = TipoMovimientoInventario.ENTRADA_COMPRA,
                 Fecha = compra.Fecha,
-                Cantidad = detalle.Cantidad,
+                Cantidad = detalle.CantidadRecibida,
                 StockAnterior = stockAnterior,
                 StockNuevo = producto.Stock,
                 Referencia = Documento(compra),
@@ -95,20 +108,21 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
         foreach (var detalle in compra.Detalles)
         {
             var producto = await db.Productos.FirstAsync(x => x.EmpresaId == compra.EmpresaId && x.ProductoId == detalle.ProductoId, cancellationToken);
-            if (producto.Stock < detalle.Cantidad)
+            if (detalle.CantidadRecibida <= 0) continue;
+            if (producto.Stock < detalle.CantidadRecibida)
             {
                 throw new InvalidOperationException("No se puede anular la compra porque parte del stock ya fue vendido o consumido.");
             }
 
             var stockAnterior = producto.Stock;
-            producto.Stock -= detalle.Cantidad;
+            producto.Stock -= detalle.CantidadRecibida;
             db.MovimientosInventario.Add(new MovimientoInventario
             {
                 EmpresaId = compra.EmpresaId,
                 ProductoId = producto.ProductoId,
                 Tipo = TipoMovimientoInventario.REVERSA_COMPRA,
                 Fecha = PeruDateTime.Today,
-                Cantidad = -detalle.Cantidad,
+                Cantidad = -detalle.CantidadRecibida,
                 StockAnterior = stockAnterior,
                 StockNuevo = producto.Stock,
                 Referencia = Documento(compra),
@@ -117,6 +131,17 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
         }
     }
 
+    public Task<bool> TieneMovimientosInventarioActivosAsync(Compra compra, CancellationToken cancellationToken)
+    {
+        var productoIds = compra.Detalles.Select(x => x.ProductoId).Distinct().ToArray();
+        var referencia = Documento(compra);
+        return db.MovimientosInventario.AnyAsync(x =>
+            x.EmpresaId == compra.EmpresaId
+            && x.Estado == EstadoRegistro.Activo
+            && x.Tipo == TipoMovimientoInventario.ENTRADA_COMPRA
+            && x.Referencia == referencia
+            && productoIds.Contains(x.ProductoId), cancellationToken);
+    }
     public async Task GuardarAsync(Compra compra, CancellationToken cancellationToken)
     {
         if (compra.CompraId == 0) db.Compras.Add(compra);
@@ -169,8 +194,9 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             x.TotalPagado,
             x.SaldoPendiente,
             x.EstadoPago,
+            x.EstadoEntrega,
             x.EstadoDocumento,
-            x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO && x.EstadoPago != EstadoPagoCompra.PAGADO && x.SaldoPendiente > 0,
+            x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO && x.EstadoPago != EstadoPagoCompra.PAGADO && decimal.Round(x.SaldoPendiente, 2) > 0,
             x.EstadoDocumento == EstadoDocumentoCompra.ACTIVO));
 
     private static string TipoDocumentoEtiqueta(TipoDocumentoCompra tipo) => tipo switch
@@ -190,4 +216,7 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             ? (string.IsNullOrWhiteSpace(compra.Serie) || string.IsNullOrWhiteSpace(compra.Numero) ? TipoDocumentoEtiqueta(compra.TipoDocumento) : $"{compra.Serie}-{compra.Numero}")
             : compra.Documento;
 }
+
+
+
 

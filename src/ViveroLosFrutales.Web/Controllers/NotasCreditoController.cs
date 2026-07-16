@@ -10,11 +10,24 @@ public class NotasCreditoController(ComprobanteService service) : Controller
     public async Task<IActionResult> Index([FromQuery] SearchRequest request, CancellationToken cancellationToken) =>
         View(await service.BuscarNotasCreditoAsync(request, cancellationToken));
 
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
+    {
+        var dto = await service.ObtenerComprobanteParaVisualizarAsync(id, cancellationToken);
+        if (dto.TipoComprobante != ViveroLosFrutales.Domain.Enums.TipoComprobante.NCR)
+        {
+            TempData["Error"] = "El documento seleccionado no es una nota de credito.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(await service.ObtenerFormularioLecturaAsync(dto, cancellationToken));
+    }
     public async Task<IActionResult> Create([FromQuery] NotaCreditoOrigenSearchRequest request, int? comprobanteReferenciaId, CancellationToken cancellationToken)
     {
         var model = new NotaCreditoCreatePageDto
         {
-            NotaCredito = await service.PrepararNotaCreditoInicialAsync(cancellationToken)
+            NotaCredito = await service.PrepararNotaCreditoInicialAsync(cancellationToken),
+            FormularioConfiguracion = await service.ObtenerFormularioNotaCreditoAsync(cancellationToken)
         };
         if (comprobanteReferenciaId is int id)
         {
@@ -55,7 +68,8 @@ public class NotasCreditoController(ComprobanteService service) : Controller
             {
                 NotaCredito = dto.ComprobanteReferenciaId > 0
                     ? await service.PrepararNotaCreditoAsync(dto.ComprobanteReferenciaId, cancellationToken)
-                    : await service.PrepararNotaCreditoInicialAsync(cancellationToken)
+                    : await service.PrepararNotaCreditoInicialAsync(cancellationToken),
+                FormularioConfiguracion = await service.ObtenerFormularioNotaCreditoAsync(cancellationToken)
             });
         }
     }
@@ -104,3 +118,5 @@ public class NotasCreditoController(ComprobanteService service) : Controller
         return RedirectToAction(nameof(Index));
     }
 }
+
+

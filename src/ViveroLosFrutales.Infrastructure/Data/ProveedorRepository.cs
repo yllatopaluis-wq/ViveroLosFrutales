@@ -19,7 +19,7 @@ public class ProveedorRepository(ApplicationDbContext db) : IProveedorRepository
         }
 
         return query.OrderBy(x => x.RazonSocial)
-            .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Telefono, x.Estado))
+            .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Direccion, x.Telefono, x.Estado))
             .ToPagedAsync(request, cancellationToken);
     }
 
@@ -30,7 +30,7 @@ public class ProveedorRepository(ApplicationDbContext db) : IProveedorRepository
         await db.Proveedores.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo)
             .OrderBy(x => x.RazonSocial)
-            .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Telefono, x.Estado))
+            .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Direccion, x.Telefono, x.Estado))
             .ToListAsync(cancellationToken);
 
     public async Task GuardarAsync(Proveedor proveedor, CancellationToken cancellationToken)
@@ -39,3 +39,4 @@ public class ProveedorRepository(ApplicationDbContext db) : IProveedorRepository
         await db.SaveChangesAsync(cancellationToken);
     }
 }
+

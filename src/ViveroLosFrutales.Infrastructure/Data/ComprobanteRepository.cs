@@ -205,6 +205,7 @@ public class ComprobanteRepository(ApplicationDbContext db) : IComprobanteReposi
             .Include(x => x.Cliente)
             .Include(x => x.Empresa)
             .Include(x => x.ComprobanteReferencia)
+            .Include(x => x.NotaPedido)
             .Include(x => x.Cobros)
             .Include(x => x.CobrosAplicados).ThenInclude(x => x.CobroCliente)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.ComprobanteId == id, cancellationToken);

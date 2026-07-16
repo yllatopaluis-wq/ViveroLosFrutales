@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Domain.Common;
+﻿using ViveroLosFrutales.Domain.Common;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Domain.Entities;
@@ -37,6 +37,7 @@ public class Cotizacion : EmpresaEntity
     public Empresa? Empresa { get; set; }
     public Cliente? Cliente { get; set; }
     public ICollection<CotizacionDetalle> Detalles { get; set; } = new List<CotizacionDetalle>();
+    public ICollection<CotizacionCondicionSnapshot> CondicionesSnapshot { get; set; } = new List<CotizacionCondicionSnapshot>();
 
     public TipoDocumentoCliente? ClienteTipoDocumentoMostrar => ClienteTipoDocumento ?? Cliente?.TipoDocumento;
     public string ClienteNumeroDocumentoMostrar => FirstNotEmpty(ClienteNumeroDocumento, Cliente?.NumeroDocumento);
@@ -67,3 +68,4 @@ public class Cotizacion : EmpresaEntity
     private static string FirstNotEmpty(params string?[] values) =>
         values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x))?.Trim() ?? string.Empty;
 }
+

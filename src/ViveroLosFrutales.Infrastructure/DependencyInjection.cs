@@ -50,6 +50,8 @@ public static class DependencyInjection
         services.AddScoped<ICotizacionRepository, CotizacionRepository>();
         services.AddScoped<IProveedorRepository, ProveedorRepository>();
         services.AddScoped<ICompraRepository, CompraRepository>();
+        services.AddScoped<IOrdenCompraRepository, OrdenCompraRepository>();
+        services.AddScoped<IPagoProveedorAplicacionRepository, PagoProveedorAplicacionRepository>();
         services.AddScoped<IPagoProveedorRepository, PagoProveedorRepository>();
         services.AddScoped<IGastoRepository, GastoRepository>();
         services.AddScoped<IIngresoRepository, IngresoRepository>();
@@ -68,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IRolRepository, RolRepository>();
         services.AddScoped<IConfiguracionEmpresaRepository, ConfiguracionEmpresaRepository>();
+        services.AddScoped<IDocumentoConfiguracionRepository, DocumentoConfiguracionRepository>();
         services.Configure<PdfOptions>(configuration.GetSection("Pdf"));
         services.Configure<NubefactOptions>(configuration.GetSection("Nubefact"));
         services.AddScoped<IPdfService, PdfService>();
@@ -76,4 +79,6 @@ public static class DependencyInjection
         return services;
     }
 }
+
+
 

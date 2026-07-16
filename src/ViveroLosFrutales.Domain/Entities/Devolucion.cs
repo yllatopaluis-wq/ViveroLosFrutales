@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Domain.Common;
+﻿using ViveroLosFrutales.Domain.Common;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Domain.Entities;
@@ -14,6 +14,8 @@ public class Devolucion : EmpresaEntity
     public int? ComprobanteId { get; set; }
     public int? NotaCreditoId { get; set; }
     public int? CompraId { get; set; }
+    public int? OrdenCompraId { get; set; }
+    public int? PagoProveedorId { get; set; }
     public DateTime FechaGeneracion { get; set; } = PeruDateTime.Today;
     public decimal MontoOriginal { get; set; }
     public decimal MontoDevuelto { get; set; }
@@ -31,4 +33,7 @@ public class Devolucion : EmpresaEntity
     public Comprobante? Comprobante { get; set; }
     public Comprobante? NotaCredito { get; set; }
     public Compra? Compra { get; set; }
+    public OrdenCompra? OrdenCompra { get; set; }
+    public PagoProveedor? PagoProveedor { get; set; }
 }
+

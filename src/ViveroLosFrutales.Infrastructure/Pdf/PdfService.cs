@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using QuestPDF.Fluent;
@@ -35,7 +35,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
             EmpresaDireccion = cotizacion.EmpresaDireccion,
             EmpresaTelefono = cotizacion.EmpresaTelefono,
             EmpresaEmail = cotizacion.EmpresaEmail,
-            CondicionesVenta = cotizacion.CondicionesVenta,
+            CondicionesVenta = cotizacion.CondicionesSnapshot.Any() ? string.Join(Environment.NewLine, cotizacion.CondicionesSnapshot.OrderBy(x => x.Orden).Select(x => string.IsNullOrWhiteSpace(x.Etiqueta) ? x.Texto : $"{x.Etiqueta}: {x.Texto}")) : cotizacion.CondicionesVenta,
             CaracteristicasTecnicas = cotizacion.CaracteristicasTecnicas,
             SubTotal = cotizacion.SubTotal,
             Igv = cotizacion.Igv,
@@ -165,7 +165,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
                         {
                             box.Item().Padding(10).Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten3).Column(inner =>
                             {
-                                inner.Item().Text("COTIZACIÓN").FontSize(16).Bold().AlignCenter();
+                                inner.Item().Text("COTIZACIÃ“N").FontSize(16).Bold().AlignCenter();
                                 inner.Item().Text($"{serie}-{comprobante.Correlativo:000000}").FontSize(14).SemiBold().AlignCenter();
                                 inner.Item().PaddingTop(8).Text($"Fecha: {comprobante.FechaEmision:dd/MM/yyyy}").AlignCenter();
                             });
@@ -180,9 +180,9 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
                         row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(clientBox =>
                         {
                             clientBox.Item().Text("DATOS DEL CLIENTE").Bold().FontSize(11);
-                            clientBox.Item().PaddingTop(5).Text($"Atención: {comprobante.ClienteNombreMostrar}");
+                            clientBox.Item().PaddingTop(5).Text($"AtenciÃ³n: {comprobante.ClienteNombreMostrar}");
                             clientBox.Item().Text($"RUC: {comprobante.ClienteNumeroDocumentoMostrar}");
-                            clientBox.Item().Text($"Dirección: {comprobante.ClienteDireccionMostrar}");
+                            clientBox.Item().Text($"DirecciÃ³n: {comprobante.ClienteDireccionMostrar}");
                         });
                     });
 
@@ -246,22 +246,22 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
 
                     column.Item().PaddingTop(15).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(conditions =>
                     {
-                        conditions.Item().Text("CONDICIÓN DE VENTA").Bold().FontSize(11);
+                        conditions.Item().Text("CONDICIÃ“N DE VENTA").Bold().FontSize(11);
                         AddMultilineBulletText(conditions, comprobante.CondicionesVenta,
-                            "Plazo de entrega: Entrega programada a los 6 meses después de aceptación de cotización.",
+                            "Plazo de entrega: Entrega programada a los 6 meses despuÃ©s de aceptaciÃ³n de cotizaciÃ³n.",
                             "Lugar de entrega: En las instalaciones del Vivero (Huaral)",
                             "Forma de pago: Contado.",
-                            "Garantía: 1 meses",
-                            "Medios de pago: En efectivo, depósito a cuenta corriente");
+                            "GarantÃ­a: 1 meses",
+                            "Medios de pago: En efectivo, depÃ³sito a cuenta corriente");
                     });
 
                     column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(features =>
                     {
-                        features.Item().Text("CARACTERÍSTICAS TÉCNICAS").Bold().FontSize(11);
+                        features.Item().Text("CARACTERÃSTICAS TÃ‰CNICAS").Bold().FontSize(11);
                         AddMultilineBulletText(features, comprobante.CaracteristicasTecnicas,
                             "Semillas vegetativas seleccionadas de campos certificados con control fitosanitario.",
                             "Edad: Plantas de 5 meses.",
-                            "Tamaño de 50 – 70 cm",
+                            "TamaÃ±o de 50 â€“ 70 cm",
                             "Bolsas medidas de 7 x 12",
                             "Peso aprox. por planta 3 kilos");
                     });
@@ -326,7 +326,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
                         row.ConstantItem(180).Height(100).Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(10).Column(box =>
                         {
                             box.Item().Text("COTIZACION").FontSize(19).Bold().AlignCenter();
-                            box.Item().Text($"{serie}-{comprobante.Correlativo:000000}").FontSize(14).SemiBold().AlignCenter();
+                            box.Item().Text($"{serie}-{comprobante.Correlativo}").FontSize(14).SemiBold().AlignCenter();
                             box.Item().PaddingVertical(5).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
                             box.Item().Text($"Fecha: {comprobante.FechaEmision:dd/MM/yyyy}").FontSize(8);
                             box.Item().Text("Vigencia: 15 dias calendario").FontSize(8);
@@ -403,50 +403,29 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
                         });
                     });
 
-                    column.Item().PaddingTop(12).Row(row =>
+                    column.Item().PaddingTop(12).Border(1).BorderColor(Colors.Grey.Lighten2).PaddingBottom(8).Column(conditions =>
                     {
-                        row.RelativeItem().PaddingRight(7).Border(1).BorderColor(Colors.Grey.Lighten2).PaddingBottom(8).Column(conditions =>
-                        {
-                            AddCotizacionSectionTitle(conditions, "CONDICION DE VENTA");
-                            AddCotizacionBulletText(conditions, comprobante.CondicionesVenta,
-                                "Plazo de entrega: A los 10 dias de realizado el pago.",
-                                "Lugar de entrega: En las instalaciones del vivero.",
-                                $"Forma de pago: {comprobante.FormaPago}.",
-                                "Garantia: 1 mes.",
-                                "Medio de pago: En efectivo, deposito a cuenta corriente o pago con tarjeta.");
-                        });
-
-                        row.RelativeItem().PaddingLeft(7).Border(1).BorderColor(Colors.Grey.Lighten2).PaddingBottom(8).Column(features =>
-                        {
-                            AddCotizacionSectionTitle(features, "CARACTERISTICAS TECNICAS");
-                            AddCotizacionBulletText(features, comprobante.CaracteristicasTecnicas,
-                                "Semillas seleccionadas de campos certificados con control fitosanitario.",
-                                "Edad: Plantas de 14 meses.",
-                                "Tamaño de 40 - 50 cm.",
-                                "Bolsa: medidas de 7 x 14.",
-                                "Peso aprox. por planta: 4 kilos.");
-                        });
+                        AddCotizacionSectionTitle(conditions, "CONDICION DE VENTA");
+                        AddCotizacionBulletText(conditions, comprobante.CondicionesVenta,
+                            "Cotizacion valida por: 15 dias calendario.",
+                            "Precios sujetos a disponibilidad de stock.",
+                            $"Forma de pago: {comprobante.FormaPago}.");
                     });
 
-                    column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Grey.Lighten2).Background(Colors.Grey.Lighten4).Padding(8).Row(row =>
+                    if (!string.IsNullOrWhiteSpace(comprobante.CaracteristicasTecnicas))
                     {
-                        AddBenefitBox(row, CotizacionIconShield(), "BENEFICIOS DE\nNUESTRAS PLANTAS", "", featured: true);
-                        AddBenefitBox(row, CotizacionIconMedal(), "Mayor rendimiento", "y desarrollo");
-                        AddBenefitBox(row, CotizacionIconAdvisor(), "Asesoria tecnica", "");
-                        AddBenefitBox(row, CotizacionIconShield(), "Garantia de", "satisfaccion", hasDivider: false);
-                    });
+                        column.Item().PaddingTop(8).Border(1).BorderColor(Colors.Grey.Lighten2).PaddingBottom(8).Column(observations =>
+                        {
+                            AddCotizacionSectionTitle(observations, "OBSERVACIONES");
+                            AddCotizacionPlainText(observations, comprobante.CaracteristicasTecnicas);
+                        });
+                    }
 
                     column.Item().PaddingTop(10).LineHorizontal(1).LineColor(Colors.Grey.Lighten1);
 
                     column.Item().PaddingTop(12).Row(row =>
                     {
-                        row.RelativeItem(1.35f).PaddingRight(12).Column(about =>
-                        {
-                            about.Item().Text("SOBRE NOSOTROS").FontSize(8).Bold();
-                            about.Item().PaddingTop(5).Text("Somos un vivero especializado en la produccion de plantas frutales de alta calidad, comprometidos con la agricultura sostenible y el exito de nuestros clientes.").FontSize(7).LineHeight(1.25f);
-                        });
-
-                        row.RelativeItem(0.95f).PaddingHorizontal(8).BorderLeft(1).BorderColor(Colors.Grey.Lighten2).PaddingLeft(10).Column(contact =>
+                        row.RelativeItem().PaddingRight(12).Column(contact =>
                         {
                             contact.Item().Text("CONTACTANOS").FontSize(8).Bold();
                             AddCotizacionContactLine(contact, empresaTelefono);
@@ -689,6 +668,13 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         });
     }
 
+    private static void AddCotizacionPlainText(ColumnDescriptor column, string content)
+    {
+        foreach (var line in (content ?? string.Empty).Replace("\r", string.Empty).Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)))
+        {
+            column.Item().PaddingHorizontal(10).PaddingTop(5).Text(line.Trim()).FontSize(7).LineHeight(1.25f);
+        }
+    }
     private static void AddCotizacionBulletText(ColumnDescriptor column, string content, params string[] defaultLines)
     {
         var lines = string.IsNullOrWhiteSpace(content)
@@ -765,7 +751,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
 
         foreach (var line in lines)
         {
-            container.Item().PaddingTop(2).Text($"• {line.Trim()}").FontSize(10);
+            container.Item().PaddingTop(2).Text($"â€¢ {line.Trim()}").FontSize(10);
         }
     }
 
@@ -802,7 +788,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         if (absolutePath.StartsWith(Path.GetFullPath(_environment.WebRootPath), StringComparison.OrdinalIgnoreCase))
         {
             var relativePath = Path.GetRelativePath(_environment.WebRootPath, absolutePath);
-            return "/" + relativePath.Replace("\\", "/");
+            return "/" + relativePath.Replace("", "/");
         }
 
         return absolutePath;
@@ -1028,3 +1014,7 @@ public class PdfService(IWebHostEnvironment environment, IOptions<PdfOptions> op
         return string.Concat(fileName.Select(c => invalidChars.Contains(c) ? '_' : c));
     }
 }
+
+
+
+

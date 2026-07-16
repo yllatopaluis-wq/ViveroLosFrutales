@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Domain.Entities;
 using ViveroLosFrutales.Domain.Enums;
@@ -61,6 +61,15 @@ public interface IMotivoNotaCreditoRepository
     Task<MotivoNotaCredito?> ObtenerAsync(int id, CancellationToken cancellationToken);
 }
 
+
+public interface IDocumentoConfiguracionRepository
+{
+    Task<FormularioConfiguracion?> ObtenerFormularioAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<CondicionComercialPlantilla?> ObtenerCondicionPlantillaAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<PlantillaDocumento?> ObtenerPlantillaDocumentoAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CotizacionCondicionSnapshot>> ListarCondicionesSnapshotAsync(int cotizacionId, CancellationToken cancellationToken);
+    Task GuardarConfiguracionDocumentoAsync(int empresaId, string usuario, DocumentoConfiguracionEditDto dto, CancellationToken cancellationToken);
+}
 public interface ICotizacionRepository
 {
     Task<PagedResult<CotizacionListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
@@ -86,15 +95,34 @@ public interface IProveedorRepository
     Task GuardarAsync(Proveedor proveedor, CancellationToken cancellationToken);
 }
 
+
+public interface IOrdenCompraRepository
+{
+    Task<PagedResult<OrdenCompraListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
+    Task<OrdenCompra?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task<int> SiguienteCorrelativoAsync(int empresaId, string serie, CancellationToken cancellationToken);
+    Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
+    Task GuardarAsync(OrdenCompra ordenCompra, CancellationToken cancellationToken);
+}
+
+public interface IPagoProveedorAplicacionRepository
+{
+    Task<IReadOnlyList<PagoProveedorAplicacion>> ListarPorCompraAsync(int empresaId, int compraId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<PagoProveedorAplicacion>> ListarPorPagoAsync(int empresaId, int pagoProveedorId, CancellationToken cancellationToken);
+    Task<PagoProveedorAplicacion?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task GuardarAsync(PagoProveedorAplicacion aplicacion, CancellationToken cancellationToken);
+}
 public interface ICompraRepository
 {
     Task<PagedResult<CompraListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<CompraListDto>> BuscarCuentasPorPagarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
     Task<Compra?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CompraListDto>> ListarPorOrdenCompraAsync(int empresaId, int ordenCompraId, CancellationToken cancellationToken);
     Task<bool> ExisteDocumentoAsync(int empresaId, int proveedorId, TipoDocumentoCompra tipoDocumento, string serie, string numero, int? excluirCompraId, CancellationToken cancellationToken);
     Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
     Task AumentarStockAsync(Compra compra, CancellationToken cancellationToken);
     Task RevertirStockAsync(Compra compra, CancellationToken cancellationToken);
+    Task<bool> TieneMovimientosInventarioActivosAsync(Compra compra, CancellationToken cancellationToken);
     Task GuardarAsync(Compra compra, CancellationToken cancellationToken);
 }
 
@@ -102,6 +130,7 @@ public interface IPagoProveedorRepository
 {
     Task<PagedResult<PagoProveedorTesoreriaListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
     Task<PagoProveedor?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<PagoProveedor>> ListarPorOrdenCompraAsync(int empresaId, int ordenCompraId, CancellationToken cancellationToken);
     Task GuardarAsync(PagoProveedor pago, CancellationToken cancellationToken);
 }
 
@@ -217,6 +246,10 @@ public interface IDevolucionRepository
     Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
     Task GuardarAsync(Devolucion devolucion, CancellationToken cancellationToken);
 }
+
+
+
+
 
 
 

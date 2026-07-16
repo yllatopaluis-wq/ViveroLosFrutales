@@ -1,6 +1,6 @@
-@model NotaCreditoCreatePageDto
+﻿@model NotaCreditoCreatePageDto
 @{
-    ViewData["Title"] = "Crear nota de crédito";
+    ViewData["Title"] = "Crear nota de credito";
     var today = PeruDateTime.Today;
     var firstDay = new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
     var currentDay = today.ToString("yyyy-MM-dd");
@@ -9,7 +9,54 @@
     var fechaHasta = Context.Request.Query["FechaHasta"].FirstOrDefault() ?? currentDay;
     var abrirModal = Context.Request.Query["modal"].FirstOrDefault() == "1";
     var tieneOrigen = Model.NotaCredito.ComprobanteReferenciaId > 0;
-    var totalNotaCredito = Model.NotaCredito.Detalles.Sum(x => x.Total);
+    var bloques = Model.FormularioConfiguracion.Bloques.ToDictionary(x => x.Bloque, x => x, StringComparer.OrdinalIgnoreCase);
+    var campos = Model.FormularioConfiguracion.Campos.ToDictionary(x => $"{x.Bloque}:{x.Campo}", x => x, StringComparer.OrdinalIgnoreCase);
+
+    FormularioCampoDto Campo(string bloque, string campo, string etiquetaDefault, int ordenDefault = 999, string anchoDefault = "3") =>
+        campos.TryGetValue($"{bloque}:{campo}", out var config)
+            ? config
+            : new FormularioCampoDto(bloque, campo, etiquetaDefault, true, false, false, ordenDefault, anchoDefault, null);
+    bool BloqueVisible(string bloque) => !bloques.TryGetValue(bloque, out var config) || config.Visible;
+    bool CampoVisible(string bloque, string campo) => Campo(bloque, campo, campo).Visible;
+    string Etiqueta(string bloque, string campo, string fallback) => Campo(bloque, campo, fallback).Etiqueta;
+    bool Obligatorio(string bloque, string campo) => Campo(bloque, campo, campo).Obligatorio;
+    int Ancho(string bloque, string campo, string fallback = "3")
+    {
+        var raw = Campo(bloque, campo, campo, 999, fallback).Ancho;
+        if (string.Equals(raw, "full", StringComparison.OrdinalIgnoreCase)) return 12;
+        return int.TryParse(raw, out var ancho) && ancho is >= 1 and <= 12 ? ancho : int.Parse(fallback);
+    }
+    string ColClass(string bloque, string campo, string fallback = "3") => $"col-12 col-md-{Ancho(bloque, campo, fallback)}";
+    string RequiredMark(string bloque, string campo) => Obligatorio(bloque, campo) ? " *" : string.Empty;
+
+    var generalFields = Model.FormularioConfiguracion.Campos
+        .Where(x => string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase) && x.Visible)
+        .OrderBy(x => x.Orden)
+        .ToList();
+    var productFields = Model.FormularioConfiguracion.Campos
+        .Where(x => string.Equals(x.Bloque, "PRODUCTOS", StringComparison.OrdinalIgnoreCase) && x.Visible)
+        .OrderBy(x => x.Orden)
+        .ToList();
+
+    decimal subtotalExonerado = 0m;
+    decimal subtotalGravado = 0m;
+    decimal igvCalculado = 0m;
+    foreach (var item in Model.NotaCredito.Detalles)
+    {
+        var totalLinea = item.Total;
+        if (item.AfectoIgv)
+        {
+            var baseLinea = decimal.Round(totalLinea / 1.18m, 2);
+            subtotalGravado += baseLinea;
+            igvCalculado += totalLinea - baseLinea;
+        }
+        else
+        {
+            subtotalExonerado += totalLinea;
+        }
+    }
+    var descuento = 0m;
+    var totalNotaCredito = subtotalExonerado + subtotalGravado + igvCalculado - descuento;
     var nuevoTotalValido = Math.Max(0, Model.NotaCredito.Total - totalNotaCredito);
     var devolucionEstimada = Math.Max(0, Model.NotaCredito.TotalCobradoOrigen - nuevoTotalValido);
 }
@@ -19,125 +66,139 @@
     <div class="alert alert-danger py-2">@error</div>
 }
 
-<form asp-action="Create" method="post" class="document-form nota-credito-form" onsubmit="return confirmarNotaCredito(this);">
+<form asp-action="Create" method="post" class="document-form comprobante-form quote-form nota-credito-form" onsubmit="return confirmarNotaCredito(this);">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="text-danger"></div>
     <input asp-for="NotaCredito.ComprobanteReferenciaId" name="ComprobanteReferenciaId" type="hidden" />
-    <input asp-for="NotaCredito.Referencia" type="hidden" />
+    <input asp-for="NotaCredito.Referencia" name="Referencia" type="hidden" />
     <input id="totalOrigenValor" value="@Model.NotaCredito.Total" type="hidden" />
     <input id="totalCobradoOrigenValor" value="@Model.NotaCredito.TotalCobradoOrigen" type="hidden" />
-    <section class="document-section">
-        <div class="document-section-heading">
+
+    <section class="quote-panel quote-header-panel @(BloqueVisible("GENERAL") ? "" : "d-none")">
+        <div class="quote-panel-title">
             <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
-            <h3>Información de la nota de crédito</h3>
+            <strong>@(bloques.TryGetValue("GENERAL", out var generalBlock) ? generalBlock.Titulo : "Informacion de nota de credito")</strong>
         </div>
-        <fieldset class="document-grid credit-note-main-grid">
-            <label>
-                <span>Serie nota de crédito</span>
-                <input asp-for="NotaCredito.Serie" name="Serie" class="form-control" readonly />
-            </label>
-            <label>
-                <span>Número</span>
-                <input asp-for="NotaCredito.Correlativo" name="Correlativo" class="form-control text-end" readonly />
-            </label>
-            <label>
-                <span>Fecha de emisión</span>
-                <input asp-for="NotaCredito.FechaEmision" name="FechaEmision" class="form-control" type="date" />
-            </label>
-            <label>
-                <span>Motivo</span>
-                <select asp-for="NotaCredito.MotivoNotaCreditoId" name="MotivoNotaCreditoId" class="form-select" id="motivoNotaCredito">
-                @foreach (var motivo in Model.NotaCredito.Motivos)
+        <div class="row g-2 quote-general-row">
+            @foreach (var field in generalFields)
+            {
+                switch (field.Campo)
                 {
-                    <option value="@motivo.MotivoNotaCreditoId">@motivo.Nombre</option>
+                    case "Serie":
+                        <label class="@ColClass("GENERAL", "Serie", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Serie")</span><input asp-for="NotaCredito.Serie" name="Serie" class="form-control" readonly="@(field.SoloLectura)" /></label>
+                        break;
+                    case "Numero":
+                        <label class="@ColClass("GENERAL", "Numero", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Numero")</span><input asp-for="NotaCredito.Correlativo" name="Correlativo" class="form-control text-end" readonly="@(field.SoloLectura)" /></label>
+                        break;
+                    case "FechaEmision":
+                        <label class="@ColClass("GENERAL", "FechaEmision", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "FechaEmision")</span><input asp-for="NotaCredito.FechaEmision" name="FechaEmision" class="form-control" type="date" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
+                        break;
+                    case "Motivo":
+                        <label class="@ColClass("GENERAL", "Motivo", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Motivo")</span><select asp-for="NotaCredito.MotivoNotaCreditoId" name="MotivoNotaCreditoId" class="form-select" id="motivoNotaCredito" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)">@foreach (var motivo in Model.NotaCredito.Motivos) { <option value="@motivo.MotivoNotaCreditoId">@motivo.Nombre</option> }</select></label>
+                        if (field.SoloLectura) { <input asp-for="NotaCredito.MotivoNotaCreditoId" name="MotivoNotaCreditoId" type="hidden" /> }
+                        break;
+                    case "SustentoDescripcion":
+                        <label class="@ColClass("GENERAL", "SustentoDescripcion", "12")"><span>@field.Etiqueta@RequiredMark("GENERAL", "SustentoDescripcion")</span><textarea asp-for="NotaCredito.SustentoDescripcion" name="SustentoDescripcion" class="form-control quote-observations-input" rows="2" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)"></textarea></label>
+                        break;
                 }
-                </select>
-            </label>
-        </fieldset>
+            }
+        </div>
     </section>
 
-    <section class="document-section">
-        <div class="document-section-heading">
+    <section class="quote-panel @(BloqueVisible("ORIGEN") ? "" : "d-none")">
+        <div class="quote-panel-title">
             <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z" /><path d="M9 7h6M9 11h6M9 15h4" /></svg></span>
-            <h3>Comprobante de origen</h3>
+            <strong>@(bloques.TryGetValue("ORIGEN", out var origenBlock) ? origenBlock.Titulo : "Comprobante origen")</strong>
         </div>
-    @if (!tieneOrigen)
-    {
-        <button type="button" class="document-save-btn" onclick="abrirModalOrigen()">Buscar comprobante</button>
-    }
-    else
-    {
-        <div class="nota-info-card document-origin-card">
-            <div><span>Comprobante</span><strong id="referenciaOrigen">@Model.NotaCredito.Referencia</strong></div>
-            <div><span>Tipo</span><strong>@Model.NotaCredito.TipoComprobanteOrigen</strong></div>
-            <div><span>Fecha</span><strong>@Model.NotaCredito.FechaOrigen.ToString("dd/MM/yyyy")</strong></div>
-            <div><span>Cliente</span><strong>@Model.NotaCredito.Cliente</strong></div>
-            <div><span>Total origen</span><strong>S/ @Model.NotaCredito.Total.ToString("N2")</strong></div>
-            <div><a class="document-more-btn" asp-action="Create">Cambiar comprobante</a></div>
-        </div>
-    }
+        @if (!tieneOrigen)
+        {
+            <button type="button" class="document-save-btn" onclick="abrirModalOrigen()">Buscar comprobante</button>
+        }
+        else
+        {
+            <div class="quote-client-summary quote-client-summary-line document-origin-card">
+                @if (CampoVisible("ORIGEN", "Comprobante")) { <div><span>@Etiqueta("ORIGEN", "Comprobante", "Comprobante")</span><strong id="referenciaOrigen">@Model.NotaCredito.Referencia</strong></div> }
+                @if (CampoVisible("ORIGEN", "Cliente")) { <div class="client-name-block"><span>@Etiqueta("ORIGEN", "Cliente", "Cliente")</span><strong>@Model.NotaCredito.Cliente</strong></div> }
+                @if (CampoVisible("ORIGEN", "Documento")) { <div><span>@Etiqueta("ORIGEN", "Documento", "Documento")</span><strong>@(string.IsNullOrWhiteSpace(Model.NotaCredito.DocumentoCliente) ? "-" : Model.NotaCredito.DocumentoCliente)</strong></div> }
+                @if (CampoVisible("ORIGEN", "FechaEmisionOrigen")) { <div><span>@Etiqueta("ORIGEN", "FechaEmisionOrigen", "Fecha emision")</span><strong>@Model.NotaCredito.FechaOrigen.ToString("dd/MM/yyyy")</strong></div> }
+                @if (CampoVisible("ORIGEN", "TotalOriginal")) { <div><span>@Etiqueta("ORIGEN", "TotalOriginal", "Total original")</span><strong>S/ @Model.NotaCredito.Total.ToString("N2")</strong></div> }
+                @if (CampoVisible("ORIGEN", "NotasCreditoEmitidas")) { <div><span>@Etiqueta("ORIGEN", "NotasCreditoEmitidas", "NC emitidas")</span><strong>S/ @Model.NotaCredito.TotalNotasCreditoEmitidas.ToString("N2")</strong></div> }
+                @if (CampoVisible("ORIGEN", "SaldoDisponible")) { <div><span>@Etiqueta("ORIGEN", "SaldoDisponible", "Saldo disponible")</span><strong>S/ @Model.NotaCredito.SaldoDisponible.ToString("N2")</strong></div> }
+                <div><a class="document-more-btn" asp-action="Create">Cambiar comprobante</a></div>
+            </div>
+        }
     </section>
 
-    <section class="document-section">
-        <div class="document-section-heading">
+    <section class="quote-panel @(BloqueVisible("PRODUCTOS") ? "" : "d-none")">
+        <div class="quote-panel-title">
             <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span>
-            <h3>Detalle de productos</h3>
+            <strong>@(bloques.TryGetValue("PRODUCTOS", out var productosBlock) ? productosBlock.Titulo : "Detalle de productos")</strong>
         </div>
-        <div class="document-detail-table-wrap">
-            <table class="table table-sm data-grid document-detail-table">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th class="text-end">Cantidad original</th>
-                <th class="text-end">Cantidad NC</th>
-                <th class="text-end">Precio</th>
-                <th class="text-end">Total NC</th>
-            </tr>
-        </thead>
-        <tbody>
-        @for (var i = 0; i < Model.NotaCredito.Detalles.Count; i++)
-        {
-            var item = Model.NotaCredito.Detalles[i];
-            <tr>
-                <td>
-                    @(string.IsNullOrWhiteSpace(item.Producto) ? item.ProductoId.ToString() : item.Producto)
-                    <input name="Detalles[@i].ProductoId" value="@item.ProductoId" type="hidden" />
-                    <input name="Detalles[@i].Producto" value="@item.Producto" type="hidden" />
-                    <input name="Detalles[@i].CantidadOriginal" value="@item.CantidadOriginal" type="hidden" />
-                    <input name="Detalles[@i].PrecioUnitario" value="@item.PrecioUnitario" type="hidden" />
-                </td>
-                <td class="text-end">@item.CantidadOriginal.ToString("N2")</td>
-                <td><input name="Detalles[@i].Cantidad" value="@item.Cantidad" class="form-control form-control-sm text-end nc-cantidad" type="number" min="0.01" max="@item.CantidadOriginal" step="0.01" data-precio="@item.PrecioUnitario" /></td>
-                <td class="text-end">S/ @item.PrecioUnitario.ToString("N2")</td>
-                <td class="text-end"><span class="nc-line-total">S/ @item.Total.ToString("N2")</span></td>
-            </tr>
-        }
-        </tbody>
+        <div class="document-detail-table-wrap quote-detail-table-wrap">
+            <table class="table table-sm data-grid document-detail-table quote-detail-table">
+                <thead><tr>
+                    @foreach (var field in productFields)
+                    {
+                        var align = field.Campo is "CantidadOriginal" or "CantidadNc" or "Precio" or "TotalNc" ? "text-end" : string.Empty;
+                        <th class="@align" data-field="@field.Campo">@field.Etiqueta</th>
+                    }
+                </tr></thead>
+                <tbody>
+                @for (var i = 0; i < Model.NotaCredito.Detalles.Count; i++)
+                {
+                    var item = Model.NotaCredito.Detalles[i];
+                    <tr>
+                        @foreach (var field in productFields)
+                        {
+                            switch (field.Campo)
+                            {
+                                case "Producto":
+                                    <td data-field="Producto">@(string.IsNullOrWhiteSpace(item.Producto) ? item.ProductoId.ToString() : item.Producto)<input name="Detalles[@i].ProductoId" value="@item.ProductoId" type="hidden" /><input name="Detalles[@i].Producto" value="@item.Producto" type="hidden" /><input name="Detalles[@i].CantidadOriginal" value="@item.CantidadOriginal" type="hidden" /><input name="Detalles[@i].PrecioUnitario" value="@item.PrecioUnitario" type="hidden" /><input name="Detalles[@i].AfectoIgv" value="@(item.AfectoIgv.ToString().ToLowerInvariant())" type="hidden" /></td>
+                                    break;
+                                case "CantidadOriginal":
+                                    <td class="text-end" data-field="CantidadOriginal">@item.CantidadOriginal.ToString("N2")</td>
+                                    break;
+                                case "CantidadNc":
+                                    <td data-field="CantidadNc"><input name="Detalles[@i].Cantidad" value="@item.Cantidad" class="form-control form-control-sm text-end nc-cantidad" type="number" min="0.01" max="@item.CantidadOriginal" step="0.01" data-precio="@item.PrecioUnitario" data-afecto-igv="@(item.AfectoIgv.ToString().ToLowerInvariant())" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                    break;
+                                case "Precio":
+                                    <td class="text-end" data-field="Precio">S/ @item.PrecioUnitario.ToString("N2")</td>
+                                    break;
+                                case "TotalNc":
+                                    <td class="text-end" data-field="TotalNc"><span class="nc-line-total">S/ @item.Total.ToString("N2")</span></td>
+                                    break;
+                            }
+                        }
+                    </tr>
+                }
+                </tbody>
             </table>
         </div>
-
-        <div class="document-total-strip credit-note-total-strip">
-        <div><span>Total comprobante origen</span><strong>S/ @Model.NotaCredito.Total.ToString("N2")</strong></div>
-        <div class="grand-total"><span>Total nota de crédito</span><strong id="totalNotaCredito">S/ @totalNotaCredito.ToString("N2")</strong></div>
-        </div>
     </section>
+
+    <div class="document-total-strip quote-total-strip @(BloqueVisible("TOTALES") ? "" : "d-none")" aria-label="Totales de nota de credito">
+        @if (CampoVisible("TOTALES", "SubtotalExonerado")) { <div><span>@Etiqueta("TOTALES", "SubtotalExonerado", "Subtotal exonerado")</span><strong id="ncSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "SubtotalGravado")) { <div><span>@Etiqueta("TOTALES", "SubtotalGravado", "Subtotal gravado")</span><strong id="ncSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "Descuento")) { <div><span>@Etiqueta("TOTALES", "Descuento", "Descuento")</span><strong id="ncDescuento">S/ @descuento.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "Igv")) { <div><span>@Etiqueta("TOTALES", "Igv", "IGV")</span><strong id="ncIgv">S/ @igvCalculado.ToString("N2")</strong></div> }
+        @if (CampoVisible("TOTALES", "TotalNc")) { <div class="grand-total"><span>@Etiqueta("TOTALES", "TotalNc", "Total NC")</span><strong id="totalNotaCredito">S/ @totalNotaCredito.ToString("N2")</strong></div> }
+    </div>
 
     @if (tieneOrigen)
     {
-        <section class="document-section">
-            <div class="document-section-heading"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8h14M7 16h10" /></svg></span><h3>Impacto financiero</h3></div>
-            <div class="nota-info-card document-origin-card">
-            <div><span>Impacto financiero</span><strong>Los cobros existentes no serán anulados</strong></div>
-            <div><span>Total cobrado</span><strong>S/ @Model.NotaCredito.TotalCobradoOrigen.ToString("N2")</strong></div>
-            <div><span>Nuevo total válido</span><strong id="nuevoTotalValido">S/ @nuevoTotalValido.ToString("N2")</strong></div>
-            <div><span>Monto devolución</span><strong id="montoDevolucionEstimado">S/ @devolucionEstimada.ToString("N2")</strong></div>
+        <section class="quote-panel">
+            <div class="quote-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 8h14M7 16h10" /></svg></span><strong>Impacto financiero</strong></div>
+            <div class="quote-client-summary quote-client-summary-line document-origin-card">
+                <div><span>Total cobrado</span><strong>S/ @Model.NotaCredito.TotalCobradoOrigen.ToString("N2")</strong></div>
+                <div><span>Nuevo total valido</span><strong id="nuevoTotalValido">S/ @nuevoTotalValido.ToString("N2")</strong></div>
+                <div><span>Monto devolucion</span><strong id="montoDevolucionEstimado">S/ @devolucionEstimada.ToString("N2")</strong></div>
             </div>
         </section>
     }
 
-    <div class="document-bottom-actions">
-        <button type="submit" class="document-save-btn" @(tieneOrigen ? null : "disabled")>Generar nota de crédito</button>
-        <a class="document-more-btn" asp-action="Index">Volver</a>
+    <div class="document-bottom-actions quote-bottom-actions @(BloqueVisible("ACCIONES") ? "" : "d-none")">
+        @if (CampoVisible("ACCIONES", "Guardar")) { <button type="submit" class="document-save-btn" @(tieneOrigen ? null : "disabled")>@Etiqueta("ACCIONES", "Guardar", "Generar nota de credito")</button> }
+        @if (CampoVisible("ACCIONES", "Volver")) { <a class="document-more-btn" asp-action="Index">@Etiqueta("ACCIONES", "Volver", "Volver")</a> }
     </div>
 </form>
 
@@ -158,12 +219,13 @@
         <table class="table table-sm table-striped data-grid">
             <thead>
                 <tr>
-                    <th>Serie-Número</th>
+                    <th>Serie-Numero</th>
                     <th>Fecha</th>
                     <th>Cliente</th>
+                    <th>Documento</th>
                     <th class="text-end">Total</th>
                     <th>Estado SUNAT</th>
-                    <th class="text-end">Acción</th>
+                    <th class="text-end">Accion</th>
                 </tr>
             </thead>
             <tbody>
@@ -173,6 +235,7 @@
                     <td>@($"{item.Serie}-{item.Correlativo:000000}")</td>
                     <td>@item.FechaEmision.ToString("dd/MM/yyyy")</td>
                     <td>@item.Cliente</td>
+                    <td>@item.DocumentoCliente</td>
                     <td class="text-end">S/ @item.Total.ToString("N2")</td>
                     <td>@item.EstadoSunat</td>
                     <td class="text-end"><a class="btn btn-sm btn-primary" asp-action="Create" asp-route-comprobanteReferenciaId="@item.ComprobanteId">Seleccionar</a></td>
@@ -194,25 +257,40 @@
 <script>
     function abrirModalOrigen() { document.getElementById('modalOrigen')?.classList.add('open'); }
     function cerrarModalOrigen() { document.getElementById('modalOrigen')?.classList.remove('open'); }
+    const money = (value) => `S/ ${Number(value || 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     function recalcularNotaCredito() {
+        let exonerado = 0;
+        let gravado = 0;
+        let igv = 0;
         let total = 0;
         document.querySelectorAll('.nc-cantidad').forEach(input => {
             const cantidad = Number(input.value || 0);
             const precio = Number(input.dataset.precio || 0);
+            const afectaIgv = input.dataset.afectoIgv === 'true';
             const linea = Math.round(cantidad * precio * 100) / 100;
             total += linea;
-            input.closest('tr').querySelector('.nc-line-total').textContent = `S/ ${linea.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (afectaIgv) {
+                const base = Math.round((linea / 1.18) * 100) / 100;
+                gravado += base;
+                igv += linea - base;
+            } else {
+                exonerado += linea;
+            }
+            input.closest('tr').querySelector('.nc-line-total').textContent = money(linea);
         });
-        document.getElementById('totalNotaCredito').textContent = `S/ ${total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const descuento = 0;
+        document.getElementById('ncSubtotalExonerado') && (document.getElementById('ncSubtotalExonerado').textContent = money(exonerado));
+        document.getElementById('ncSubtotalGravado') && (document.getElementById('ncSubtotalGravado').textContent = money(gravado));
+        document.getElementById('ncDescuento') && (document.getElementById('ncDescuento').textContent = money(descuento));
+        document.getElementById('ncIgv') && (document.getElementById('ncIgv').textContent = money(igv));
+        document.getElementById('totalNotaCredito') && (document.getElementById('totalNotaCredito').textContent = money(total - descuento));
         const totalOrigen = Number(document.getElementById('totalOrigenValor')?.value || 0);
         const totalCobrado = Number(document.getElementById('totalCobradoOrigenValor')?.value || 0);
         const nuevoTotal = Math.max(0, Math.round((totalOrigen - total) * 100) / 100);
         const devolucion = Math.max(0, Math.round((totalCobrado - nuevoTotal) * 100) / 100);
-        const nuevoTotalEl = document.getElementById('nuevoTotalValido');
-        const devolucionEl = document.getElementById('montoDevolucionEstimado');
-        if (nuevoTotalEl) nuevoTotalEl.textContent = `S/ ${nuevoTotal.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        if (devolucionEl) devolucionEl.textContent = `S/ ${devolucion.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('nuevoTotalValido') && (document.getElementById('nuevoTotalValido').textContent = money(nuevoTotal));
+        document.getElementById('montoDevolucionEstimado') && (document.getElementById('montoDevolucionEstimado').textContent = money(devolucion));
         return total;
     }
 
@@ -225,13 +303,12 @@
             return false;
         }
         if (total <= 0) {
-            alert('Ingrese al menos una cantidad para la nota de crédito.');
+            alert('Ingrese al menos una cantidad para la nota de credito.');
             return false;
         }
         const motivo = document.getElementById('motivoNotaCredito')?.selectedOptions[0]?.text ?? '';
         const origen = document.getElementById('referenciaOrigen')?.textContent ?? '';
-        const nuevoTotal = document.getElementById('nuevoTotalValido')?.textContent ?? '';
-        const devolucion = document.getElementById('montoDevolucionEstimado')?.textContent ?? '';
-        return confirm(`Está seguro de generar la Nota de crédito?\n\nComprobante origen: ${origen}\nMotivo: ${motivo}\nTotal Nota crédito: S/ ${total.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nNuevo total válido: ${nuevoTotal}\nMonto devolución: ${devolucion}\n\nLos cobros existentes no serán anulados. Si existe exceso cobrado, se generará una devolución pendiente.`);
+        return confirm(`Esta seguro de generar la nota de credito?\n\nComprobante origen: ${origen}\nMotivo: ${motivo}\nTotal nota de credito: ${money(total)}\n\nLos cobros existentes no seran anulados. Si existe exceso cobrado, se generara una devolucion pendiente.`);
     }
 </script>
+

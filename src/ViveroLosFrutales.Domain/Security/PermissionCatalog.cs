@@ -29,6 +29,8 @@ public static class PermissionCatalog
         new PermissionDefinition("Maestros", "Proveedores", "Ver", "Crear", "Editar", "Anular"),
 
         new PermissionDefinition("Operaciones", "Compras", "Ver", "Crear", "Anular", "RegistrarPago", "AnularPago"),
+        new PermissionDefinition("Operaciones", "OrdenesCompra", "Ver", "Registrar", "Editar", "Aprobar", "RegistrarPago", "RegistrarCompra", "AplicarPagos", "SolicitarDevolucion", "Cerrar", "Anular"),
+        new PermissionDefinition("Operaciones", "PagoProveedorAplicacion", "Aplicar", "AnularAplicacion"),
         new PermissionDefinition("Operaciones", "Gastos", "Ver", "Crear", "Editar", "Anular"),
         new PermissionDefinition("Operaciones", "Ingresos", "Ver", "Crear", "Editar", "Anular"),
         new PermissionDefinition("Operaciones", "Devoluciones", "Ver", "Registrar"),
@@ -78,6 +80,8 @@ public static class PermissionCatalog
         "Clientes" => "Clientes",
         "Proveedores" => "Proveedores",
         "Compras" => "Compras",
+        "OrdenesCompra" => "Ordenes de compra",
+        "PagoProveedorAplicacion" => "Aplicacion de pagos proveedor",
         "Gastos" => "Gastos",
         "Ingresos" => "Ingresos",
         "Devoluciones" => "Devoluciones",
@@ -106,6 +110,13 @@ public static class PermissionCatalog
         "Convertir" => "Convertir",
         "Registrar" => "Registrar",
         "RegistrarPago" => "Registrar pago",
+        "RegistrarCompra" => "Registrar compra",
+        "AplicarPagos" => "Aplicar pagos",
+        "SolicitarDevolucion" => "Solicitar devolucion",
+        "Cerrar" => "Cerrar",
+        "Aprobar" => "Aprobar",
+        "Aplicar" => "Aplicar",
+        "AnularAplicacion" => "Anular aplicacion",
         "AnularPago" => "Anular pago",
         "ConsultarSunat" => "Consultar SUNAT",
         "RestablecerPassword" => "Restablecer contraseña",
@@ -114,4 +125,5 @@ public static class PermissionCatalog
         _ => action
     };
 }
+
 

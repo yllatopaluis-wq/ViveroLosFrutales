@@ -133,7 +133,10 @@
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
                             </summary>
                             <div class="row-actions-panel">
-                                <form asp-action="Imprimir" method="post" target="_blank" onsubmit="return registrarImpresionNotaCredito();">
+                                <a asp-action="Details" asp-route-id="@item.ComprobanteId">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></svg>
+                                    Ver nota de credito
+                                </a>                                <form asp-action="Imprimir" method="post" target="_blank" onsubmit="return registrarImpresionNotaCredito();">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@item.ComprobanteId" />
                                     <button type="submit">

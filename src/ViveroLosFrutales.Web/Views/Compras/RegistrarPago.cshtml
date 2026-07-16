@@ -1,46 +1,105 @@
 @model RegistrarPagoProveedorDto
 @{
+    ViewData["Title"] = "Registrar Pago a Proveedor";
     var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
-    ViewData["Title"] = "Registrar Pago Proveedor";
+    var saldoData = Model.SaldoPendiente.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+    static string EstadoPagoClass(EstadoPagoCompra estado) => estado == EstadoPagoCompra.PAGADO ? "success" : estado == EstadoPagoCompra.PARCIAL ? "warning" : "info";
+    static string EstadoPagoTexto(EstadoPagoCompra estado) => estado == EstadoPagoCompra.PAGADO ? "PAGADO" : estado == EstadoPagoCompra.PARCIAL ? "PARCIAL" : "PENDIENTE";
 }
 
-<form asp-action="RegistrarPago" method="post" class="form-card">
+<form asp-action="RegistrarPago" method="post" class="provider-payment-form quote-form" data-provider-payment-form data-saldo-pendiente="@saldoData">
     @Html.AntiForgeryToken()
     <input asp-for="CompraId" type="hidden" />
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <section class="nota-summary-grid">
-        <div class="nota-summary-card"><span>Proveedor</span><strong>@Model.Proveedor</strong></div>
-        <div class="nota-summary-card"><span>Documento compra</span><strong>@Model.DocumentoCompra</strong></div>
-        <div class="nota-summary-card"><span>Total compra</span><strong>S/ @Model.TotalCompra.ToString("N2")</strong></div>
-        <div class="nota-summary-card"><span>Total pagado</span><strong>S/ @Model.TotalPagado.ToString("N2")</strong></div>
-        <div class="nota-summary-card"><span>Saldo pendiente</span><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></div>
+    <section class="payment-block">
+        <h3>Informacion de la compra</h3>
+        <div class="payment-info-grid">
+            <label><span>Proveedor</span><input value="@Model.Proveedor" class="form-control" readonly /></label>
+            <label><span>Documento</span><input value="@Model.DocumentoCompra" class="form-control" readonly /></label>
+            <label><span>Fecha de compra</span><input value="@Model.FechaCompra.ToString("dd/MM/yyyy")" class="form-control" readonly /></label>
+            <label><span>Condicion de pago</span><input value="@Model.CondicionPago" class="form-control" readonly /></label>
+            <label><span>Estado de pago</span><strong class="status-badge compact @EstadoPagoClass(Model.EstadoPago)">@EstadoPagoTexto(Model.EstadoPago)</strong></label>
+        </div>
     </section>
 
-    <div class="form-grid">
-        <label>Fecha pago<input asp-for="FechaPago" type="date" class="form-control form-control-sm" /></label>
-        <label>
-            Medio pago
-            <select asp-for="MedioPago" class="form-select form-select-sm">
-                <option value="EFECTIVO">Efectivo</option>
-                <option value="TRANSFERENCIA">Transferencia</option>
-                <option value="YAPE">Yape</option>
-                <option value="TARJETA DEBITO">Tarjeta débito</option>
-                <option value="TARJETA CREDITO">Tarjeta crédito</option>
-            </select>
-        </label>
-        <label>Monto pago<input asp-for="MontoPago" class="form-control form-control-sm" /></label>
-        <label>Cuenta origen<select asp-for="CuentaFinancieraId" class="form-select form-select-sm"><option value="">Caja principal</option>@foreach (var cuenta in cuentas) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
-    </div>
-    <label>Observación<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
-    <p class="text-muted">Al confirmar se creará un MovimientoCaja de tipo EGRESO. La caja se calcula solo desde movimientos activos.</p>
-    <div class="form-actions">
-        <button type="submit" class="btn btn-sm btn-primary">Registrar pago</button>
-        <a class="btn btn-sm btn-secondary" asp-action="Details" asp-route-id="@Model.CompraId">Volver</a>
+    <section class="payment-block">
+        <h3>Resumen financiero de la compra</h3>
+        <div class="payment-summary-grid">
+            <article class="payment-kpi success"><small>Total compra</small><strong>S/ @Model.TotalCompra.ToString("N2")</strong></article>
+            <article class="payment-kpi info"><small>Pagado</small><strong>S/ @Model.TotalPagado.ToString("N2")</strong></article>
+            <article class="payment-kpi warning"><small>Saldo pendiente</small><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></article>
+            <article class="payment-kpi purple"><small>Saldo a favor</small><strong data-saldo-favor-resumen>S/ 0.00</strong></article>
+        </div>
+    </section>
+
+    <section class="payment-block">
+        <h3>Datos del pago</h3>
+        <div class="payment-data-grid">
+            <label><span>Fecha de pago *</span><input asp-for="FechaPago" type="date" class="form-control" /></label>
+            <label><span>Monto a pagar *</span><input asp-for="MontoPago" class="form-control text-end" type="number" step="0.01" min="0.01" data-monto-pago /></label>
+            <label><span>Moneda</span><input value="@Model.Moneda - Soles" class="form-control" readonly /></label>
+            <label>
+                <span>Medio de pago *</span>
+                <select asp-for="MedioPago" class="form-select">
+                    <option value="EFECTIVO">Efectivo</option>
+                    <option value="TRANSFERENCIA">Transferencia</option>
+                    <option value="YAPE">Yape</option>
+                    <option value="TARJETA DEBITO">Tarjeta debito</option>
+                    <option value="TARJETA CREDITO">Tarjeta credito</option>
+                </select>
+            </label>
+            <label>
+                <span>Cuenta financiera</span>
+                <select asp-for="CuentaFinancieraId" class="form-select">
+                    <option value="">Caja principal</option>
+                    @foreach (var cuenta in cuentas)
+                    {
+                        <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>
+                    }
+                </select>
+            </label>
+            <label class="payment-observation"><span>Referencia / observacion</span><textarea asp-for="Observacion" class="form-control" maxlength="200" rows="3" placeholder="Nro. de operacion, voucher, transferencia, cheque u otra referencia."></textarea></label>
+        </div>
+    </section>
+
+    <section class="payment-block" data-payment-application-block hidden>
+        <h3>Aplicacion del pago</h3>
+        <p class="payment-note">El pago se aplicara a la compra seleccionada. Si el monto es mayor al saldo pendiente, quedara un saldo a favor del proveedor.</p>
+        <div class="payment-application-table">
+            <div class="payment-application-head"><span>Documento</span><span>Fecha</span><span>Total</span><span>Pagado</span><span>Saldo pendiente</span><span>Aplicar pago</span></div>
+            <div class="payment-application-row">
+                <strong>@Model.DocumentoCompra</strong>
+                <span>@Model.FechaCompra.ToString("dd/MM/yyyy")</span>
+                <span>S/ @Model.TotalCompra.ToString("N2")</span>
+                <span>S/ @Model.TotalPagado.ToString("N2")</span>
+                <span>S/ @Model.SaldoPendiente.ToString("N2")</span>
+                <strong data-monto-aplicado>S/ @Math.Min(Model.MontoPago, Model.SaldoPendiente).ToString("N2")</strong>
+            </div>
+        </div>
+        <div class="payment-total-apply"><span>Total a aplicar:</span><strong data-total-aplicar>S/ @Math.Min(Model.MontoPago, Model.SaldoPendiente).ToString("N2")</strong></div>
+    </section>
+
+    <section class="payment-block">
+        <h3>Resultado del pago</h3>
+        <div class="payment-summary-grid">
+            <article class="payment-kpi success"><small>Monto aplicado</small><strong data-resultado-aplicado>S/ @Math.Min(Model.MontoPago, Model.SaldoPendiente).ToString("N2")</strong><em>Se aplicara a la compra seleccionada.</em></article>
+            <article class="payment-kpi warning"><small>Saldo despues del pago</small><strong data-saldo-despues>S/ @Math.Max(Model.SaldoPendiente - Model.MontoPago, 0).ToString("N2")</strong><em>Saldo pendiente luego del pago.</em></article>
+            <article class="payment-kpi purple"><small>Saldo a favor generado</small><strong data-saldo-favor>S/ @Math.Max(Model.MontoPago - Model.SaldoPendiente, 0).ToString("N2")</strong><em>A favor del proveedor si aplica.</em></article>
+        </div>
+    </section>
+
+
+    <div class="form-actions payment-footer-actions">
+        <button type="button" class="document-more-btn payment-application-toggle" data-payment-application-toggle>Mostrar aplicacion del pago</button>
+        <button type="submit" class="document-save-btn">Registrar pago</button>
+        <a class="document-more-btn" asp-action="Index">Volver</a>
     </div>
 </form>
 
-
 @section Scripts {
-    <script>window.viveroFiltrarCuentasPorMedioPago?.();</script>
+    <script>
+        window.viveroFiltrarCuentasPorMedioPago?.();
+        window.viveroPagoProveedorForm?.();
+    </script>
 }

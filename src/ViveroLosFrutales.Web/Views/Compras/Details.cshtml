@@ -2,87 +2,107 @@
 @{
     ViewData["Title"] = "Detalle Compra";
     var puedePagar = Model.EstadoDocumento == EstadoDocumentoCompra.ACTIVO && Model.EstadoPago != EstadoPagoCompra.PAGADO && Model.SaldoPendiente > 0;
+    var estadoDocumentoClase = Model.EstadoDocumento == EstadoDocumentoCompra.ACTIVO ? string.Empty : "danger";
+    var estadoPagoClase = Model.EstadoPago == EstadoPagoCompra.PAGADO ? string.Empty : Model.EstadoPago == EstadoPagoCompra.PARCIAL ? "warning" : "info";
 }
 
-<div class="toolbar">
-    <a class="btn btn-sm btn-secondary" asp-action="Index">Volver</a>
-    @if (puedePagar)
+<section class="ds-document-shell">
+    <header class="ds-document-header">
+        <div class="ds-document-title">
+            <div class="ds-document-eyebrow"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span><span>Detalle Compra</span></div>
+            <h1 class="ds-document-number">@Model.Documento</h1>
+            <span class="ds-document-subtitle">@Model.Proveedor</span>
+        </div>
+        <div class="ds-document-actions">
+            <a class="ds-action ghost" asp-action="Index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg> Volver</a>
+            @if (puedePagar)
+            {
+                <a class="ds-action primary" asp-action="RegistrarPago" asp-route-id="@Model.CompraId"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" /></svg> Registrar pago</a>
+            }
+            @if (Model.TieneAplicacionesPagoActivas && Model.EstadoDocumento == EstadoDocumentoCompra.ACTIVO)
+            {
+                <form asp-action="RevertirAplicaciones" method="post" class="d-inline" onsubmit="return solicitarMotivoReversionAplicaciones(this);">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.CompraId" />
+                    <input type="hidden" name="motivo" value="" />
+                    <button type="submit" class="ds-action danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 3v6h6" /></svg> Revertir aplicaciones</button>
+                </form>
+            }
+        </div>
+    </header>
+
+    @if (TempData["Error"] is string error)
     {
-        <a class="btn btn-sm btn-primary" asp-action="RegistrarPago" asp-route-id="@Model.CompraId">Registrar pago</a>
+        <div class="alert alert-danger py-2">@error</div>
     }
-</div>
-
-@if (TempData["Error"] is string error)
-{
-    <div class="alert alert-danger py-2">@error</div>
-}
-@if (TempData["Success"] is string success)
-{
-    <div class="alert alert-success py-2">@success</div>
-}
-
-<section class="nota-summary-grid">
-    <div class="nota-summary-card"><span>Proveedor</span><strong>@Model.Proveedor</strong></div>
-    <div class="nota-summary-card"><span>Documento</span><strong>@Model.Documento</strong></div>
-    <div class="nota-summary-card"><span>Fecha</span><strong>@Model.Fecha.ToString("dd/MM/yyyy")</strong></div>
-    <div class="nota-summary-card"><span>Forma pago</span><strong>@Model.FormaPago</strong></div>
-    <div class="nota-summary-card"><span>Total</span><strong>S/ @Model.Total.ToString("N2")</strong></div>
-    <div class="nota-summary-card"><span>Pagado</span><strong>S/ @Model.TotalPagado.ToString("N2")</strong></div>
-    <div class="nota-summary-card"><span>Saldo</span><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong></div>
-    <div class="nota-summary-card"><span>Estado pago</span><strong>@Model.EstadoPago</strong></div>
-    <div class="nota-summary-card"><span>Estado doc.</span><strong>@Model.EstadoDocumento</strong></div>
-</section>
-
-<div class="section-title">Detalle</div>
-<table class="table table-sm data-grid">
-    <thead><tr><th>Producto</th><th>Unidad</th><th class="text-end">Cantidad</th><th class="text-end">Costo</th><th class="text-end">Importe</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead>
-    <tbody>
-    @foreach (var item in Model.Detalles)
+    @if (TempData["Success"] is string success)
     {
-        <tr>
-            <td>@item.Producto</td>
-            <td>@item.UnidadMedida</td>
-            <td class="text-end">@item.Cantidad.ToString("N2")</td>
-            <td class="text-end">S/ @item.CostoUnitario.ToString("N2")</td>
-            <td class="text-end">S/ @item.Importe.ToString("N2")</td>
-            <td class="text-end">S/ @item.Igv.ToString("N2")</td>
-            <td class="text-end">S/ @item.TotalLinea.ToString("N2")</td>
-        </tr>
+        <div class="alert alert-success py-2">@success</div>
     }
-    </tbody>
-</table>
 
-<div class="section-title">Pagos</div>
-<table class="table table-sm data-grid">
-    <thead><tr><th>Fecha</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th><th>Observacion</th><th class="text-end actions-heading">Acciones</th></tr></thead>
-    <tbody>
-    @foreach (var pago in Model.Pagos)
-    {
-        <tr>
-            <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
-            <td>@pago.MedioPago</td>
-            <td class="text-end">S/ @pago.Monto.ToString("N2")</td>
-            <td><span class="status-badge @(pago.Estado == PagoProveedorEstado.ACTIVO ? "active" : "danger")">@pago.Estado</span></td>
-            <td>@pago.Observacion</td>
-            <td class="actions-cell">
-                @if (pago.PuedeAnular)
+    <div class="ds-kpi-grid">
+        <article class="ds-kpi"><div class="ds-kpi-copy"><small>Total compra</small><strong>S/ @Model.Total.ToString("N2")</strong><em>@Model.EstadoDocumento</em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 3H2" /></svg></span></article>
+        <article class="ds-kpi blue"><div class="ds-kpi-copy"><small>Pagado</small><strong>S/ @Model.TotalPagado.ToString("N2")</strong><em>@Model.EstadoPago</em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z" /><path d="M16 11h4" /></svg></span></article>
+        <article class="ds-kpi orange"><div class="ds-kpi-copy"><small>Saldo pendiente</small><strong>S/ @Model.SaldoPendiente.ToString("N2")</strong><em>Por pagar</em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 8v8" /><path d="M8 12h8" /><circle cx="12" cy="12" r="9" /></svg></span></article>
+        <article class="ds-kpi neutral"><div class="ds-kpi-copy"><small>Estado</small><strong><span class="ds-status @estadoDocumentoClase">@Model.EstadoDocumento</span></strong><em><span class="ds-status @estadoPagoClase">@Model.EstadoPago</span></em></div><span class="ds-kpi-icon"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg></span></article>
+    </div>
+
+    <section class="ds-panel">
+        <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 13h6" /></svg></span><strong>Informacion de la compra</strong></div>
+        <div class="ds-info-grid">
+            <div class="ds-field wide"><span>Proveedor</span><strong>@Model.Proveedor</strong></div>
+            <div class="ds-field"><span>Documento</span><strong>@Model.Documento</strong></div>
+            <div class="ds-field"><span>Fecha</span><strong>@Model.Fecha.ToString("dd/MM/yyyy")</strong></div>
+            <div class="ds-field"><span>Vencimiento</span><strong>@(Model.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</strong></div>
+            <div class="ds-field"><span>Forma de pago</span><strong>@Model.FormaPago</strong></div>
+            <div class="ds-field"><span>Moneda</span><strong>@Model.Moneda</strong></div>            <div class="ds-field full"><span>Observacion</span><strong>@(string.IsNullOrWhiteSpace(Model.Observacion) ? "-" : Model.Observacion)</strong></div>
+        </div>
+    </section>
+
+    <div class="ds-document-content">
+        <section class="ds-panel ds-products-panel">
+            <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M3 12l9 4 9-4" /><path d="M3 17l9 4 9-4" /></svg></span><strong>Detalle de productos</strong></div>
+            <div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>Producto</th><th>Unidad</th><th class="text-end">Cantidad</th><th class="text-end">Recibida</th><th class="text-end">Pendiente</th><th class="text-end">Costo</th><th class="text-end">Importe</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead><tbody>
+            @foreach (var item in Model.Detalles)
+            {
+                <tr><td><strong>@item.Producto</strong></td><td>@item.UnidadMedida</td><td class="text-end">@item.Cantidad.ToString("N2")</td><td class="text-end">@item.CantidadRecibida.ToString("N2")</td><td class="text-end">@item.CantidadPendiente.ToString("N2")</td><td class="text-end">S/ @item.CostoUnitario.ToString("N2")</td><td class="text-end">S/ @item.Importe.ToString("N2")</td><td class="text-end">S/ @item.Igv.ToString("N2")</td><td class="text-end"><strong>S/ @item.TotalLinea.ToString("N2")</strong></td></tr>
+            }
+            <tr class="ds-total-row"><td colspan="6">Totales</td><td class="text-end">S/ @Model.SubTotal.ToString("N2")</td><td class="text-end">S/ @Model.Igv.ToString("N2")</td><td class="text-end">S/ @Model.Total.ToString("N2")</td></tr>
+            </tbody></table></div>
+        </section>
+
+        <section class="ds-panel">
+            <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z" /><path d="M8 9h8M8 13h8M8 17h5" /></svg></span><strong>Timeline de pagos</strong></div>
+            @if (Model.Pagos.Any())
+            {
+                <ol class="ds-timeline">
+                @foreach (var pago in Model.Pagos.OrderByDescending(x => x.FechaPago))
                 {
-                    <form asp-action="AnularPago" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionPago(this);">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@pago.PagoProveedorId" />
-                        <input type="hidden" name="compraId" value="@Model.CompraId" />
-                        <input type="hidden" name="motivo" value="" />
-                        <button type="submit" class="icon-btn danger" title="Anular pago" aria-label="Anular pago">
-                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                        </button>
-                    </form>
+                    var pagoClase = pago.Estado == PagoProveedorEstado.ACTIVO ? string.Empty : "danger";
+                    <li class="ds-timeline-item"><strong>@pago.FechaPago.ToString("dd/MM/yyyy") - S/ @pago.Monto.ToString("N2")</strong><span>@pago.MedioPago - @(string.IsNullOrWhiteSpace(pago.CuentaFinanciera) ? "Sin cuenta" : pago.CuentaFinanciera)</span><small><span class="ds-status @pagoClase">@pago.Estado</span> @(string.IsNullOrWhiteSpace(pago.Observacion) ? string.Empty : pago.Observacion)</small></li>
                 }
-            </td>
-        </tr>
-    }
-    </tbody>
-</table>
+                </ol>
+            }
+            else
+            {
+                <div class="ds-note-card">Sin pagos registrados.</div>
+            }
+        </section>
 
+        @if (Model.Pagos.Any())
+        {
+            <section class="ds-panel">
+                <div class="ds-panel-title"><span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7h18" /><path d="M6 11h12" /><path d="M8 15h8" /></svg></span><strong>Pagos registrados</strong></div>
+                <div class="ds-table-wrap"><table class="ds-table"><thead><tr><th>Fecha</th><th>Medio</th><th class="text-end">Monto</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead><tbody>
+                @foreach (var pago in Model.Pagos)
+                {
+                    <tr><td>@pago.FechaPago.ToString("dd/MM/yyyy")</td><td>@pago.MedioPago</td><td class="text-end"><strong>S/ @pago.Monto.ToString("N2")</strong></td><td><span class="ds-status @(pago.Estado == PagoProveedorEstado.ACTIVO ? string.Empty : "danger")">@pago.Estado</span></td><td class="text-end">@if (pago.PuedeAnular) { <form asp-action="AnularPago" method="post" class="icon-form" onsubmit="return solicitarMotivoAnulacionPago(this);">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@pago.PagoProveedorId" /><input type="hidden" name="compraId" value="@Model.CompraId" /><input type="hidden" name="motivo" value="" /><button type="submit" class="icon-btn danger" title="Anular pago" aria-label="Anular pago"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></button></form> }</td></tr>
+                }
+                </tbody></table></div>
+            </section>
+        }
+    </div>
+</section>
 <script>
     function solicitarMotivoAnulacionPago(form) {
         const motivo = prompt("Ingrese el motivo de anulacion del pago:");
@@ -94,5 +114,17 @@
         }
         form.querySelector("input[name='motivo']").value = motivoLimpio;
         return confirm("Confirmar anulacion del pago?");
+    }
+
+    function solicitarMotivoReversionAplicaciones(form) {
+        const motivo = prompt("Ingrese el motivo para revertir las aplicaciones de pago:");
+        if (motivo === null) return false;
+        const motivoLimpio = motivo.trim();
+        if (!motivoLimpio) {
+            alert("Debe ingresar el motivo de reversion.");
+            return false;
+        }
+        form.querySelector("input[name='motivo']").value = motivoLimpio;
+        return confirm("Se revertiran las aplicaciones activas. El movimiento de caja no se modificara. Confirmar?");
     }
 </script>
