@@ -26,11 +26,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ConfiguracionEmpresa> ConfiguracionesEmpresa => Set<ConfiguracionEmpresa>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Compra> Compras => Set<Compra>();
-    public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
-    public DbSet<OrdenCompraDetalle> OrdenCompraDetalles => Set<OrdenCompraDetalle>();
+    // TEMP UAT baseline: Orden de Compra aun no existe en UAT.
+    // public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
+    // public DbSet<OrdenCompraDetalle> OrdenCompraDetalles => Set<OrdenCompraDetalle>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
     public DbSet<PagoProveedor> PagosProveedor => Set<PagoProveedor>();
-    public DbSet<PagoProveedorAplicacion> PagoProveedorAplicaciones => Set<PagoProveedorAplicacion>();
+    // TEMP UAT baseline: PagoProveedorAplicacion pertenece al modulo de Orden de Compra.
+    // public DbSet<PagoProveedorAplicacion> PagoProveedorAplicaciones => Set<PagoProveedorAplicacion>();
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<Gasto> Gastos => Set<Gasto>();
     public DbSet<Ingreso> Ingresos => Set<Ingreso>();
@@ -62,6 +64,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         base.OnModelCreating(builder);
 
         builder.HasDefaultSchema("erp");
+
+        // TEMP UAT baseline: excluir modulo de Orden de Compra del modelo EF.
+        builder.Ignore<OrdenCompra>();
+        builder.Ignore<OrdenCompraDetalle>();
+        builder.Ignore<PagoProveedorAplicacion>();
 
         builder.Entity<ApplicationUser>().ToTable("AspNetUsers", "erp");
         builder.Entity<IdentityRole>().ToTable("AspNetRoles", "erp");
@@ -219,11 +226,39 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasKey(x => x.MotivoNotaCreditoId);
             entity.Property(x => x.Nombre).HasMaxLength(150).IsRequired();
             entity.HasIndex(x => x.Nombre).IsUnique();
-            entity.HasData(
-                new MotivoNotaCredito { MotivoNotaCreditoId = 1, Nombre = "Anulacion de la operacion", Estado = EstadoRegistro.Activo },
-                new MotivoNotaCredito { MotivoNotaCreditoId = 2, Nombre = "Error en datos del comprobante", Estado = EstadoRegistro.Activo },
-                new MotivoNotaCredito { MotivoNotaCreditoId = 3, Nombre = "Devolucion total", Estado = EstadoRegistro.Activo },
-                new MotivoNotaCredito { MotivoNotaCreditoId = 4, Nombre = "Descuento posterior", Estado = EstadoRegistro.Activo });
+        
+var fechaSemilla = new DateTime(2026, 6, 24);
+
+entity.HasData(
+    new MotivoNotaCredito
+    {
+        MotivoNotaCreditoId = 1,
+        Nombre = "Anulacion de la operacion",
+        Estado = EstadoRegistro.Activo,
+        FechaRegistro = fechaSemilla
+    },
+    new MotivoNotaCredito
+    {
+        MotivoNotaCreditoId = 2,
+        Nombre = "Error en datos del comprobante",
+        Estado = EstadoRegistro.Activo,
+        FechaRegistro = fechaSemilla
+    },
+    new MotivoNotaCredito
+    {
+        MotivoNotaCreditoId = 3,
+        Nombre = "Devolucion total",
+        Estado = EstadoRegistro.Activo,
+        FechaRegistro = fechaSemilla
+    },
+    new MotivoNotaCredito
+    {
+        MotivoNotaCreditoId = 4,
+        Nombre = "Descuento posterior",
+        Estado = EstadoRegistro.Activo,
+        FechaRegistro = fechaSemilla
+    });
+
         });
 
         builder.Entity<ComprobanteDetalle>(entity =>
@@ -285,6 +320,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Empresa).WithMany(x => x.Proveedores).HasForeignKey(x => x.EmpresaId);
         });
 
+        /* TEMP UAT baseline: configuraciones de OrdenCompra y OrdenCompraDetalle deshabilitadas.
         builder.Entity<OrdenCompra>(entity =>
         {
             entity.ToTable("OrdenCompra");
@@ -339,12 +375,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Detalles).HasForeignKey(x => x.OrdenCompraId);
             entity.HasOne(x => x.Producto).WithMany().HasForeignKey(x => x.ProductoId).OnDelete(DeleteBehavior.Restrict);
         });
+        */
 
         builder.Entity<Compra>(entity =>
         {
             entity.ToTable("Compra");
             entity.HasKey(x => x.CompraId);
             entity.Ignore(x => x.FechaEmision);
+            // TEMP UAT baseline: propiedades/relaciones de Orden de Compra excluidas.
+            entity.Ignore(x => x.OrdenCompraId);
+            entity.Ignore(x => x.OrdenCompra);
+            entity.Ignore(x => x.PagoAplicaciones);
             entity.Property(x => x.Moneda).HasMaxLength(20);
             entity.Property(x => x.TipoCambio).HasColumnType("decimal(18,4)");
             entity.Property(x => x.Documento).HasMaxLength(40).IsRequired();
@@ -361,11 +402,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => x.EmpresaId);
             entity.HasIndex(x => new { x.EmpresaId, x.Fecha });
             entity.HasIndex(x => new { x.EmpresaId, x.ProveedorId });
-            entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
+            // TEMP UAT baseline: entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
             entity.HasIndex(x => new { x.EmpresaId, x.ProveedorId, x.TipoDocumento, x.Serie, x.Numero });
             entity.HasOne(x => x.Empresa).WithMany(x => x.Compras).HasForeignKey(x => x.EmpresaId);
             entity.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.ProveedorId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Compras).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
+            // TEMP UAT baseline: entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Compras).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<CompraDetalle>(entity =>
@@ -374,8 +415,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasKey(x => x.CompraDetalleId);
             entity.Property(x => x.UnidadMedida).HasMaxLength(20);
             entity.Ignore(x => x.CantidadPendiente);
+            // TEMP UAT baseline: CantidadRecibida pertenece a la recepcion de Orden de Compra.
+            entity.Ignore(x => x.CantidadRecibida);
             entity.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
-            entity.Property(x => x.CantidadRecibida).HasColumnType("decimal(18,2)");
+            // TEMP UAT baseline: entity.Property(x => x.CantidadRecibida).HasColumnType("decimal(18,2)");
             entity.Property(x => x.CostoUnitario).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Importe).HasColumnType("decimal(18,2)");
             entity.Property(x => x.Igv).HasColumnType("decimal(18,2)");
@@ -388,6 +431,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.ToTable("PagoProveedor");
             entity.HasKey(x => x.PagoProveedorId);
+            // TEMP UAT baseline: propiedades/relaciones de Orden de Compra excluidas.
+            entity.Ignore(x => x.OrdenCompraId);
+            entity.Ignore(x => x.OrdenCompra);
+            entity.Ignore(x => x.Aplicaciones);
             entity.Property(x => x.Monto).HasColumnType("decimal(18,2)");
             entity.Property(x => x.MedioPago).HasMaxLength(80);
             entity.Property(x => x.Observacion).HasMaxLength(500);
@@ -395,14 +442,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.UsuarioAnulacion).HasMaxLength(120);
             entity.HasIndex(x => new { x.EmpresaId, x.ProveedorId, x.FechaPago });
             entity.HasIndex(x => new { x.EmpresaId, x.CompraId });
-            entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
+            // TEMP UAT baseline: entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
             entity.HasIndex(x => new { x.EmpresaId, x.CuentaFinancieraId });
             entity.HasOne(x => x.CuentaFinanciera).WithMany().HasForeignKey(x => x.CuentaFinancieraId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.ProveedorId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Compra).WithMany(x => x.Pagos).HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Pagos).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
+            // TEMP UAT baseline: entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Pagos).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        /* TEMP UAT baseline: configuracion de PagoProveedorAplicacion deshabilitada.
         builder.Entity<PagoProveedorAplicacion>(entity =>
         {
             entity.ToTable("PagoProveedorAplicacion");
@@ -420,6 +468,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.PagoProveedor).WithMany(x => x.Aplicaciones).HasForeignKey(x => x.PagoProveedorId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Compra).WithMany(x => x.PagoAplicaciones).HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
         });
+        */
 
         builder.Entity<MovimientoInventario>(entity =>
         {
@@ -629,6 +678,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(x => x.Observacion).HasMaxLength(500);
             entity.Property(x => x.MotivoGeneracion).HasMaxLength(500);
             entity.Property(x => x.UsuarioModificacion).HasMaxLength(120);
+            // TEMP UAT baseline: propiedades/relaciones de Orden de Compra excluidas.
+            entity.Ignore(x => x.OrdenCompraId);
+            entity.Ignore(x => x.PagoProveedorId);
+            entity.Ignore(x => x.OrdenCompra);
+            entity.Ignore(x => x.PagoProveedor);
             entity.HasIndex(x => new { x.EmpresaId, x.FechaGeneracion });
             entity.HasIndex(x => new { x.EmpresaId, x.TipoTercero });
             entity.HasIndex(x => new { x.EmpresaId, x.ClienteId });
@@ -637,8 +691,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(x => new { x.EmpresaId, x.ComprobanteId });
             entity.HasIndex(x => new { x.EmpresaId, x.NotaCreditoId });
             entity.HasIndex(x => new { x.EmpresaId, x.CompraId });
-            entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
-            entity.HasIndex(x => new { x.EmpresaId, x.PagoProveedorId });
+            // TEMP UAT baseline: entity.HasIndex(x => new { x.EmpresaId, x.OrdenCompraId });
+            // TEMP UAT baseline: entity.HasIndex(x => new { x.EmpresaId, x.PagoProveedorId });
             entity.HasOne(x => x.Empresa).WithMany().HasForeignKey(x => x.EmpresaId);
             entity.HasOne(x => x.Cliente).WithMany().HasForeignKey(x => x.ClienteId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Proveedor).WithMany().HasForeignKey(x => x.ProveedorId).OnDelete(DeleteBehavior.Restrict);
@@ -646,8 +700,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasOne(x => x.Comprobante).WithMany().HasForeignKey(x => x.ComprobanteId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.NotaCredito).WithMany().HasForeignKey(x => x.NotaCreditoId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Compra).WithMany().HasForeignKey(x => x.CompraId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Devoluciones).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne(x => x.PagoProveedor).WithMany().HasForeignKey(x => x.PagoProveedorId).OnDelete(DeleteBehavior.Restrict);
+            // TEMP UAT baseline: entity.HasOne(x => x.OrdenCompra).WithMany(x => x.Devoluciones).HasForeignKey(x => x.OrdenCompraId).OnDelete(DeleteBehavior.Restrict);
+            // TEMP UAT baseline: entity.HasOne(x => x.PagoProveedor).WithMany().HasForeignKey(x => x.PagoProveedorId).OnDelete(DeleteBehavior.Restrict);
         });
 
         builder.Entity<FormularioConfiguracion>(entity =>
@@ -841,11 +895,3 @@ entity.Property(x => x.ValorDefecto).HasMaxLength(500);
         return permisosAdmin.Concat(permisos).ToArray();
     }
 }
-
-
-
-
-
-
-
-

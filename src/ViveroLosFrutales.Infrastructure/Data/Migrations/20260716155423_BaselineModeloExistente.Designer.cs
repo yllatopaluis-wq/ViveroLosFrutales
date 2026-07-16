@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ViveroLosFrutales.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using ViveroLosFrutales.Infrastructure.Data;
 namespace ViveroLosFrutales.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716155423_BaselineModeloExistente")]
+    partial class BaselineModeloExistente
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2029,7 +2032,7 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                         {
                             MotivoNotaCreditoId = 1,
                             Estado = 1,
-                            FechaRegistro = new DateTime(2026, 6, 24, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            FechaRegistro = new DateTime(2026, 7, 16, 10, 54, 21, 378, DateTimeKind.Unspecified).AddTicks(4169),
                             Nombre = "Anulacion de la operacion",
                             UsuarioRegistro = ""
                         },
@@ -2037,7 +2040,7 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                         {
                             MotivoNotaCreditoId = 2,
                             Estado = 1,
-                            FechaRegistro = new DateTime(2026, 6, 24, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            FechaRegistro = new DateTime(2026, 7, 16, 10, 54, 21, 378, DateTimeKind.Unspecified).AddTicks(4246),
                             Nombre = "Error en datos del comprobante",
                             UsuarioRegistro = ""
                         },
@@ -2045,7 +2048,7 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                         {
                             MotivoNotaCreditoId = 3,
                             Estado = 1,
-                            FechaRegistro = new DateTime(2026, 6, 24, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            FechaRegistro = new DateTime(2026, 7, 16, 10, 54, 21, 378, DateTimeKind.Unspecified).AddTicks(4253),
                             Nombre = "Devolucion total",
                             UsuarioRegistro = ""
                         },
@@ -2053,7 +2056,7 @@ namespace ViveroLosFrutales.Infrastructure.Data.Migrations
                         {
                             MotivoNotaCreditoId = 4,
                             Estado = 1,
-                            FechaRegistro = new DateTime(2026, 6, 24, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            FechaRegistro = new DateTime(2026, 7, 16, 10, 54, 21, 378, DateTimeKind.Unspecified).AddTicks(4258),
                             Nombre = "Descuento posterior",
                             UsuarioRegistro = ""
                         });
