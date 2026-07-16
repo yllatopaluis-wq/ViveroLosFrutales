@@ -11,7 +11,7 @@ public class OrdenCompraRepository(ApplicationDbContext db) : IOrdenCompraReposi
 {
     public Task<PagedResult<OrdenCompraListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken)
     {
-        var query = db.Set<OrdenCompra>().AsNoTracking().Where(x => x.EmpresaId == empresaId);
+        var query = db.OrdenesCompra.AsNoTracking().Where(x => x.EmpresaId == empresaId);
         if (request.FechaDesde is not null) query = query.Where(x => x.Fecha >= request.FechaDesde.Value.Date);
         if (request.FechaHasta is not null)
         {
@@ -55,7 +55,7 @@ public class OrdenCompraRepository(ApplicationDbContext db) : IOrdenCompraReposi
     }
 
     public Task<OrdenCompra?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken) =>
-        db.Set<OrdenCompra>()
+        db.OrdenesCompra
             .Include(x => x.Proveedor)
             .Include(x => x.Detalles).ThenInclude(x => x.Producto)
             .Include(x => x.Compras).ThenInclude(x => x.Proveedor)
@@ -66,7 +66,7 @@ public class OrdenCompraRepository(ApplicationDbContext db) : IOrdenCompraReposi
 
     public async Task<int> SiguienteCorrelativoAsync(int empresaId, string serie, CancellationToken cancellationToken)
     {
-        var ultimo = await db.Set<OrdenCompra>().AsNoTracking()
+        var ultimo = await db.OrdenesCompra.AsNoTracking()
             .Where(x => x.EmpresaId == empresaId && x.Serie == serie)
             .MaxAsync(x => (int?)x.Correlativo, cancellationToken);
         return (ultimo ?? 0) + 1;
@@ -85,7 +85,7 @@ public class OrdenCompraRepository(ApplicationDbContext db) : IOrdenCompraReposi
 
     public async Task GuardarAsync(OrdenCompra ordenCompra, CancellationToken cancellationToken)
     {
-        if (ordenCompra.OrdenCompraId == 0) db.Set<OrdenCompra>().Add(ordenCompra);
+        if (ordenCompra.OrdenCompraId == 0) db.OrdenesCompra.Add(ordenCompra);
         await db.SaveChangesAsync(cancellationToken);
     }
 }
