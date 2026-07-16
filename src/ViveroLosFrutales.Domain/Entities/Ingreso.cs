@@ -13,13 +13,13 @@ public class Ingreso : EmpresaEntity
     public decimal Importe { get; set; }
     public string MedioPago { get; set; } = string.Empty;
     public string Observacion { get; set; } = string.Empty;
-    public int? ProveedorId { get; set; }
+    public int? ClienteId { get; set; }
     public int? MovimientoCajaId { get; set; }
     public int? CuentaFinancieraId { get; set; }
     public string MotivoAnulacion { get; set; } = string.Empty;
     public DateTime? FechaAnulacion { get; set; }
     public Empresa? Empresa { get; set; }
-    public Proveedor? Proveedor { get; set; }
+    public Cliente? Cliente { get; set; }
     public CategoriaIngreso? CategoriaIngreso { get; set; }
     public MovimientoCaja? MovimientoCaja { get; set; }
     public CuentaFinanciera? CuentaFinanciera { get; set; }

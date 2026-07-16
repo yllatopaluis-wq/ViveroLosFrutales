@@ -71,6 +71,8 @@ builder.Services.AddScoped<DocumentoConfiguracionService>();
 builder.Services.AddScoped<CotizacionService>();
 builder.Services.AddScoped<ProveedorService>();
 builder.Services.AddScoped<CompraService>();
+ builder.Services.AddScoped<OrdenCompraService>();
+ builder.Services.AddScoped<PagoProveedorAplicacionService>();
 builder.Services.AddScoped<GastoService>();
 builder.Services.AddScoped<IngresoService>();
 builder.Services.AddScoped<UsuarioService>();
@@ -155,6 +157,7 @@ if (builder.Configuration.GetValue("Seed:RunOnStartup", true))
 }
 
 app.Run();
+
 
 
 

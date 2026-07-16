@@ -235,6 +235,30 @@ public class DevolucionService(
         return devolucion;
     }
 
+
+    public async Task<Devolucion?> CrearDevolucionPorSaldoFavorOrdenCompraAsync(OrdenCompra orden, decimal monto, OrigenDevolucion origen, string motivo, CancellationToken cancellationToken)
+    {
+        if (monto <= 0) return null;
+        var devolucion = new Devolucion
+        {
+            EmpresaId = empresaContext.EmpresaId,
+            TipoTercero = TipoTerceroDevolucion.PROVEEDOR,
+            ProveedorId = orden.ProveedorId,
+            OrdenCompraId = orden.OrdenCompraId,
+            Origen = origen,
+            FechaGeneracion = PeruDateTime.Today,
+            MontoOriginal = decimal.Round(monto, 2),
+            MontoPendiente = decimal.Round(monto, 2),
+            MontoDevuelto = 0,
+            EstadoDevolucion = EstadoDevolucion.PENDIENTE,
+            MotivoGeneracion = motivo.Trim(),
+            Observacion = "Generada por saldo disponible en orden de compra.",
+            UsuarioRegistro = empresaContext.UsuarioNombre
+        };
+        ValidarTercero(devolucion);
+        await devolucionRepository.GuardarAsync(devolucion, cancellationToken);
+        return devolucion;
+    }
     private async Task<Devolucion> ObtenerEntidadAsync(int id, CancellationToken cancellationToken) =>
         await devolucionRepository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken)
             ?? throw new InvalidOperationException("Devolucion no encontrada.");
@@ -280,6 +304,7 @@ public class DevolucionService(
         if (devolucion.NotaCredito is not null) return $"{devolucion.NotaCredito.Serie}-{devolucion.NotaCredito.Correlativo:000000}";
         if (devolucion.Comprobante is not null) return $"{devolucion.Comprobante.Serie}-{devolucion.Comprobante.Correlativo:000000}";
         if (devolucion.Compra is not null) return devolucion.Compra.Documento;
+        if (devolucion.OrdenCompra is not null) return $"{devolucion.OrdenCompra.Serie}-{devolucion.OrdenCompra.Correlativo:000000}";
         return "-";
     }
 
@@ -289,7 +314,12 @@ public class DevolucionService(
         OrigenDevolucion.NOTA_CREDITO => "Nota de Credito",
         OrigenDevolucion.ANULACION_COMPRA => "Anulacion Compra",
         OrigenDevolucion.ANULACION_COMPROBANTE => "Anulacion Comprobante",
+        OrigenDevolucion.ANULACION_ORDEN_COMPRA => "Anulacion Orden Compra",
+        OrigenDevolucion.CIERRE_ORDEN_CON_SALDO => "Cierre Orden con Saldo",
+        OrigenDevolucion.SALDO_A_FAVOR_PROVEEDOR => "Saldo a Favor Proveedor",
+        OrigenDevolucion.PAGO_PROVEEDOR_NO_APLICADO => "Pago Proveedor no Aplicado",
         _ => origen.ToString()
     };
 }
+
 

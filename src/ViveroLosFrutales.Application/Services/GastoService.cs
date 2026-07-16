@@ -6,7 +6,7 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.Services;
 
-public class GastoService(IGastoRepository repository, CuentaFinancieraService cuentaFinancieraService, IClienteRepository clienteRepository, IFormularioConfiguracionService formularioConfiguracionService, IEmpresaContext empresaContext)
+public class GastoService(IGastoRepository repository, CuentaFinancieraService cuentaFinancieraService, IProveedorRepository proveedorRepository, IFormularioConfiguracionService formularioConfiguracionService, IEmpresaContext empresaContext)
 {
     public Task<PagedResult<GastoListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
@@ -17,13 +17,21 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
     public Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarCuentasFinancierasAsync(CancellationToken cancellationToken) =>
         cuentaFinancieraService.ListarActivasAsync(cancellationToken);
 
-    public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> ListarClientesAsync(CancellationToken cancellationToken) =>
-        await BuscarClientesAsync(null, cancellationToken);
+    public async Task<IReadOnlyList<ProveedorListDto>> ListarProveedoresAsync(CancellationToken cancellationToken) =>
+        await BuscarProveedoresAsync(null, cancellationToken);
 
-    public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<ProveedorListDto>> BuscarProveedoresAsync(string? search, CancellationToken cancellationToken)
     {
-        var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
-        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email)).ToArray();
+        var proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            proveedores = proveedores.Where(x => x.RazonSocial.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.NumeroDocumento.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.NombreComercial.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || x.Telefono.Contains(term, StringComparison.OrdinalIgnoreCase)).Take(20).ToArray();
+        }
+        return proveedores.Take(20).ToArray();
     }
 
     public Task<FormularioConfiguracionDto> ObtenerFormularioConfiguracionAsync(CancellationToken cancellationToken) =>
@@ -62,7 +70,7 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
             gasto.DocumentoReferencia = dto.DocumentoReferencia?.Trim() ?? string.Empty;
             gasto.Importe = decimal.Round(dto.Importe, 2);
             gasto.MedioPago = dto.MedioPago.Trim().ToUpperInvariant();
-            gasto.ClienteId = dto.ClienteId;
+            gasto.ProveedorId = dto.ProveedorId;
             gasto.CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken);
             gasto.Observacion = dto.Observacion?.Trim() ?? string.Empty;
             gasto.Estado = EstadoRegistro.Activo;
@@ -120,7 +128,7 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
         DocumentoReferencia = gasto.DocumentoReferencia,
         Importe = gasto.Importe,
         MedioPago = gasto.MedioPago,
-        ClienteId = gasto.ClienteId,
+        ProveedorId = gasto.ProveedorId,
         CuentaFinancieraId = gasto.CuentaFinancieraId,
         Observacion = gasto.Observacion,
         Estado = gasto.Estado

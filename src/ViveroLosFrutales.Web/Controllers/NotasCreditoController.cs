@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -10,6 +10,18 @@ public class NotasCreditoController(ComprobanteService service) : Controller
     public async Task<IActionResult> Index([FromQuery] SearchRequest request, CancellationToken cancellationToken) =>
         View(await service.BuscarNotasCreditoAsync(request, cancellationToken));
 
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
+    {
+        var dto = await service.ObtenerComprobanteParaVisualizarAsync(id, cancellationToken);
+        if (dto.TipoComprobante != ViveroLosFrutales.Domain.Enums.TipoComprobante.NCR)
+        {
+            TempData["Error"] = "El documento seleccionado no es una nota de credito.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(await service.ObtenerFormularioLecturaAsync(dto, cancellationToken));
+    }
     public async Task<IActionResult> Create([FromQuery] NotaCreditoOrigenSearchRequest request, int? comprobanteReferenciaId, CancellationToken cancellationToken)
     {
         var model = new NotaCreditoCreatePageDto

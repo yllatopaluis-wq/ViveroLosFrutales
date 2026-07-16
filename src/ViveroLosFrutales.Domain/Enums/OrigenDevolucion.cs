@@ -1,9 +1,13 @@
-namespace ViveroLosFrutales.Domain.Enums;
+﻿namespace ViveroLosFrutales.Domain.Enums;
 
 public enum OrigenDevolucion
 {
     ANULACION_NOTA_PEDIDO = 1,
     NOTA_CREDITO = 2,
     ANULACION_COMPRA = 3,
-    ANULACION_COMPROBANTE = 4
+    ANULACION_COMPROBANTE = 4,
+    ANULACION_ORDEN_COMPRA = 5,
+    CIERRE_ORDEN_CON_SALDO = 6,
+    SALDO_A_FAVOR_PROVEEDOR = 7,
+    PAGO_PROVEEDOR_NO_APLICADO = 8
 }

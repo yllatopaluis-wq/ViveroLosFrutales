@@ -5,17 +5,19 @@
     ViewData["Title"] = readOnly ? "Visualizar Gasto" : Model.GastoId == 0 ? "Registrar Gasto" : "Editar Gasto";
     var categoriasGasto = ViewBag.CategoriasGasto as IReadOnlyList<CategoriaGastoOptionDto> ?? Array.Empty<CategoriaGastoOptionDto>();
     var categoriaActual = (Model.Categoria ?? string.Empty).Trim().ToUpperInvariant();
-    var clienteSeleccionado = Model.Clientes.FirstOrDefault(x => x.ClienteId == Model.ClienteId);
-    var clienteTexto = clienteSeleccionado is null ? string.Empty : $"{clienteSeleccionado.NombreCompleto} - {clienteSeleccionado.NumeroDocumento}";
-    var clientesJson = JsonSerializer.Serialize(Model.Clientes.Select(x => new
+    var proveedorSeleccionado = Model.Proveedores.FirstOrDefault(x => x.ProveedorId == Model.ProveedorId);
+    var proveedorTexto = proveedorSeleccionado is null ? string.Empty : $"{proveedorSeleccionado.RazonSocial} - {proveedorSeleccionado.NumeroDocumento}";
+        var proveedoresJson = JsonSerializer.Serialize(Model.Proveedores.Select(x => new
     {
-        id = x.ClienteId,
-        nombre = x.NombreCompleto,
+        id = x.ProveedorId,
+        tipoDocumento = x.TipoDocumento.ToString(),
         documento = x.NumeroDocumento,
+        nombre = x.RazonSocial,
+        razonSocial = x.RazonSocial,
+        nombreComercial = x.NombreComercial,
         telefono = x.Telefono,
-        email = x.Email,
         direccion = x.Direccion,
-        texto = $"{x.NombreCompleto} - {x.NumeroDocumento}"
+        texto = $"{x.RazonSocial} - {x.NumeroDocumento}"
     }));
     var bloques = Model.FormularioConfiguracion.Bloques.ToDictionary(x => x.Bloque, x => x, StringComparer.OrdinalIgnoreCase);
     var campos = Model.FormularioConfiguracion.Campos.ToDictionary(x => $"{x.Bloque}:{x.Campo}", x => x, StringComparer.OrdinalIgnoreCase);
@@ -87,29 +89,27 @@
         </div>
     </section>
 
-    <section class="quote-panel @(BloqueVisible("CLIENTE") ? "" : "d-none")">
+    <section class="quote-panel @(BloqueVisible("PROVEEDOR") ? "" : "d-none")">
         <div class="quote-panel-title">
             <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span>
-            <strong>@(bloques.TryGetValue("CLIENTE", out var clienteBlock) ? clienteBlock.Titulo : "Cliente")</strong>
+            <strong>@(bloques.TryGetValue("PROVEEDOR", out var proveedorBlock) ? proveedorBlock.Titulo : "Proveedor")</strong>
         </div>
-        @if (CampoVisible("CLIENTE", "ClienteBuscador"))
+        @if (CampoVisible("PROVEEDOR", "ProveedorBuscador"))
         {
             <div class="quote-client-search">
-                <input class="form-control" id="clienteSearch" value="@clienteTexto" placeholder="Buscar cliente por nombre, documento o telefono..." autocomplete="off" disabled="@readOnly" required="@(Obligatorio("CLIENTE", "ClienteBuscador"))" />
-                <div class="producto-search-results cliente-search-results" id="clienteSearchResults" hidden></div>
-                <input asp-for="ClienteId" type="hidden" id="clienteId" />
+                <input class="form-control" id="proveedorSearch" value="@proveedorTexto" placeholder="Buscar proveedor por razon social, documento o telefono..." autocomplete="off" disabled="@readOnly" required="@(Obligatorio("PROVEEDOR", "ProveedorBuscador"))" />
+                <div class="producto-search-results proveedor-search-results" id="proveedorSearchResults" hidden></div>
+                <input asp-for="ProveedorId" type="hidden" id="proveedorId" />
             </div>
         }
         else
         {
-            <input asp-for="ClienteId" type="hidden" id="clienteId" />
+            <input asp-for="ProveedorId" type="hidden" id="proveedorId" />
         }
         <div class="quote-client-summary quote-client-summary-line">
-            @if (CampoVisible("CLIENTE", "ClienteNombre")) { <div class="client-name-block"><span>@Etiqueta("CLIENTE", "ClienteNombre", "Seleccione cliente")</span><strong id="clienteResumenNombre">@(clienteSeleccionado?.NombreCompleto ?? "Seleccione cliente")</strong></div> }
-            @if (CampoVisible("CLIENTE", "ClienteDocumento")) { <div><span>@Etiqueta("CLIENTE", "ClienteDocumento", "Documento")</span><strong id="clienteResumenDocumento">@(clienteSeleccionado?.NumeroDocumento ?? "-")</strong></div> }
-            @if (CampoVisible("CLIENTE", "ClienteTelefono")) { <div><span>@Etiqueta("CLIENTE", "ClienteTelefono", "Telefono")</span><strong id="clienteResumenTelefono">@(string.IsNullOrWhiteSpace(clienteSeleccionado?.Telefono) ? "-" : clienteSeleccionado.Telefono)</strong></div> }
-            @if (CampoVisible("CLIENTE", "ClienteEmail")) { <div><span>@Etiqueta("CLIENTE", "ClienteEmail", "Email")</span><strong id="clienteResumenEmail">@(string.IsNullOrWhiteSpace(clienteSeleccionado?.Email) ? "-" : clienteSeleccionado.Email)</strong></div> }
-            @if (CampoVisible("CLIENTE", "ClienteDireccion")) { <div><span>@Etiqueta("CLIENTE", "ClienteDireccion", "Direccion")</span><strong id="clienteResumenDireccion">@(string.IsNullOrWhiteSpace(clienteSeleccionado?.Direccion) ? "-" : clienteSeleccionado.Direccion)</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorRazonSocial")) { <div class="client-name-block"><span>@Etiqueta("PROVEEDOR", "ProveedorRazonSocial", "Razon social")</span><strong id="proveedorResumenNombre">@(proveedorSeleccionado?.RazonSocial ?? "Seleccione proveedor")</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorNumeroDocumento")) { <div><span>@Etiqueta("PROVEEDOR", "ProveedorNumeroDocumento", "Numero documento")</span><strong id="proveedorResumenDocumento">@(proveedorSeleccionado?.NumeroDocumento ?? "-")</strong></div> }
+            @if (CampoVisible("PROVEEDOR", "ProveedorDireccion")) { <div><span>@Etiqueta("PROVEEDOR", "ProveedorDireccion", "Direccion")</span><strong id="proveedorResumenDireccion">@(string.IsNullOrWhiteSpace(proveedorSeleccionado?.Direccion) ? "-" : proveedorSeleccionado.Direccion)</strong></div> }
         </div>
     </section>
 
@@ -140,31 +140,31 @@
 @section Scripts {
     <script>
         (() => {
-            let clientes = @Html.Raw(clientesJson);
-            const clientesUrl = '@Url.Action("BuscarClientes", "Gastos")';
-            const search = document.getElementById('clienteSearch');
-            const results = document.getElementById('clienteSearchResults');
-            const clienteId = document.getElementById('clienteId');
-            const resumenNombre = document.getElementById('clienteResumenNombre');
-            const resumenDocumento = document.getElementById('clienteResumenDocumento');
-            const resumenTelefono = document.getElementById('clienteResumenTelefono');
-            const resumenEmail = document.getElementById('clienteResumenEmail');
-            const resumenDireccion = document.getElementById('clienteResumenDireccion');
+            let proveedores = @Html.Raw(proveedoresJson);
+            const proveedoresUrl = '@Url.Action("BuscarProveedores", "Gastos")';
+            const search = document.getElementById('proveedorSearch');
+            const results = document.getElementById('proveedorSearchResults');
+            const proveedorId = document.getElementById('proveedorId');
+            const resumenNombre = document.getElementById('proveedorResumenNombre');
+            const resumenDocumento = document.getElementById('proveedorResumenDocumento');
+            const resumenTelefono = document.getElementById('proveedorResumenTelefono');
+            const resumenEmail = document.getElementById('proveedorResumenEmail');
+            const resumenDireccion = document.getElementById('proveedorResumenDireccion');
 
-            if (search && results && clienteId) {
+            if (search && results && proveedorId) {
                 if (results.parentElement !== document.body) document.body.appendChild(results);
                 let activeIndex = -1;
                 let currentItems = [];
                 let pointerInResults = false;
                 const normalizar = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
                 const escapeHtml = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-                const buscarClientesRemoto = async () => {
-                    const response = await fetch(`${clientesUrl}?search=${encodeURIComponent(search.value || "")}`, { headers: { "Accept": "application/json" } });
-                    if (!response.ok) return clientes;
-                    clientes = await response.json();
-                    return clientes;
+                const buscarProveedoresRemoto = async () => {
+                    const response = await fetch(`${proveedoresUrl}?search=${encodeURIComponent(search.value || "")}`, { headers: { "Accept": "application/json" } });
+                    if (!response.ok) return proveedores;
+                    proveedores = await response.json();
+                    return proveedores;
                 };
-                const filtrar = () => clientes.slice(0, 25);
+                const filtrar = () => proveedores.slice(0, 25);
                 const cerrar = () => { results.hidden = true; activeIndex = -1; };
                 const posicionar = () => {
                     const rect = search.getBoundingClientRect();
@@ -173,12 +173,12 @@
                     results.style.width = `${rect.width}px`;
                 };
                 const pintar = async () => {
-                    await buscarClientesRemoto();
+                    await buscarProveedoresRemoto();
                     currentItems = filtrar();
                     activeIndex = currentItems.length ? 0 : -1;
                     posicionar();
                     results.innerHTML = currentItems.length
-                        ? currentItems.map((cliente, index) => `<button type="button" class="producto-search-option${index === 0 ? ' active' : ''}" data-id="${escapeHtml(cliente.id)}"><strong>${escapeHtml(cliente.nombre)}</strong><span>${escapeHtml(cliente.documento || '-')} | ${escapeHtml(cliente.telefono || '-')}</span><em>${escapeHtml(cliente.direccion || '-')}</em></button>`).join('')
+                        ? currentItems.map((proveedor, index) => `<button type="button" class="producto-search-option${index === 0 ? ' active' : ''}" data-id="${escapeHtml(proveedor.id)}"><strong>${escapeHtml(proveedor.nombre)}</strong><span>${escapeHtml(proveedor.documento || '-')} | ${escapeHtml(proveedor.telefono || '-')}</span><em>${escapeHtml(proveedor.direccion || '-')}</em></button>`).join('')
                         : '<div class="producto-search-empty">Sin coincidencias</div>';
                     results.hidden = false;
                 };
@@ -190,22 +190,22 @@
                         if (itemIndex === activeIndex) item.scrollIntoView({ block: 'nearest' });
                     });
                 };
-                const seleccionar = (cliente) => {
-                    if (!cliente) return;
-                    clienteId.value = cliente.id;
-                    search.value = cliente.texto || `${cliente.nombre} - ${cliente.documento}`;
-                    if (resumenNombre) resumenNombre.textContent = cliente.nombre || 'Seleccione cliente';
-                    if (resumenDocumento) resumenDocumento.textContent = cliente.documento || '-';
-                    if (resumenTelefono) resumenTelefono.textContent = cliente.telefono || '-';
-                    if (resumenEmail) resumenEmail.textContent = cliente.email || '-';
-                    if (resumenDireccion) resumenDireccion.textContent = cliente.direccion || '-';
+                const seleccionar = (proveedor) => {
+                    if (!proveedor) return;
+                    proveedorId.value = proveedor.id;
+                    search.value = proveedor.texto || `${proveedor.nombre} - ${proveedor.documento}`;
+                    if (resumenNombre) resumenNombre.textContent = proveedor.nombre || 'Seleccione proveedor';
+                    if (resumenDocumento) resumenDocumento.textContent = proveedor.documento || '-';
+                    if (resumenTelefono) resumenTelefono.textContent = proveedor.telefono || '-';
+                    if (resumenEmail) resumenEmail.textContent = proveedor.email || '-';
+                    if (resumenDireccion) resumenDireccion.textContent = proveedor.direccion || '-';
                     cerrar();
                 };
                 const resolver = () => {
-                    const exacto = clientes.find((cliente) => normalizar(cliente.texto) === normalizar(search.value));
+                    const exacto = proveedores.find((proveedor) => normalizar(proveedor.texto) === normalizar(search.value));
                     if (exacto) seleccionar(exacto);
                 };
-                search.addEventListener('input', () => { clienteId.value = ''; pintar(); });
+                search.addEventListener('input', () => { proveedorId.value = ''; pintar(); });
                 search.addEventListener('focus', pintar);
                 search.addEventListener('blur', () => window.setTimeout(() => { if (!pointerInResults) { resolver(); cerrar(); } }, 150));
                 search.addEventListener('keydown', (event) => {
@@ -220,7 +220,7 @@
                     const option = event.target.closest('.producto-search-option');
                     if (!option) return;
                     event.preventDefault();
-                    seleccionar(clientes.find((cliente) => String(cliente.id) === String(option.dataset.id)));
+                    seleccionar(proveedores.find((proveedor) => String(proveedor.id) === String(option.dataset.id)));
                 });
                 window.addEventListener('resize', cerrar);
                 window.addEventListener('scroll', (event) => { if (!results.contains(event.target)) cerrar(); }, true);

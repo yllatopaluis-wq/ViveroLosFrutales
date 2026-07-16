@@ -1,4 +1,4 @@
-﻿# Documentacion funcional - Vivero Los Frutales
+# Documentacion funcional - Vivero Los Frutales
 
 ## 1. Objetivo
 
@@ -64,6 +64,8 @@ Documentos configurables:
 - Comprobante.
 - Nota de credito.
 - Compra.
+- Gasto.
+- Ingreso.
 
 La pantalla muestra una cabecera de configuracion, pestanas por tipo de documento, un panel izquierdo con la estructura del formulario y un panel derecho con los campos del bloque seleccionado.
 
@@ -85,6 +87,7 @@ Desde el panel de campos se puede:
 El bloque `Detalle de productos` tambien permite configurar columnas de la grilla. En cotizacion, nota de pedido, comprobante y compra controla columnas como producto, unidad, stock, cantidad, precio, descuento y total. En nota de credito controla producto, cantidad original, cantidad NC, precio y total NC.
 
 La configuracion se guarda por empresa activa. Si una empresa no tiene configuracion propia, el sistema usa la configuracion estandar del documento.
+
 ## 5. Empresas
 
 El mantenimiento de empresas permite registrar:
@@ -136,6 +139,7 @@ El mantenimiento de productos permite registrar:
 - Unidad de medida.
 - Stock.
 - Precio sin IGV.
+- Precio de compra opcional.
 - Indicador de afectacion a IGV.
 - Indicador y porcentaje de detraccion.
 - Estado.
@@ -162,26 +166,24 @@ Datos principales:
 
 ## 10. Compras
 
-El formulario de compras permite registrar:
+El formulario de compras usa el motor configurable de documentos por empresa y permite registrar compras directas, con o sin orden de compra asociada.
 
-- Proveedor.
-- Documento.
-- Fecha.
-- Detalle de productos.
-- Cantidad.
-- Costo unitario.
-- Importe por linea.
-- Subtotal, IGV y total.
+Bloques funcionales:
 
-El detalle usa el mismo estilo operativo que comprobantes:
+- Informacion general: fecha, moneda, forma de pago, dias de credito, fecha de vencimiento, entrega, tipo de documento, serie y correlativo.
+- Proveedor: buscador de proveedores activos y datos de tipo documento, numero de documento, razon social y direccion.
+- Detalle de productos: buscador de productos, columnas configurables, cantidad, cantidad recibida, precio unitario de compra e importe por linea.
+- Observaciones.
+- Totales: total de compra.
+- Acciones.
 
-- Una fila inicial.
-- Boton de agregar con icono `+`.
-- Boton de quitar en filas nuevas.
-- Calculo automatico de importes y totales.
+Medio de pago y cuenta destino no forman parte del alta de compra. Esos datos se registran en el formulario de pago de proveedor.
 
-Al guardar una compra, el stock del producto aumenta y se registra movimiento de inventario.
+La grilla de productos puede configurarse desde `Administracion > Configuracion de documentos`, igual que cotizaciones, notas de pedido y comprobantes. Permite controlar columnas, etiquetas, orden, visibilidad, obligatoriedad, solo lectura y comportamiento de productos.
 
+Al seleccionar un producto, la compra toma como referencia el `Precio compra` registrado en el maestro de productos. Este precio no es obligatorio en el registro del producto; si no se informa, inicia en cero.
+
+Al guardar una compra, el stock aumenta solo por la cantidad recibida y se registra movimiento de inventario por la recepcion. Si la entrega queda pendiente, no aumenta stock hasta que exista cantidad recibida en el registro.
 
 Tipos de documento admitidos:
 
@@ -195,18 +197,48 @@ Tipos de documento admitidos:
 
 Reglas del documento:
 
-- `FACTURA`, `BOLETA` y `LIQUIDACION COMPRA` requieren serie y numero.
-- `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no requieren serie ni numero.
+- `FACTURA`, `BOLETA`, `LIQUIDACION COMPRA`, `RECIBO` y `NOTA VENTA` requieren serie y correlativo.
+- `PENDIENTE COMPROBANTE` y `SIN DOCUMENTO` no requieren serie ni correlativo.
 - `PENDIENTE COMPROBANTE` es tipo de documento, no estado de compra.
+
+Edicion de compras:
+
+- Desde la lista de compras existe la accion `Editar` para compras activas.
+- La edicion solo permite modificar entrega, tipo de documento, serie, correlativo, forma de pago y dias de credito.
+- No permite modificar proveedor, productos, cantidades compradas, precios, totales, pagos ni movimientos de inventario.
+- Al cambiar dias de credito, el sistema recalcula la fecha de vencimiento usando la fecha original de la compra.
 
 Reglas de pago y anulacion:
 
 - Los estados de pago de compra son `PENDIENTE`, `PARCIAL` y `PAGADO`.
 - El estado del documento de compra es `ACTIVO` o `ANULADO`.
-- Una compra al contado queda pagada y genera pago a proveedor con movimiento de caja.
-- Una compra a credito queda pendiente hasta registrar pagos desde el detalle.
-- Al anular una compra se revierte el stock. Si existen pagos activos, se conserva la trazabilidad historica y se genera una devolucion pendiente del proveedor.
+- La forma de pago `Contado` o `Credito` no genera caja por si sola. El egreso real se registra desde el formulario de pago de proveedor.
+- Cada pago a proveedor genera un unico movimiento de caja de tipo egreso.
+- Aplicar un pago proveedor a una compra no genera movimiento de caja adicional.
+- Al anular una compra se valida el documento, se revierte el stock con movimiento de inventario de reversa, se anulan las aplicaciones de pago activas, se genera una solicitud de devolucion de proveedor por el monto aplicado y finalmente se marca la compra como anulada.
+- La solicitud de devolucion no mueve caja. El ingreso de dinero se registra despues, cuando el usuario confirma la devolucion real del proveedor.
 - Los documentos anulados no bloquean volver a registrar el mismo documento para el mismo proveedor.
+
+## 10.1 Ordenes de compra
+
+La orden de compra es un documento interno para compromisos con proveedores. No es comprobante tributario y al guardarla no genera stock, movimiento de inventario, movimiento de caja ni cuenta por pagar definitiva.
+
+Permite:
+
+- Registrar proveedor, productos solicitados, cantidades, precio de compra, condiciones y observaciones.
+- Registrar pagos adelantados al proveedor desde la orden. Cada pago genera un unico egreso en caja.
+- Registrar una o varias compras/facturas contra la misma orden.
+- Aplicar pagos adelantados a compras mediante aplicaciones parciales o automaticas FIFO.
+- Mantener saldo disponible del pago sin duplicar caja.
+- Cerrar o anular la orden segun su estado.
+- Generar devolucion pendiente de proveedor cuando queda saldo disponible y se solicita su devolucion.
+
+Reglas principales:
+
+- Solo la compra aumenta stock y crea movimiento de inventario.
+- Aplicar un pago a una compra no crea movimiento de caja.
+- Las compras siguen siendo la cuenta por pagar definitiva; la orden es compromiso o anticipo.
+- La devolucion pendiente no mueve caja hasta registrar la devolucion real.
 
 ## 11. Cotizaciones
 
@@ -424,17 +456,24 @@ Al anular un cobro:
 - Se recalcula el estado de pago de la nota de pedido o comprobante relacionado.
 - Si el cobro fue aplicado desde una nota de pedido a un comprobante, deja de contar para el comprobante.
 
-## 17. Devoluciones de clientes
+## 17. Devoluciones de clientes y proveedores
 
-El modulo `Ventas > Devoluciones de Clientes` administra devoluciones pendientes generadas por:
+El modulo de devoluciones administra dinero pendiente de devolver a clientes o por recuperar de proveedores.
+
+Se generan devoluciones de cliente por:
 
 - Anulacion de nota de pedido con cobros historicos.
 - Emision de nota de credito con exceso cobrado.
+- Anulacion de comprobante con cobros historicos.
+
+Se generan devoluciones de proveedor por:
+
+- Anulacion de compra con pagos historicos.
 
 Muestra:
 
 - Fecha.
-- Cliente.
+- Cliente o proveedor.
 - Origen.
 - Documento.
 - Monto original.
@@ -455,7 +494,8 @@ Reglas:
 - No se permite registrar devolucion con monto menor o igual a cero.
 - No se permite devolver mas que el monto pendiente.
 - No se permite registrar devolucion si el estado es `DEVUELTO` o `ANULADO`.
-- Al confirmar una devolucion se genera `MovimientoCaja` de tipo `EGRESO`, origen `DEVOLUCION_CLIENTE`.
+- Al confirmar una devolucion de cliente se genera `MovimientoCaja` de tipo `EGRESO`, origen `DEVOLUCION_CLIENTE`.
+- Al confirmar una devolucion de proveedor se genera `MovimientoCaja` de tipo `INGRESO`, origen `DEVOLUCION_PROVEEDOR`.
 - Solo el registro real de devolucion impacta caja; la generacion de la devolucion pendiente no mueve caja.
 - La campana del encabezado muestra un contador con las devoluciones `PENDIENTE` o `PARCIAL` de la empresa activa.
 - Al abrir la campana se muestran las cinco alertas mas recientes con tercero, origen, documento y monto pendiente.
@@ -556,11 +596,11 @@ Reglas:
 - Para cobros aplicados desde nota de pedido a comprobante, el documento se muestra como `NP002-000002 -> F002-000006`.
 - Para devoluciones de clientes, el egreso se muestra con el cliente y documento origen de la devolucion.
 
-## 18.1 TesorerÃƒÂ­a
+## 18.1 TesorerÃƒÆ’Ã‚Â­a
 
-El mÃƒÂ³dulo TesorerÃƒÂ­a centraliza la informaciÃƒÂ³n de dinero real de la empresa.
+El mÃƒÆ’Ã‚Â³dulo TesorerÃƒÆ’Ã‚Â­a centraliza la informaciÃƒÆ’Ã‚Â³n de dinero real de la empresa.
 
-Opciones del menÃƒÂº:
+Opciones del menÃƒÆ’Ã‚Âº:
 
 - Caja.
 - Caja y Bancos.
@@ -572,7 +612,7 @@ Opciones del menÃƒÂº:
 
 ### Cuentas financieras
 
-Las cuentas financieras representan dÃƒÂ³nde estÃƒÂ¡ fÃƒÂ­sicamente o bancariamente el dinero:
+Las cuentas financieras representan dÃƒÆ’Ã‚Â³nde estÃƒÆ’Ã‚Â¡ fÃƒÆ’Ã‚Â­sicamente o bancariamente el dinero:
 
 - Caja: efectivo interno.
 - Banco: cuenta bancaria.
@@ -583,17 +623,17 @@ Datos principales:
 - Nombre.
 - Tipo.
 - Banco.
-- NÃƒÂºmero de cuenta.
+- NÃƒÆ’Ã‚Âºmero de cuenta.
 - Moneda.
 - Saldo inicial.
 - Fecha de saldo inicial.
 - Estado activo/anulado.
 
-El sistema crea o usa una cuenta por defecto llamada `Caja principal` cuando una operaciÃƒÂ³n no indica cuenta financiera.
+El sistema crea o usa una cuenta por defecto llamada `Caja principal` cuando una operaciÃƒÆ’Ã‚Â³n no indica cuenta financiera.
 
 ### Caja y Bancos
 
-La pantalla responde la pregunta: Ã‚Â¿cuÃƒÂ¡nto dinero real tiene la empresa?
+La pantalla responde la pregunta: Ãƒâ€šÃ‚Â¿cuÃƒÆ’Ã‚Â¡nto dinero real tiene la empresa?
 
 Muestra:
 
@@ -620,7 +660,7 @@ Registran cuenta financiera:
 - Pagos a proveedores.
 - Devoluciones.
 
-Esto permite saber a quÃƒÂ© caja, banco o billetera ingresÃƒÂ³ o de dÃƒÂ³nde saliÃƒÂ³ el dinero.
+Esto permite saber a quÃƒÆ’Ã‚Â© caja, banco o billetera ingresÃƒÆ’Ã‚Â³ o de dÃƒÆ’Ã‚Â³nde saliÃƒÆ’Ã‚Â³ el dinero.
 
 ### Transferencias
 
@@ -632,7 +672,7 @@ Formulario:
 - Cuenta origen.
 - Cuenta destino.
 - Monto.
-- ObservaciÃƒÂ³n.
+- ObservaciÃƒÆ’Ã‚Â³n.
 
 Reglas:
 
@@ -698,7 +738,7 @@ No muestra el campo hash en la lista principal.
 
 ## 22. Reportes y filtros
 
-El Reporte General presenta un comparativo anual con meses en filas y aÃƒÂ±os en columnas. Permite seleccionar hasta diez aÃƒÂ±os y cambiar el indicador entre:
+El Reporte General presenta un comparativo anual con meses en filas y aÃƒÆ’Ã‚Â±os en columnas. Permite seleccionar hasta diez aÃƒÆ’Ã‚Â±os y cambiar el indicador entre:
 
 - Resultado neto.
 - Ventas netas.
@@ -706,7 +746,7 @@ El Reporte General presenta un comparativo anual con meses en filas y aÃƒÂ±o
 - Gastos.
 - Compras.
 
-Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃƒÂ±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
+Tambien muestra indicadores acumulados y un estado anual consolidado con variacion respecto al aÃƒÆ’Ã‚Â±o anterior. El resultado se calcula como `Ventas + Ingresos - Gastos - Compras`. Las notas de credito activas reducen las ventas; los registros anulados no participan.
 
 
 Reportes operativos disponibles:
@@ -749,27 +789,27 @@ Esto aplica a listas como comprobantes, cotizaciones, empresas, categorias y otr
 
 ## 24. Datos iniciales de salida
 
-La instalaciÃƒÂ³n inicial deja preparadas dos empresas activas:
+La instalaciÃƒÆ’Ã‚Â³n inicial deja preparadas dos empresas activas:
 
 - `20615082997`: VIVERO LOS FRUTALES LIMA SAC.
 - `20615619273`: VIVERO LOS FRUTALES HUARAL SAC.
 
-El usuario inicial para ingreso y configuraciÃƒÂ³n es:
+El usuario inicial para ingreso y configuraciÃƒÆ’Ã‚Â³n es:
 
 ```text
 Usuario: admin
 Password: Admin1234
 ```
 
-Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesiÃƒÂ³n debe seleccionar una empresa. DespuÃƒÂ©s del primer ingreso se debe cambiar la contraseÃƒÂ±a desde el mÃƒÂ³dulo de usuarios.
+Este usuario tiene rol administrador, permisos completos y acceso a las dos empresas iniciales. Al iniciar sesiÃƒÆ’Ã‚Â³n debe seleccionar una empresa. DespuÃƒÆ’Ã‚Â©s del primer ingreso se debe cambiar la contraseÃƒÆ’Ã‚Â±a desde el mÃƒÆ’Ã‚Â³dulo de usuarios.
 
 Los productos se cargan por empresa desde el catalogo Nubefact. El sistema mantiene stock, precios, unidad, afectacion IGV y detraccion por producto y empresa. Los clientes tambien se cargan por empresa, por lo que cada empresa mantiene su propio padron comercial.
 
-## 25. Sitio pÃƒÂºblico
+## 25. Sitio pÃƒÆ’Ã‚Âºblico
 
-La soluciÃƒÂ³n incluye un sitio pÃƒÂºblico separado del ERP.
+La soluciÃƒÆ’Ã‚Â³n incluye un sitio pÃƒÆ’Ã‚Âºblico separado del ERP.
 
-El sitio pÃƒÂºblico presenta contenido institucional y comercial:
+El sitio pÃƒÆ’Ã‚Âºblico presenta contenido institucional y comercial:
 
 - Inicio.
 - Nosotros.
@@ -777,6 +817,6 @@ El sitio pÃƒÂºblico presenta contenido institucional y comercial:
 - Servicios.
 - Contacto.
 
-El catÃƒÂ¡logo pÃƒÂºblico se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuraciÃƒÂ³n. Es una aplicaciÃƒÂ³n web independiente para publicaciÃƒÂ³n externa.
+El catÃƒÆ’Ã‚Â¡logo pÃƒÆ’Ã‚Âºblico se alimenta desde empresas y productos activos. No permite operaciones internas de venta, caja, compras ni configuraciÃƒÆ’Ã‚Â³n. Es una aplicaciÃƒÆ’Ã‚Â³n web independiente para publicaciÃƒÆ’Ã‚Â³n externa.
 
 

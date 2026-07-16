@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
@@ -54,11 +54,14 @@ public class ComprobantesController(
         }));
     }
 
-    public async Task<IActionResult> Visualizar(int id, CancellationToken cancellationToken)
+    public IActionResult Visualizar(int id) =>
+        RedirectToAction(nameof(Details), new { id });
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
     {
         var dto = await service.ObtenerComprobanteParaVisualizarAsync(id, cancellationToken);
         ViewData["ReadOnly"] = true;
-        return View("Create", await service.ObtenerFormularioLecturaAsync(dto, cancellationToken));
+        return View(await service.ObtenerFormularioLecturaAsync(dto, cancellationToken));
     }
 
     public async Task<IActionResult> Edit(int id, CancellationToken cancellationToken)

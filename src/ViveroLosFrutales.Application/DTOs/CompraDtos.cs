@@ -13,6 +13,7 @@ public record CompraListDto(
     decimal TotalPagado,
     decimal SaldoPendiente,
     EstadoPagoCompra EstadoPago,
+    EstadoEntregaCompra EstadoEntrega,
     EstadoDocumentoCompra EstadoDocumento,
     bool PuedeRegistrarPago,
     bool PuedeAnular);
@@ -21,12 +22,19 @@ public class CompraEditDto
 {
     public int CompraId { get; set; }
     public int ProveedorId { get; set; }
+    public int? OrdenCompraId { get; set; }
     public TipoDocumentoCompra TipoDocumento { get; set; } = TipoDocumentoCompra.FACTURA;
     public string Serie { get; set; } = string.Empty;
     public string Numero { get; set; } = string.Empty;
     public string Documento { get; set; } = string.Empty;
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
+    public DateTime? FechaVencimiento { get; set; }
+    public string Moneda { get; set; } = "Soles";
+    public decimal TipoCambio { get; set; } = 1;
+    public int DiasCredito { get; set; }
     public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CONTADO;
+    public EstadoEntregaCompra EstadoEntrega { get; set; } = EstadoEntregaCompra.PENDIENTE;
+    public decimal MontoPagoInicial { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
     public int? CuentaFinancieraId { get; set; }
     public string Observacion { get; set; } = string.Empty;
@@ -38,6 +46,7 @@ public class CompraDetalleEditDto
     public int ProductoId { get; set; }
     public string UnidadMedida { get; set; } = string.Empty;
     public decimal Cantidad { get; set; }
+    public decimal CantidadRecibida { get; set; }
     public decimal CostoUnitario { get; set; }
 }
 
@@ -50,7 +59,7 @@ public class CompraFormDataDto
     public FormularioConfiguracionDto FormularioConfiguracion { get; set; } = ViveroLosFrutales.Application.Services.FormularioConfiguracionService.Defaults("COMPRA");
 }
 
-public record CompraDetalleDto(string Producto, string UnidadMedida, decimal Cantidad, decimal CostoUnitario, decimal Importe, decimal Igv, decimal TotalLinea);
+public record CompraDetalleDto(string Producto, string UnidadMedida, decimal Cantidad, decimal CantidadRecibida, decimal CantidadPendiente, decimal CostoUnitario, decimal Importe, decimal Igv, decimal TotalLinea);
 
 public record PagoProveedorListDto(
     int PagoProveedorId,
@@ -87,6 +96,10 @@ public class CompraDetalleViewDto
     public string Numero { get; set; } = string.Empty;
     public string Documento { get; set; } = string.Empty;
     public FormaPagoCompra FormaPago { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+    public string Moneda { get; set; } = string.Empty;
+    public decimal TipoCambio { get; set; }
+    public int DiasCredito { get; set; }
     public string Observacion { get; set; } = string.Empty;
     public decimal SubTotal { get; set; }
     public decimal Igv { get; set; }
@@ -94,17 +107,39 @@ public class CompraDetalleViewDto
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
     public EstadoPagoCompra EstadoPago { get; set; }
+    public EstadoEntregaCompra EstadoEntrega { get; set; }
     public EstadoDocumentoCompra EstadoDocumento { get; set; }
+    public bool TieneAplicacionesPagoActivas { get; set; }
     public IReadOnlyList<CompraDetalleDto> Detalles { get; set; } = Array.Empty<CompraDetalleDto>();
     public IReadOnlyList<PagoProveedorListDto> Pagos { get; set; } = Array.Empty<PagoProveedorListDto>();
     public DevolucionListDto? DevolucionProveedor { get; set; }
 }
 
+
+public class CompraCamposEditablesDto
+{
+    public int CompraId { get; set; }
+    public string Proveedor { get; set; } = string.Empty;
+    public DateTime Fecha { get; set; }
+    public decimal Total { get; set; }
+    public TipoDocumentoCompra TipoDocumento { get; set; } = TipoDocumentoCompra.PENDIENTE_COMPROBANTE;
+    public string Serie { get; set; } = string.Empty;
+    public string Numero { get; set; } = string.Empty;
+    public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CONTADO;
+    public int DiasCredito { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+    public EstadoEntregaCompra EstadoEntrega { get; set; } = EstadoEntregaCompra.PENDIENTE;
+    public CompraDetalleViewDto? Detalle { get; set; }
+}
 public class RegistrarPagoProveedorDto
 {
     public int CompraId { get; set; }
     public string Proveedor { get; set; } = string.Empty;
     public string DocumentoCompra { get; set; } = string.Empty;
+    public DateTime FechaCompra { get; set; }
+    public string CondicionPago { get; set; } = string.Empty;
+    public EstadoPagoCompra EstadoPago { get; set; } = EstadoPagoCompra.PENDIENTE;
+    public string Moneda { get; set; } = "PEN";
     public decimal TotalCompra { get; set; }
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
@@ -115,4 +150,6 @@ public class RegistrarPagoProveedorDto
     public decimal MontoPago { get; set; }
     public string Observacion { get; set; } = string.Empty;
 }
+
+
 

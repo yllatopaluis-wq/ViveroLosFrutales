@@ -7,8 +7,8 @@ window.viveroDetalleRows = function () {
     const index = table.querySelectorAll("tr").length;
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td><input name="Detalles[${index}].ProductoId" class="form-control form-control-sm" type="number" /></td>
-      <td><input name="Detalles[${index}].Cantidad" class="form-control form-control-sm text-end" type="number" step="0.01" /></td>
+      <td><input name="${detailPrefix}[${index}].ProductoId" class="form-control form-control-sm" type="number" /></td>
+      <td><input name="${detailPrefix}[${index}].Cantidad" class="form-control form-control-sm text-end" type="number" step="0.01" /></td>
       <td><input name="Detalles[${index}].PrecioUnitario" class="form-control form-control-sm text-end" type="number" step="0.01" /></td>
       <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">Quitar</button></td>`;
     table.appendChild(row);
@@ -484,9 +484,9 @@ window.viveroComprobanteForm = function (config) {
       const row = document.createElement("tr");
       row.innerHTML = showTotals
         ? `
-          <td>${productoSearchMarkup(`Detalles[${index}].ProductoId`, "")}</td>
+          <td>${productoSearchMarkup(`${detailPrefix}[${index}].ProductoId`, "")}</td>
           <td><input value="UNIDAD" class="form-control form-control-sm" readonly /></td>
-          <td><input name="Detalles[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+          <td><input name="${detailPrefix}[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
           <td><input name="Detalles[${index}].PrecioUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
           <td><input value="0.00" class="form-control form-control-sm text-end line-total" readonly /></td>
           <td class="text-center">
@@ -495,8 +495,8 @@ window.viveroComprobanteForm = function (config) {
             </button>
           </td>`
         : `
-          <td>${productoSearchMarkup(`Detalles[${index}].ProductoId`, "")}</td>
-          <td><input name="Detalles[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+          <td>${productoSearchMarkup(`${detailPrefix}[${index}].ProductoId`, "")}</td>
+          <td><input name="${detailPrefix}[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
           <td><input name="Detalles[${index}].PrecioUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" /></td>
           <td><button type="button" class="btn btn-sm btn-outline-danger remove-row">Quitar</button></td>`;
       detalleBody.appendChild(row);
@@ -528,6 +528,7 @@ window.viveroProductoGridSearch = function (config) {
   const productBehavior = config?.behavior || {};
   const priceFieldName = config?.priceFieldName || "PrecioUnitario";
   const unitFieldName = config?.unitFieldName || null;
+  const detailPrefix = config?.detailPrefix || "Detalles";
   const mostrarItemProducto = productBehavior.mostrarItem !== false && productBehavior.MostrarItem !== false;
   const mostrarAccionProducto = productBehavior.mostrarAccion !== false && productBehavior.MostrarAccion !== false;
   const cantidadInicialProducto = Math.max(Number(productBehavior.cantidadInicial || productBehavior.CantidadInicial || 1), 0.01);
@@ -639,10 +640,11 @@ window.viveroProductoGridSearch = function (config) {
     body.querySelectorAll("tr").forEach((row, index) => {
       const number = row.querySelector(".quote-row-number");
       if (number) number.textContent = String(index + 1);
-      row.querySelector(".producto-select")?.setAttribute("name", `Detalles[${index}].ProductoId`);
-      row.querySelector(".cantidad-input")?.setAttribute("name", `Detalles[${index}].Cantidad`);
-      if (unitFieldName) row.querySelector(".unidad-input")?.setAttribute("name", `Detalles[${index}].${unitFieldName}`);
-      row.querySelector(".precio-input")?.setAttribute("name", `Detalles[${index}].${priceFieldName}`);
+      row.querySelector(".producto-select")?.setAttribute("name", `${detailPrefix}[${index}].ProductoId`);
+      row.querySelector(".cantidad-input")?.setAttribute("name", `${detailPrefix}[${index}].Cantidad`);
+      row.querySelector(".cantidad-recibida-input")?.setAttribute("name", `${detailPrefix}[${index}].CantidadRecibida`);
+      if (unitFieldName) row.querySelector(".unidad-input")?.setAttribute("name", `${detailPrefix}[${index}].${unitFieldName}`);
+      row.querySelector(".precio-input")?.setAttribute("name", `${detailPrefix}[${index}].${priceFieldName}`);
     });
   }
 
@@ -695,15 +697,17 @@ window.viveroProductoGridSearch = function (config) {
       case "Codigo":
         return `<td data-field="Codigo"><input value="${escapeHtml(codigoProducto(producto))}" class="form-control form-control-sm codigo-input" readonly /></td>`;
       case "Producto":
-        return `<td data-field="Producto"><input class="form-control form-control-sm producto-search" value="${escapeHtml(textoProducto(producto))}" readonly /><input name="Detalles[${index}].ProductoId" class="producto-select" type="hidden" value="${escapeHtml(producto?.id || "")}" /></td>`;
+        return `<td data-field="Producto"><input class="form-control form-control-sm producto-search" value="${escapeHtml(textoProducto(producto))}" readonly /><input name="${detailPrefix}[${index}].ProductoId" class="producto-select" type="hidden" value="${escapeHtml(producto?.id || "")}" /></td>`;
       case "Unidad":
-        return `<td data-field="Unidad"><input ${unitFieldName ? `name="Detalles[${index}].${unitFieldName}"` : ""} value="${escapeHtml(unidadProducto(producto))}" class="form-control form-control-sm unidad-input" readonly /></td>`;
+        return `<td data-field="Unidad"><input ${unitFieldName ? `name="${detailPrefix}[${index}].${unitFieldName}"` : ""} value="${escapeHtml(unidadProducto(producto))}" class="form-control form-control-sm unidad-input" readonly /></td>`;
       case "Stock":
         return `<td data-field="Stock"><input value="${stockProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end stock-input" readonly /></td>`;
       case "Cantidad":
-        return `<td data-field="Cantidad"><input name="Detalles[${index}].Cantidad" value="${cantidadInicial}" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>`;
+        return `<td data-field="Cantidad"><input name="${detailPrefix}[${index}].Cantidad" value="${cantidadInicial}" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>`;
+      case "CantidadRecibida":
+        return `<td data-field="CantidadRecibida"><input name="${detailPrefix}[${index}].CantidadRecibida" value="0" class="form-control form-control-sm text-end cantidad-recibida-input" type="number" step="0.01" min="0" /></td>`;
       case "PrecioUnitario":
-        return `<td data-field="PrecioUnitario"><input name="Detalles[${index}].${priceFieldName}" value="${precioProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0"${precioReadonly} /></td>`;
+        return `<td data-field="PrecioUnitario"><input name="${detailPrefix}[${index}].${priceFieldName}" value="${precioProducto(producto).toFixed(2)}" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0"${precioReadonly} /></td>`;
       case "DescuentoPorcentaje":
         return `<td data-field="DescuentoPorcentaje"><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100"${descuentoReadonly} /></td>`;
       case "TotalLinea":
@@ -791,7 +795,7 @@ window.viveroProductoGridSearch = function (config) {
       ? items.map((producto, index) => {
           const sku = skuProducto(producto);
           const codigoBarras = codigoBarrasProducto(producto);
-          const meta = [`Código: ${codigoProducto(producto)}`, sku ? `SKU: ${sku}` : "SKU: -", codigoBarras ? `CB: ${codigoBarras}` : "", `Stock: ${stockProducto(producto).toFixed(2)} ${unidadProducto(producto)}`].filter(Boolean).join(" | ");
+          const meta = [`CÃ³digo: ${codigoProducto(producto)}`, sku ? `SKU: ${sku}` : "SKU: -", codigoBarras ? `CB: ${codigoBarras}` : "", `Stock: ${stockProducto(producto).toFixed(2)} ${unidadProducto(producto)}`].filter(Boolean).join(" | ");
           return `<button type="button" class="producto-search-option${index === 0 ? " active" : ""}" data-id="${escapeHtml(producto.id)}"><strong>${escapeHtml(textoProducto(producto))}</strong><span>${escapeHtml(meta)}</span><em>Precio: ${formatMoney(precioProducto(producto))}</em></button>`;
         }).join("")
       : '<div class="producto-search-empty">Sin coincidencias</div>';
@@ -1002,8 +1006,8 @@ window.viveroCompraForm = function () {
     const index = body.querySelectorAll("tr").length;
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td><select name="Detalles[${index}].ProductoId" class="form-select form-select-sm producto-select">${productoOptions()}</select><input name="Detalles[${index}].UnidadMedida" type="hidden" /></td>
-      <td><input name="Detalles[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
+      <td><select name="${detailPrefix}[${index}].ProductoId" class="form-select form-select-sm producto-select">${productoOptions()}</select><input name="Detalles[${index}].UnidadMedida" type="hidden" /></td>
+      <td><input name="${detailPrefix}[${index}].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" /></td>
       <td><input name="Detalles[${index}].CostoUnitario" class="form-control form-control-sm text-end costo-input" type="number" step="0.01" min="0" /></td>
       <td><input value="0.00" class="form-control form-control-sm text-end line-total" readonly /></td>
       <td class="text-center">
@@ -1189,7 +1193,7 @@ window.viveroCompraDocumentoForm = function () {
   const fields = Array.from(document.querySelectorAll(".compra-document-number-field"));
   if (!tipoDocumento || !serie || !numero || fields.length === 0) return;
 
-  const documentosSinSerieNumero = new Set(["4", "5", "6", "7", "RECIBO", "NOTA_VENTA", "PENDIENTE_COMPROBANTE", "SIN_DOCUMENTO"]);
+  const documentosSinSerieNumero = new Set(["6", "7", "PENDIENTE_COMPROBANTE", "SIN_DOCUMENTO"]);
 
   function normalizarTipoDocumento() {
     const value = (tipoDocumento.value || "").trim().toUpperCase();
@@ -1200,8 +1204,6 @@ window.viveroCompraDocumentoForm = function () {
   function sincronizarDocumento() {
     const tipo = normalizarTipoDocumento();
     const ocultar = documentosSinSerieNumero.has(tipo.value)
-      || tipo.text.includes("RECIBO")
-      || tipo.text.includes("NOTA VENTA")
       || tipo.text.includes("PENDIENTE")
       || tipo.text.includes("SIN DOCUMENTO");
 
@@ -1227,3 +1229,107 @@ window.viveroCompraDocumentoForm = function () {
   sincronizarDocumento();
 };
 
+window.viveroCompraCreditoForm = function () {
+  const formaPago = document.querySelector('#compraFormaPago, [name="Compra.FormaPago"], [name="FormaPago"]');
+  const diasWrap = document.querySelector('#compraDiasCreditoWrap');
+  const dias = document.querySelector('#compraDiasCredito, [name="Compra.DiasCredito"], [name="DiasCredito"]');
+  const fecha = document.querySelector('#compraFecha, [name="Compra.Fecha"], [name="Fecha"]');
+  const vencimiento = document.querySelector('#compraFechaVencimiento, [name="Compra.FechaVencimiento"], [name="FechaVencimiento"]');
+
+  if (!formaPago || !dias || !fecha || !vencimiento) return;
+
+  const normalizarForma = () => {
+    const value = String(formaPago.value || '').trim().toUpperCase();
+    const text = String(formaPago.selectedOptions?.[0]?.textContent || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    return { value, text };
+  };
+
+  const esCredito = () => {
+    const forma = normalizarForma();
+    return forma.value === 'CREDITO' || forma.value === '2' || forma.text.includes('CREDITO');
+  };
+
+  const sumarDias = (fechaTexto, diasCredito) => {
+    if (!fechaTexto) return '';
+    const [year, month, day] = fechaTexto.split('-').map(Number);
+    if (!year || !month || !day) return '';
+    const result = new Date(year, month - 1, day);
+    result.setDate(result.getDate() + Number(diasCredito || 0));
+    const yyyy = result.getFullYear();
+    const mm = String(result.getMonth() + 1).padStart(2, '0');
+    const dd = String(result.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const sincronizar = () => {
+    const credito = esCredito();
+    if (diasWrap) {
+      diasWrap.hidden = !credito;
+      diasWrap.classList.toggle('d-none', !credito);
+      diasWrap.style.display = credito ? '' : 'none';
+    }
+
+    dias.required = credito;
+    dias.toggleAttribute('required', credito);
+
+    if (!credito) {
+      dias.value = '0';
+      vencimiento.value = fecha.value || vencimiento.value || '';
+      return;
+    }
+
+    if (dias.value === '0') dias.value = '';
+    vencimiento.value = sumarDias(fecha.value, dias.value);
+  };
+
+  formaPago.addEventListener('change', sincronizar);
+  formaPago.addEventListener('input', sincronizar);
+  dias.addEventListener('change', sincronizar);
+  fecha.addEventListener('change', sincronizar);
+  fecha.addEventListener('input', sincronizar);
+  sincronizar();
+};
+window.viveroPagoProveedorForm = function () {
+  document.querySelectorAll("[data-provider-payment-form]").forEach((form) => {
+    const saldo = Number(form.dataset.saldoPendiente || 0);
+    const monto = form.querySelector("[data-monto-pago]");
+    const appliedTargets = form.querySelectorAll("[data-monto-aplicado], [data-total-aplicar], [data-resultado-aplicado]");
+    const saldoDespues = form.querySelector("[data-saldo-despues]");
+    const saldoFavor = form.querySelector("[data-saldo-favor]");
+    const saldoFavorResumen = form.querySelector("[data-saldo-favor-resumen]");
+
+    const money = (value) => `S/ ${Number(value || 0).toFixed(2)}`;
+    const refresh = () => {
+      const pago = Math.max(Number(monto?.value || 0), 0);
+      const aplicado = Math.min(pago, saldo);
+      const pendiente = Math.max(saldo - pago, 0);
+      const favor = Math.max(pago - saldo, 0);
+
+      appliedTargets.forEach((target) => { target.textContent = money(aplicado); });
+      if (saldoDespues) saldoDespues.textContent = money(pendiente);
+      if (saldoFavor) saldoFavor.textContent = money(favor);
+      if (saldoFavorResumen) saldoFavorResumen.textContent = money(favor);
+    };
+
+    const applicationBlock = form.querySelector("[data-payment-application-block]");
+    const applicationToggle = form.querySelector("[data-payment-application-toggle]");
+    applicationToggle?.addEventListener("click", () => {
+      if (!applicationBlock) return;
+      const isHidden = applicationBlock.hasAttribute("hidden");
+      if (isHidden) {
+        applicationBlock.removeAttribute("hidden");
+        applicationToggle.textContent = "Ocultar aplicacion del pago";
+      } else {
+        applicationBlock.setAttribute("hidden", "hidden");
+        applicationToggle.textContent = "Mostrar aplicacion del pago";
+      }
+    });
+
+    monto?.addEventListener("input", refresh);
+    refresh();
+  });
+};

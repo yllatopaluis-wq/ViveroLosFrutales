@@ -1,4 +1,4 @@
-﻿# Documentacion tecnica - Vivero Los Frutales
+# Documentacion tecnica - Vivero Los Frutales
 
 ## 1. Arquitectura
 
@@ -198,28 +198,55 @@ El precio con IGV se recalcula en dominio con `Producto.RecalcularPrecioConIgv`.
 
 ## 10. Compras e inventario
 
-`CompraRepository.GuardarAsync` ejecuta una transaccion.
+El flujo de compras se implementa en `CompraService`, `CompraRepository`, `ComprasController` y las vistas `Views/Compras`.
 
-Al guardar:
+Alta de compra:
 
-1. Inserta compra y detalle.
-2. Busca cada producto.
-3. Actualiza stock.
-4. Registra `MovimientoInventario` con tipo `COMPRA`.
-5. Confirma transaccion.
+1. `CompraService.NuevoAsync` carga proveedores, productos, cuentas financieras y configuracion de formulario con `FormularioConfiguracionService.TipoCompra`.
+2. `Compras/Create.cshtml` renderiza bloques configurables `GENERAL`, `PROVEEDOR`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES` y `ACCIONES`.
+3. El bloque `PROVEEDOR` usa proveedores activos.
+4. El bloque `PRODUCTOS` usa campos configurables de grilla y comportamiento persistido en `FormularioBloqueProductoConfiguracion`.
+5. La grilla de compras persiste `CostoUnitario` y sugiere `Producto.PrecioCompra`.
+6. `CompraService.GuardarAsync` calcula subtotal, IGV y total.
+7. `CompraRepository.AumentarStockAsync` aumenta stock solo por `CompraDetalle.CantidadRecibida` y crea `MovimientoInventario` tipo `ENTRADA_COMPRA`.
 
-La vista `Compras/Create.cshtml` usa `viveroCompraForm` en `site.js` para agregar filas y calcular totales en cliente.
+El formulario de alta de compra no registra medio de pago ni cuenta financiera. Esos datos pertenecen al pago de proveedor.
 
+Campos principales de compra:
+
+- `TipoDocumento`.
+- `Serie`.
+- `Numero`.
+- `Documento`.
+- `Fecha`.
+- `FechaVencimiento`.
+- `Moneda`.
+- `TipoCambio`.
+- `FormaPago`.
+- `DiasCredito`.
+- `EstadoEntrega`.
+- `EstadoPago`.
+- `EstadoDocumento`.
+- `TotalPagado` y `SaldoPendiente`, calculados desde aplicaciones activas.
 
 Tipos de documento de compra:
 
 - Enum: `TipoDocumentoCompra`.
 - Valores vigentes: `FACTURA`, `BOLETA`, `LIQUIDACION_COMPRA`, `RECIBO`, `NOTA_VENTA`, `PENDIENTE_COMPROBANTE`, `SIN_DOCUMENTO`.
-- Etiquetas funcionales: `FACTURA`, `BOLETA`, `LIQUIDACION COMPRA`, `RECIBO`, `NOTA VENTA`, `PENDIENTE COMPROBANTE`, `SIN DOCUMENTO`.
-- `CompraService.DocumentoRequiereSerieNumero` exige serie y numero solo para `FACTURA`, `BOLETA` y `LIQUIDACION_COMPRA`.
-- `viveroCompraDocumentoForm` oculta serie y numero para `RECIBO`, `NOTA_VENTA`, `PENDIENTE_COMPROBANTE` y `SIN_DOCUMENTO`.
-- `CompraRepository.Proyectar` muestra etiqueta funcional cuando no existe serie/numero, evitando mostrar nombres tecnicos con guion bajo.
+- `CompraService.DocumentoRequiereSerieNumero` exige serie y numero para `FACTURA`, `BOLETA`, `LIQUIDACION_COMPRA`, `RECIBO` y `NOTA_VENTA`.
+- `viveroCompraDocumentoForm` oculta serie y numero solo para `PENDIENTE_COMPROBANTE` y `SIN_DOCUMENTO`.
+- `CompraRepository.Proyectar` muestra etiqueta funcional cuando no existe serie/numero.
 - `PENDIENTE_COMPROBANTE` es tipo de documento y no debe confundirse con `EstadoPagoCompra.PENDIENTE`.
+
+Edicion restringida de compra:
+
+- `ComprasController.Edit` usa `CompraService.ObtenerCamposEditablesAsync` y `ActualizarCamposEditablesAsync`.
+- DTO: `CompraCamposEditablesDto`.
+- Vista: `Views/Compras/Edit.cshtml`.
+- Campos editables: `EstadoEntrega`, `TipoDocumento`, `Serie`, `Numero`, `FormaPago`, `DiasCredito`.
+- No modifica proveedor, detalle, costos, cantidades, totales, pagos ni stock.
+- Recalcula `FechaVencimiento` a partir de `Compra.Fecha` y `DiasCredito` cuando la forma de pago es credito.
+- Bloquea edicion si la compra esta anulada.
 
 Calculo de costos en compras:
 
@@ -231,10 +258,44 @@ Pagos de compras:
 
 - `EstadoPagoCompra`: `PENDIENTE`, `PARCIAL`, `PAGADO`.
 - `EstadoDocumentoCompra`: `ACTIVO`, `ANULADO`.
-- Las compras al contado crean `PagoProveedor` y `MovimientoCaja` de egreso.
-- Las compras a credito quedan con saldo pendiente y se pagan desde `RegistrarPagoProveedorAsync`.
-- `AnularCompraAsync` revierte inventario y, si habia pagos activos, genera devolucion pendiente del proveedor sin borrar la caja historica.
+- `PagoProveedor` representa la salida real de dinero y crea `MovimientoCaja` de tipo `EGRESO`.
+- `PagoProveedorAplicacion` relaciona pagos con compras y nunca crea caja.
+- `TotalPagado` y `SaldoPendiente` de compra se recalculan con `SUM(PagoProveedorAplicacion.MontoAplicado)` de aplicaciones activas.
+- Un pago proveedor puede quedar disponible y reutilizarse si sus aplicaciones se anulan.
 
+Anulacion de compra:
+
+`CompraService.AnularCompraAsync` ejecuta todo dentro de una transaccion:
+
+1. Valida motivo obligatorio y que la compra no este anulada.
+2. Calcula el monto aplicado activo antes de revertir aplicaciones.
+3. Ejecuta `CompraRepository.RevertirStockAsync`, que descuenta `CantidadRecibida` y crea `MovimientoInventario` tipo `REVERSA_COMPRA`.
+4. Ejecuta `RevertirAplicacionesActivas`, marcando `PagoProveedorAplicacion.Estado = ANULADO` con motivo, usuario y fecha.
+5. Recalcula estado de pago de la compra.
+6. Llama a `DevolucionService.CrearDevolucionPorAnulacionCompraAsync` para generar solicitud de devolucion de proveedor por el monto aplicado activo.
+7. Marca `Compra.Estado = Anulado` y `EstadoDocumento = ANULADO`.
+
+Reglas de auditoria:
+
+- No se elimina fisicamente `Compra`, `CompraDetalle`, `PagoProveedor`, `PagoProveedorAplicacion`, `MovimientoCaja` ni `MovimientoInventario`.
+- La reversa de stock se registra como nuevo movimiento de inventario.
+- La aplicacion de pago se anula por estado.
+- La solicitud de devolucion pendiente no mueve caja; el ingreso real se genera luego desde `RegistrarDevolucionAsync`.
+- Si no hay stock suficiente para revertir, `RevertirStockAsync` lanza excepcion y la transaccion se revierte.
+
+Ordenes de compra:
+
+- Entidades nuevas: `OrdenCompra`, `OrdenCompraDetalle` y `PagoProveedorAplicacion`.
+- `Compra.OrdenCompraId` relaciona una compra/factura con una orden de compra.
+- `PagoProveedor.OrdenCompraId` permite pagos adelantados sin compra inicial.
+- `PagoProveedorAplicacion` relaciona pagos con compras sin generar movimientos de caja.
+- `Devolucion.OrdenCompraId` y `Devolucion.PagoProveedorId` permiten reservar y registrar devoluciones de proveedor sobre saldos de orden o pago.
+- `OrdenCompraService` crea ordenes, registra pagos adelantados, prepara compras desde OC, recalcula estados, cierra y anula.
+- `PagoProveedorAplicacionService` aplica pagos manualmente o por FIFO y anula aplicaciones.
+- `FormularioConfiguracionService.TipoOrdenCompra` agrega el tipo `ORDEN_COMPRA` al motor configurable con bloques `GENERAL`, `PROVEEDOR`, `PRODUCTOS`, `CONDICIONES`, `OBSERVACIONES`, `TOTALES` y `ACCIONES`.
+- `DatabaseSeeder.EnsureDatabaseSchemaAsync` contiene SQL idempotente para tablas/columnas nuevas en bases existentes.
+
+Regla tecnica clave: `MovimientoCaja` se crea al registrar `PagoProveedor` o al registrar la devolucion real de proveedor. `PagoProveedorAplicacion` nunca crea caja.
 ## 11. Cotizaciones, notas de pedido y comprobantes
 
 La implementacion actual usa entidades separadas para el flujo comercial:
@@ -519,7 +580,7 @@ La busqueda textual se aplica sobre cliente/proveedor, documento, medio de pago 
 - `Gasto.MovimientoCajaId` e `Ingreso.MovimientoCajaId` guardan la relacion principal; `MovimientoCaja.OrigenId` conserva la referencia funcional al registro origen.
 - `scripts/sql/001-create-database.sql` crea las tablas y relaciones finales; `003-cargar-categorias-financieras.sql` carga las categorias iniciales por empresa despues de registrar empresas con `002-cargar-empresa-inicial.sql`.
 
-## 14.2 TesorerÃƒÆ’Ã‚Â­a, Caja y Bancos
+## 14.2 TesorerÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a, Caja y Bancos
 
 Componentes principales:
 
@@ -534,7 +595,7 @@ Componentes principales:
 
 Tabla principal:
 
-- `erp.CuentaFinanciera`: almacena las cuentas donde estÃƒÆ’Ã‚Â¡ el dinero de la empresa.
+- `erp.CuentaFinanciera`: almacena las cuentas donde estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ el dinero de la empresa.
 
 Campos funcionales:
 
@@ -558,15 +619,15 @@ Relaciones con dinero:
 
 Regla de compatibilidad:
 
-- `CuentaFinancieraService.ResolverCuentaIdAsync` usa la cuenta seleccionada si existe y estÃƒÆ’Ã‚Â¡ activa.
-- Si no se envÃƒÆ’Ã‚Â­a cuenta, asegura y usa `Caja principal` por empresa.
+- `CuentaFinancieraService.ResolverCuentaIdAsync` usa la cuenta seleccionada si existe y estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ activa.
+- Si no se envÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a cuenta, asegura y usa `Caja principal` por empresa.
 
-CÃƒÆ’Ã‚Â¡lculo de Caja y Bancos:
+CÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lculo de Caja y Bancos:
 
 - `CuentaFinancieraRepository.ObtenerCajaBancosAsync` agrupa movimientos activos por cuenta.
-- Los movimientos sin cuenta se imputan a `Caja principal` para compatibilidad histÃƒÆ’Ã‚Â³rica.
+- Los movimientos sin cuenta se imputan a `Caja principal` para compatibilidad histÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³rica.
 - El saldo por cuenta usa `SaldoInicial + Ingresos activos - Egresos activos`.
-- El resumen separa efectivo, bancos y billeteras segÃƒÆ’Ã‚Âºn `TipoCuentaFinanciera`.
+- El resumen separa efectivo, bancos y billeteras segÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºn `TipoCuentaFinanciera`.
 
 Transferencias:
 
@@ -580,7 +641,7 @@ Migraciones y scripts:
 
 - `20260627090000_AddCuentaFinancieraCajaBancos`: crea `CuentaFinanciera`, agrega `CuentaFinancieraId` y hace backfill a `Caja principal`.
 - `20260627103000_AddTransferenciasFinancieras`: crea `TransferenciaFinanciera`.
-- `scripts/sql/008-fix-tesoreria-cuentas-financieras.sql`: parche idempotente para bases que ya tenÃƒÆ’Ã‚Â­an la tabla antes de las columnas de auditorÃƒÆ’Ã‚Â­a/anulaciÃƒÆ’Ã‚Â³n.
+- `scripts/sql/008-fix-tesoreria-cuentas-financieras.sql`: parche idempotente para bases que ya tenÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­an la tabla antes de las columnas de auditorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­a/anulaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n.
 
 ## 15. Nubefact
 
@@ -645,8 +706,8 @@ Los PDF locales se guardan en la ruta configurada por `PdfOptions`.
 
 ### 16.1 Reporte general anual
 
-- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez aÃƒÆ’Ã‚Â±os.
-- `ReporteRepository` agrega por empresa, aÃƒÆ’Ã‚Â±o y mes las ventas, ingresos, gastos y compras.
+- `ReporteGeneralService` valida el rango solicitado y limita la matriz a diez aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±os.
+- `ReporteRepository` agrega por empresa, aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±o y mes las ventas, ingresos, gastos y compras.
 - Ventas incluye BOL/FAC activas y resta NCR activas.
 - Compras considera documentos con `EstadoDocumento = ACTIVO`.
 - Gastos e ingresos consideran `Estado = Activo`.
@@ -804,6 +865,8 @@ Bloques por documento:
 - Comprobante: `GENERAL`, `CLIENTE`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
 - Compra: `GENERAL`, `PROVEEDOR`, `PRODUCTOS`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
 - Nota de credito: `GENERAL`, `ORIGEN`, `PRODUCTOS`, `TOTALES`, `ACCIONES`.
+- Gasto: `GENERAL`, `CLIENTE`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
+- Ingreso: `GENERAL`, `PROVEEDOR`, `OBSERVACIONES`, `TOTALES`, `ACCIONES`.
 
 Nota de credito en el motor:
 
@@ -846,4 +909,5 @@ Remove-Item -LiteralPath .codex-build -Recurse -Force
 - Registrar errores de Nubefact con solicitud y respuesta.
 - No exponer token Nubefact en vistas.
 - Mantener scripts SQL idempotentes con `IF OBJECT_ID` y `COL_LENGTH`.
+
 

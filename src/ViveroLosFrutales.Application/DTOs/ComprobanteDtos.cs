@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Services;
+using ViveroLosFrutales.Application.Services;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Domain.Enums;
 
@@ -41,10 +41,17 @@ public class ComprobanteEditDto
     public string ClienteEmail { get; set; } = string.Empty;
     public int? CotizacionId { get; set; }
     public int? NotaPedidoId { get; set; }
+    public string DocumentoOrigen { get; set; } = string.Empty;
+    public int? ComprobanteReferenciaId { get; set; }
+    public string ComprobanteReferenciaNumero { get; set; } = string.Empty;
+    public string MotivoNotaCredito { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public DateTime FechaEmision { get; set; } = PeruDateTime.Today;
     public FormaPago FormaPago { get; set; } = FormaPago.Contado;
     public EstadoPagoComprobante EstadoPago { get; set; } = EstadoPagoComprobante.PENDIENTE;
+    public EstadoRegistro Estado { get; set; } = EstadoRegistro.Activo;
+    public EstadoSunat EstadoSunat { get; set; } = EstadoSunat.NoAplica;
+    public bool DocumentoImpreso { get; set; }
     public string MedioPago { get; set; } = "EFECTIVO";
     public int? CuentaFinancieraId { get; set; }
 

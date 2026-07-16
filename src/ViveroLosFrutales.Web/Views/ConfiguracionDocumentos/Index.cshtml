@@ -1,4 +1,4 @@
-@model DocumentoConfiguracionEditDto
+﻿@model DocumentoConfiguracionEditDto
 @using ViveroLosFrutales.Application.Services
 @{
     ViewData["Title"] = "Configuracion de documentos";
@@ -14,6 +14,7 @@
         new { Tipo = FormularioConfiguracionService.TipoComprobante, Nombre = "Comprobante", Enabled = true },
         new { Tipo = FormularioConfiguracionService.TipoNotaCredito, Nombre = "Nota de credito", Enabled = true },
         new { Tipo = FormularioConfiguracionService.TipoCompra, Nombre = "Compra", Enabled = true },
+        new { Tipo = FormularioConfiguracionService.TipoOrdenCompra, Nombre = "Orden de compra", Enabled = true },
         new { Tipo = FormularioConfiguracionService.TipoGasto, Nombre = "Gasto", Enabled = true },
         new { Tipo = FormularioConfiguracionService.TipoIngreso, Nombre = "Ingreso", Enabled = true },
         new { Tipo = "GUIA_REMISION", Nombre = "Guia de remision", Enabled = false },
@@ -280,6 +281,7 @@
         })();
     </script>
 }
+
 
 
 

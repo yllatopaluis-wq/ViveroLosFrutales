@@ -1,4 +1,4 @@
-﻿@model CompraFormDataDto
+@model CompraFormDataDto
 @using System.Text.Json
 @{
     ViewData["Title"] = "Registrar compra";
@@ -49,9 +49,25 @@
     }
     string ColClass(string bloque, string campo, string fallback = "3") => $"col-12 col-md-{Ancho(bloque, campo, fallback)}";
     string RequiredMark(string bloque, string campo) => Obligatorio(bloque, campo) ? " *" : string.Empty;
+    var camposPagoExcluidosCompra = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "MontoPagoInicial", "MedioPago", "CuentaDestino" };
+    var ordenGeneralCompra = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Fecha"] = 10,
+        ["Moneda"] = 20,
+        ["FormaPago"] = 30,
+        ["DiasCredito"] = 40,
+        ["FechaVencimiento"] = 50,
+        ["EstadoEntrega"] = 60,
+        ["TipoDocumento"] = 70,
+        ["Serie"] = 80,
+        ["Numero"] = 90
+    };
     var generalFields = Model.FormularioConfiguracion.Campos
-        .Where(x => string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase) && x.Visible)
-        .OrderBy(x => x.Orden)
+        .Where(x => string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase)
+            && x.Visible
+            && !camposPagoExcluidosCompra.Contains(x.Campo)
+            && !string.Equals(x.Campo, "EstadoEntrega", StringComparison.OrdinalIgnoreCase))
+        .OrderBy(x => ordenGeneralCompra.TryGetValue(x.Campo, out var orden) ? orden : x.Orden)
         .ToList();
     var productBehavior = Model.FormularioConfiguracion.ProductoComportamiento;
     var productFields = Model.FormularioConfiguracion.Campos
@@ -91,8 +107,10 @@
     var totalCalculado = subtotalExonerado + subtotalGravado + igvCalculado;
 }
 
-<form asp-action="Create" method="post" class="document-form comprobante-form quote-form compra-form">
+<form asp-controller="Compras" asp-action="Create" method="post" class="document-form comprobante-form quote-form compra-form">
     @Html.AntiForgeryToken()
+    <input asp-for="Compra.OrdenCompraId" type="hidden" />
+    <input asp-for="Compra.EstadoEntrega" name="Compra.EstadoEntrega" type="hidden" />
     <div asp-validation-summary="All" class="text-danger"></div>
 
     <section class="quote-panel quote-header-panel @(BloqueVisible("GENERAL") ? "" : "d-none")">
@@ -106,36 +124,53 @@
                 switch (field.Campo)
                 {
                     case "TipoDocumento":
-                        <label class="@ColClass("GENERAL", "TipoDocumento", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "TipoDocumento")</span><select asp-for="Compra.TipoDocumento" name="TipoDocumento" class="form-select" id="tipoDocumentoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@TipoDocumentoCompra.FACTURA">FACTURA</option><option value="@TipoDocumentoCompra.BOLETA">BOLETA</option><option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option><option value="@TipoDocumentoCompra.RECIBO">RECIBO</option><option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option><option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option><option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option></select></label>
-                        if (field.SoloLectura) { <input asp-for="Compra.TipoDocumento" name="TipoDocumento" type="hidden" /> }
+                        <label class="@ColClass("GENERAL", "TipoDocumento", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "TipoDocumento")</span><select asp-for="Compra.TipoDocumento" name="Compra.TipoDocumento" class="form-select" id="tipoDocumentoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@TipoDocumentoCompra.FACTURA">FACTURA</option><option value="@TipoDocumentoCompra.BOLETA">BOLETA</option><option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option><option value="@TipoDocumentoCompra.RECIBO">RECIBO</option><option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option><option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option><option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option></select></label>
+                        if (field.SoloLectura) { <input asp-for="Compra.TipoDocumento" name="Compra.TipoDocumento" type="hidden" /> }
                         break;
                     case "Serie":
-                        <label class="@ColClass("GENERAL", "Serie", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Serie")</span><input asp-for="Compra.Serie" name="Serie" class="form-control" id="serieCompra" readonly="@(field.SoloLectura)" /></label>
+                        <label class="@ColClass("GENERAL", "Serie", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Serie")</span><input asp-for="Compra.Serie" name="Compra.Serie" class="form-control" id="serieCompra" readonly="@(field.SoloLectura)" /></label>
                         break;
                     case "Numero":
-                        <label class="@ColClass("GENERAL", "Numero", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Numero")</span><input asp-for="Compra.Numero" name="Numero" class="form-control text-end" id="numeroCompra" readonly="@(field.SoloLectura)" /></label>
+                        <label class="@ColClass("GENERAL", "Numero", "3") compra-document-number-field"><span>@field.Etiqueta@RequiredMark("GENERAL", "Numero")</span><input asp-for="Compra.Numero" name="Compra.Numero" class="form-control text-end" id="numeroCompra" readonly="@(field.SoloLectura)" /></label>
                         break;
                     case "Fecha":
-                        <label class="@ColClass("GENERAL", "Fecha", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Fecha")</span><input asp-for="Compra.Fecha" name="Fecha" class="form-control" type="date" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
+                        <label class="@ColClass("GENERAL", "Fecha", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Fecha")</span><input asp-for="Compra.Fecha" name="Compra.Fecha" class="form-control" id="compraFecha" type="date" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
+                        break;
+                    case "FechaVencimiento":
+                        <label class="@ColClass("GENERAL", "FechaVencimiento", "3")" id="compraFechaVencimientoWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "FechaVencimiento")</span><input asp-for="Compra.FechaVencimiento" name="Compra.FechaVencimiento" class="form-control" id="compraFechaVencimiento" type="date" readonly /></label>
+                        break;
+                    case "Moneda":
+                        <label class="@ColClass("GENERAL", "Moneda", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "Moneda")</span><input asp-for="Compra.Moneda" name="Compra.Moneda" class="form-control" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
+                        break;
+                    case "TipoCambio":
+                        <label class="@ColClass("GENERAL", "TipoCambio", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "TipoCambio")</span><input asp-for="Compra.TipoCambio" name="Compra.TipoCambio" class="form-control text-end" type="number" step="0.0001" min="0.0001" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
                         break;
                     case "FormaPago":
-                        <label class="@ColClass("GENERAL", "FormaPago", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "FormaPago")</span><select asp-for="Compra.FormaPago" name="FormaPago" class="form-select" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@FormaPagoCompra.CONTADO">Contado</option><option value="@FormaPagoCompra.CREDITO">Credito</option></select></label>
-                        if (field.SoloLectura) { <input asp-for="Compra.FormaPago" name="FormaPago" type="hidden" /> }
+                        <label class="@ColClass("GENERAL", "FormaPago", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "FormaPago")</span><select asp-for="Compra.FormaPago" name="Compra.FormaPago" class="form-select" id="compraFormaPago" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@FormaPagoCompra.CONTADO">Contado</option><option value="@FormaPagoCompra.CREDITO">Credito</option></select></label>
+                        if (field.SoloLectura) { <input asp-for="Compra.FormaPago" name="Compra.FormaPago" type="hidden" /> }
+                        break;
+                    case "DiasCredito":
+                        <label class="@ColClass("GENERAL", "DiasCredito", "2")" id="compraDiasCreditoWrap"><span>@field.Etiqueta *</span><select asp-for="Compra.DiasCredito" name="Compra.DiasCredito" class="form-select" id="compraDiasCredito" disabled="@(field.SoloLectura)"><option value="0">Seleccione dias</option><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select></label>
+                        break;
+                    case "EstadoEntrega":
+                        <label class="@ColClass("GENERAL", "EstadoEntrega", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "EstadoEntrega")</span><select asp-for="Compra.EstadoEntrega" name="Compra.EstadoEntrega" class="form-select" id="estadoEntregaCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="@EstadoEntregaCompra.PENDIENTE">No recibido</option><option value="@EstadoEntregaCompra.PARCIAL">Parcial</option><option value="@EstadoEntregaCompra.RECIBIDO">Recibido completo</option></select></label>
+                        if (field.SoloLectura) { <input asp-for="Compra.EstadoEntrega" name="Compra.EstadoEntrega" type="hidden" /> }
+                        break;
+                    case "MontoPagoInicial":
+                        <label class="@ColClass("GENERAL", "MontoPagoInicial", "3")"><span>@field.Etiqueta@RequiredMark("GENERAL", "MontoPagoInicial")</span><input asp-for="Compra.MontoPagoInicial" name="Compra.MontoPagoInicial" class="form-control text-end" id="montoPagoInicialCompra" type="number" step="0.01" min="0" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></label>
                         break;
                     case "MedioPago":
-                        <label class="@ColClass("GENERAL", "MedioPago", "3")" id="medioPagoCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "MedioPago")</span><select asp-for="Compra.MedioPago" name="MedioPago" class="form-select" id="medioPagoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="YAPE">Yape</option><option value="TARJETA DEBITO">Tarjeta debito</option><option value="TARJETA CREDITO">Tarjeta credito</option></select></label>
+                        <label class="@ColClass("GENERAL", "MedioPago", "3")" id="medioPagoCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "MedioPago")</span><select asp-for="Compra.MedioPago" name="Compra.MedioPago" class="form-select" id="medioPagoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="YAPE">Yape</option><option value="TARJETA DEBITO">Tarjeta debito</option><option value="TARJETA CREDITO">Tarjeta credito</option></select></label>
                         break;
                     case "CuentaDestino":
-                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra" disabled="@(field.SoloLectura)"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Compra.CuentaFinancieraId" name="Compra.CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra" disabled="@(field.SoloLectura)"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
                         break;
                 }
             }
         </div>
-        @if (!CampoVisible("GENERAL", "TipoDocumento")) { <input asp-for="Compra.TipoDocumento" name="TipoDocumento" type="hidden" /> }
-        @if (!CampoVisible("GENERAL", "Serie")) { <input asp-for="Compra.Serie" name="Serie" type="hidden" id="serieCompra" /> }
-        @if (!CampoVisible("GENERAL", "Numero")) { <input asp-for="Compra.Numero" name="Numero" type="hidden" id="numeroCompra" /> }
-        @if (!CampoVisible("GENERAL", "MedioPago")) { <input asp-for="Compra.MedioPago" name="MedioPago" type="hidden" id="medioPagoCompra" /> }
-        @if (!CampoVisible("GENERAL", "CuentaDestino")) { <input asp-for="Compra.CuentaFinancieraId" name="CuentaFinancieraId" type="hidden" id="cuentaFinancieraCompra" /> }
+        @if (!CampoVisible("GENERAL", "TipoDocumento")) { <input asp-for="Compra.TipoDocumento" name="Compra.TipoDocumento" type="hidden" /> }
+        @if (!CampoVisible("GENERAL", "Serie")) { <input asp-for="Compra.Serie" name="Compra.Serie" type="hidden" id="serieCompra" /> }
+        @if (!CampoVisible("GENERAL", "Numero")) { <input asp-for="Compra.Numero" name="Compra.Numero" type="hidden" id="numeroCompra" /> }
     </section>
 
     <section class="quote-panel @(BloqueVisible("PROVEEDOR") ? "" : "d-none")">
@@ -148,12 +183,12 @@
             <div class="quote-client-search">
                 <input class="form-control" id="proveedorSearch" value="@proveedorTexto" placeholder="Buscar proveedor por razon social, documento o telefono..." autocomplete="off" required="@(Obligatorio("PROVEEDOR", "ProveedorBuscador"))" />
                 <div class="producto-search-results proveedor-search-results" id="proveedorSearchResults" hidden></div>
-                <input asp-for="Compra.ProveedorId" name="ProveedorId" type="hidden" id="proveedorId" />
+                <input asp-for="Compra.ProveedorId" name="Compra.ProveedorId" type="hidden" id="proveedorId" />
             </div>
         }
         else
         {
-            <input asp-for="Compra.ProveedorId" name="ProveedorId" type="hidden" id="proveedorId" />
+            <input asp-for="Compra.ProveedorId" name="Compra.ProveedorId" type="hidden" id="proveedorId" />
         }
         <div class="quote-client-summary quote-client-summary-line">
             @if (CampoVisible("PROVEEDOR", "ProveedorRazonSocial")) { <div class="client-name-block"><span>@Etiqueta("PROVEEDOR", "ProveedorRazonSocial", "Razon social")</span><strong id="proveedorResumenNombre">@(proveedorSeleccionado?.RazonSocial ?? "Seleccione proveedor")</strong></div> }
@@ -190,7 +225,7 @@
                         @if (mostrarItemProducto) { <th>@Etiqueta("PRODUCTOS", "Item", "#")</th> }
                         @foreach (var field in productFields)
                         {
-                            var align = field.Campo is "Stock" or "Cantidad" or "PrecioUnitario" or "DescuentoPorcentaje" or "TotalLinea" ? "text-end" : string.Empty;
+                            var align = field.Campo is "Stock" or "Cantidad" or "CantidadRecibida" or "PrecioUnitario" or "DescuentoPorcentaje" or "TotalLinea" ? "text-end" : string.Empty;
                             <th class="@align" data-field="@field.Campo">@field.Etiqueta</th>
                         }
                         @if (mostrarAccionProducto) { <th class="text-center">@Etiqueta("PRODUCTOS", "Accion", "Accion")</th> }
@@ -210,19 +245,22 @@
                                         <td data-field="Codigo"><input value="@codigo" class="form-control form-control-sm codigo-input" readonly /></td>
                                         break;
                                     case "Producto":
-                                        <td data-field="Producto"><input class="form-control form-control-sm producto-search" value="@(productoSeleccionado is null ? string.Empty : string.IsNullOrWhiteSpace(productoSeleccionado.Categoria) ? productoSeleccionado.Nombre : $"{productoSeleccionado.Nombre} ({productoSeleccionado.Categoria})")" readonly /><input name="Detalles[@i].ProductoId" class="producto-select" type="hidden" value="@detalles[i].ProductoId" /></td>
+                                        <td data-field="Producto"><input class="form-control form-control-sm producto-search" value="@(productoSeleccionado is null ? string.Empty : string.IsNullOrWhiteSpace(productoSeleccionado.Categoria) ? productoSeleccionado.Nombre : $"{productoSeleccionado.Nombre} ({productoSeleccionado.Categoria})")" readonly /><input name="Compra.Detalles[@i].ProductoId" class="producto-select" type="hidden" value="@detalles[i].ProductoId" /></td>
                                         break;
                                     case "Unidad":
-                                        <td data-field="Unidad"><input name="Detalles[@i].UnidadMedida" value="@(string.IsNullOrWhiteSpace(detalles[i].UnidadMedida) ? productoSeleccionado?.UnidadMedida ?? "NIU" : detalles[i].UnidadMedida)" class="form-control form-control-sm unidad-input" readonly /></td>
+                                        <td data-field="Unidad"><input name="Compra.Detalles[@i].UnidadMedida" value="@(string.IsNullOrWhiteSpace(detalles[i].UnidadMedida) ? productoSeleccionado?.UnidadMedida ?? "NIU" : detalles[i].UnidadMedida)" class="form-control form-control-sm unidad-input" readonly /></td>
                                         break;
                                     case "Stock":
                                         <td data-field="Stock"><input value="@((productoSeleccionado?.Stock ?? 0m).ToString("N2"))" class="form-control form-control-sm text-end stock-input" readonly /></td>
                                         break;
                                     case "Cantidad":
-                                        <td data-field="Cantidad"><input name="Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                        <td data-field="Cantidad"><input name="Compra.Detalles[@i].Cantidad" value="@detalles[i].Cantidad" class="form-control form-control-sm text-end cantidad-input" type="number" step="0.01" min="0.01" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                        break;
+                                    case "CantidadRecibida":
+                                        <td data-field="CantidadRecibida"><input name="Compra.Detalles[@i].CantidadRecibida" value="@detalles[i].CantidadRecibida" class="form-control form-control-sm text-end cantidad-recibida-input" type="number" step="0.01" min="0" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
                                         break;
                                     case "PrecioUnitario":
-                                        <td data-field="PrecioUnitario"><input name="Detalles[@i].CostoUnitario" value="@detalles[i].CostoUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
+                                        <td data-field="PrecioUnitario"><input name="Compra.Detalles[@i].CostoUnitario" value="@detalles[i].CostoUnitario" class="form-control form-control-sm text-end precio-input" type="number" step="0.01" min="0" readonly="@(field.SoloLectura)" required="@(field.Obligatorio)" /></td>
                                         break;
                                     case "DescuentoPorcentaje":
                                         <td data-field="DescuentoPorcentaje"><input value="0" class="form-control form-control-sm text-end descuento-input" type="number" step="0.01" min="0" max="100" readonly="@(field.SoloLectura)" /></td>
@@ -246,15 +284,11 @@
             <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5z" /><path d="M8 8h8M8 12h8M8 16h5" /></svg></span>
             <strong>@(bloques.TryGetValue("OBSERVACIONES", out var observacionesBlock) ? observacionesBlock.Titulo : "Observaciones")</strong>
         </div>
-        <textarea asp-for="Compra.Observacion" name="Observacion" class="form-control quote-observations-input" rows="2" placeholder="@Etiqueta("OBSERVACIONES", "Observacion", "Observaciones")"></textarea>
+        <textarea asp-for="Compra.Observacion" name="Compra.Observacion" class="form-control quote-observations-input" rows="2" placeholder="@Etiqueta("OBSERVACIONES", "Observacion", "Observaciones")"></textarea>
     </section>
 
-    <div class="document-total-strip quote-total-strip @(BloqueVisible("TOTALES") ? "" : "d-none")" aria-label="Totales de compra">
-        @if (CampoVisible("TOTALES", "SubtotalExonerado")) { <div><span>@Etiqueta("TOTALES", "SubtotalExonerado", "Subtotal exonerado")</span><strong id="comprobanteSubtotalExonerado">S/ @subtotalExonerado.ToString("N2")</strong></div> }
-        @if (CampoVisible("TOTALES", "SubtotalGravado")) { <div><span>@Etiqueta("TOTALES", "SubtotalGravado", "Subtotal gravado")</span><strong id="comprobanteSubtotalGravado">S/ @subtotalGravado.ToString("N2")</strong></div> }
-        @if (CampoVisible("TOTALES", "Descuento")) { <div><span>@Etiqueta("TOTALES", "Descuento", "Descuento")</span><strong id="comprobanteDescuento">S/ 0.00</strong></div> }
-        @if (CampoVisible("TOTALES", "Igv")) { <div><span>@Etiqueta("TOTALES", "Igv", "IGV (18%)")</span><strong id="comprobanteIgv">S/ @igvCalculado.ToString("N2")</strong></div> }
-        @if (CampoVisible("TOTALES", "Total")) { <div class="grand-total"><span>@Etiqueta("TOTALES", "Total", "Total")</span><strong id="comprobanteTotal">S/ @totalCalculado.ToString("N2")</strong></div> }
+    <div class="document-total-strip quote-total-strip @(BloqueVisible("TOTALES") ? "" : "d-none")" aria-label="Total de compra">
+        @if (CampoVisible("TOTALES", "Total")) { <div class="grand-total"><span>@Etiqueta("TOTALES", "Total", "Total compra")</span><strong id="comprobanteTotal">S/ @totalCalculado.ToString("N2")</strong></div> }
     </div>
 
     <div class="document-bottom-actions quote-bottom-actions @(BloqueVisible("ACCIONES") ? "" : "d-none")">
@@ -375,27 +409,15 @@
             columns: @Html.Raw(productColumnsJson),
             behavior: @Html.Raw(productBehaviorJson),
             priceFieldName: 'CostoUnitario',
-            unitFieldName: 'UnidadMedida'
+            unitFieldName: 'UnidadMedida',
+            detailPrefix: 'Compra.Detalles'
         });
         window.viveroCompraDocumentoForm?.();
-        const formaPagoCompra = document.querySelector('[name="FormaPago"]');
-        const medioPagoCompraWrap = document.getElementById('medioPagoCompraWrap');
-        const medioPagoCompra = document.getElementById('medioPagoCompra');
-        const cuentaFinancieraCompraWrap = document.getElementById('cuentaFinancieraCompraWrap');
-        const cuentaFinancieraCompra = document.getElementById('cuentaFinancieraCompra');
-        const syncMedioPagoCompra = () => {
-            const esCredito = formaPagoCompra?.value === '@((int)FormaPagoCompra.CREDITO)' || formaPagoCompra?.value === 'CREDITO';
-            medioPagoCompraWrap?.classList.toggle('d-none', esCredito);
-            if (medioPagoCompra) medioPagoCompra.disabled = !!esCredito;
-            cuentaFinancieraCompraWrap?.classList.toggle('d-none', esCredito);
-            if (cuentaFinancieraCompra) cuentaFinancieraCompra.disabled = !!esCredito;
-        };
-        formaPagoCompra?.addEventListener('change', syncMedioPagoCompra);
-        syncMedioPagoCompra();
-        window.viveroFiltrarCuentasPorMedioPago?.({
-            medioPagoSelector: '#medioPagoCompra',
-            cuentaSelector: '#cuentaFinancieraCompra'
-        });
+        window.viveroCompraCreditoForm?.();
+
     </script>
 }
+
+
+
 

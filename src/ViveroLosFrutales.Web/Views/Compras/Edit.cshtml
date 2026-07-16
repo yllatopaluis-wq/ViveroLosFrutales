@@ -1,0 +1,125 @@
+@model CompraCamposEditablesDto
+@{
+    ViewData["Title"] = "Editar compra";
+    var detalle = Model.Detalle;
+}
+
+<form asp-action="Edit" method="post" class="document-form comprobante-form quote-form compra-form">
+    @Html.AntiForgeryToken()
+    <input asp-for="CompraId" type="hidden" />
+    <input asp-for="Proveedor" type="hidden" />
+    <input asp-for="Fecha" type="hidden" id="compraFecha" />
+    <input asp-for="Total" type="hidden" />
+    <input asp-for="FechaVencimiento" type="hidden" id="compraFechaVencimiento" />
+    <input asp-for="EstadoEntrega" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger"></div>
+
+    <section class="quote-panel quote-header-panel">
+        <div class="quote-panel-title">
+            <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z" /><path d="M14 3v5h5M9 12h6M9 16h4" /></svg></span>
+            <strong>Campos editables de la compra</strong>
+        </div>
+        <div class="row g-2 quote-general-row">
+            <label class="col-12 col-md-3"><span>Tipo de documento *</span><select asp-for="TipoDocumento" class="form-select" id="tipoDocumentoCompra"><option value="@TipoDocumentoCompra.FACTURA">FACTURA</option><option value="@TipoDocumentoCompra.BOLETA">BOLETA</option><option value="@TipoDocumentoCompra.LIQUIDACION_COMPRA">LIQUIDACION COMPRA</option><option value="@TipoDocumentoCompra.RECIBO">RECIBO</option><option value="@TipoDocumentoCompra.NOTA_VENTA">NOTA VENTA</option><option value="@TipoDocumentoCompra.PENDIENTE_COMPROBANTE">PENDIENTE COMPROBANTE</option><option value="@TipoDocumentoCompra.SIN_DOCUMENTO">SIN DOCUMENTO</option></select></label>
+            <label class="col-12 col-md-3 compra-document-number-field"><span>Serie</span><input asp-for="Serie" class="form-control" id="serieCompra" /></label>
+            <label class="col-12 col-md-3 compra-document-number-field"><span>Correlativo</span><input asp-for="Numero" class="form-control text-end" id="numeroCompra" /></label>
+            <label class="col-12 col-md-3"><span>Forma de pago *</span><select asp-for="FormaPago" class="form-select" id="compraFormaPago"><option value="@FormaPagoCompra.CONTADO">Contado</option><option value="@FormaPagoCompra.CREDITO">Credito</option></select></label>
+            <label class="col-12 col-md-3" id="compraDiasCreditoWrap"><span>Dias de credito *</span><select asp-for="DiasCredito" class="form-select" id="compraDiasCredito"><option value="0">Seleccione dias</option><option value="7">7 dias</option><option value="15">15 dias</option><option value="30">30 dias</option><option value="60">60 dias</option><option value="90">90 dias</option></select></label>
+        </div>
+    </section>
+
+    @if (detalle is not null)
+    {
+        <section class="quote-panel">
+            <div class="quote-panel-title">
+                <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0" /><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /></svg></span>
+                <strong>Datos de la compra</strong>
+            </div>
+            <section class="nota-summary-grid">
+                <div class="nota-summary-card"><span>Proveedor</span><strong>@detalle.Proveedor</strong></div>
+                <div class="nota-summary-card"><span>Documento</span><strong>@detalle.Documento</strong></div>
+                <div class="nota-summary-card"><span>Fecha</span><strong>@detalle.Fecha.ToString("dd/MM/yyyy")</strong></div>
+                <div class="nota-summary-card"><span>Vencimiento</span><strong>@(detalle.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</strong></div>
+                <div class="nota-summary-card"><span>Forma pago</span><strong>@detalle.FormaPago</strong></div>
+                <div class="nota-summary-card"><span>Moneda</span><strong>@detalle.Moneda</strong></div>
+                <div class="nota-summary-card"><span>Subtotal</span><strong>S/ @detalle.SubTotal.ToString("N2")</strong></div>
+                <div class="nota-summary-card"><span>IGV</span><strong>S/ @detalle.Igv.ToString("N2")</strong></div>
+                <div class="nota-summary-card"><span>Total</span><strong>S/ @detalle.Total.ToString("N2")</strong></div>
+                <div class="nota-summary-card"><span>Pagado</span><strong>S/ @detalle.TotalPagado.ToString("N2")</strong></div>
+                <div class="nota-summary-card"><span>Saldo</span><strong>S/ @detalle.SaldoPendiente.ToString("N2")</strong></div>
+                <div class="nota-summary-card"><span>Estado pago</span><strong>@detalle.EstadoPago</strong></div>
+                <div class="nota-summary-card"><span>Estado entrega</span><strong>@detalle.EstadoEntrega</strong></div>
+                <div class="nota-summary-card"><span>Estado documento</span><strong>@detalle.EstadoDocumento</strong></div>
+                <div class="nota-summary-card"><span>Observacion</span><strong>@(string.IsNullOrWhiteSpace(detalle.Observacion) ? "-" : detalle.Observacion)</strong></div>
+            </section>
+        </section>
+
+        <section class="quote-panel">
+            <div class="quote-panel-title">
+                <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></span>
+                <strong>Detalle de productos</strong>
+            </div>
+            <table class="table table-sm data-grid">
+                <thead><tr><th>Producto</th><th>Unidad</th><th class="text-end">Cantidad</th><th class="text-end">Recibida</th><th class="text-end">Pendiente</th><th class="text-end">Costo</th><th class="text-end">Importe</th><th class="text-end">IGV</th><th class="text-end">Total</th></tr></thead>
+                <tbody>
+                @foreach (var item in detalle.Detalles)
+                {
+                    <tr>
+                        <td>@item.Producto</td>
+                        <td>@item.UnidadMedida</td>
+                        <td class="text-end">@item.Cantidad.ToString("N2")</td>
+                        <td class="text-end">@item.CantidadRecibida.ToString("N2")</td>
+                        <td class="text-end">@item.CantidadPendiente.ToString("N2")</td>
+                        <td class="text-end">S/ @item.CostoUnitario.ToString("N2")</td>
+                        <td class="text-end">S/ @item.Importe.ToString("N2")</td>
+                        <td class="text-end">S/ @item.Igv.ToString("N2")</td>
+                        <td class="text-end">S/ @item.TotalLinea.ToString("N2")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </section>
+
+        <section class="quote-panel">
+            <div class="quote-panel-title">
+                <span class="document-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg></span>
+                <strong>Pagos registrados</strong>
+            </div>
+            <table class="table table-sm data-grid">
+                <thead><tr><th>Fecha</th><th>Medio</th><th>Cuenta</th><th class="text-end">Monto</th><th>Estado</th><th>Observacion</th></tr></thead>
+                <tbody>
+                @if (detalle.Pagos.Any())
+                {
+                    @foreach (var pago in detalle.Pagos)
+                    {
+                        <tr>
+                            <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
+                            <td>@pago.MedioPago</td>
+                            <td>@pago.CuentaFinanciera</td>
+                            <td class="text-end">S/ @pago.Monto.ToString("N2")</td>
+                            <td><span class="status-badge @(pago.Estado == PagoProveedorEstado.ACTIVO ? "active" : "danger")">@pago.Estado</span></td>
+                            <td>@pago.Observacion</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="text-center text-muted">Sin pagos registrados.</td></tr>
+                }
+                </tbody>
+            </table>
+        </section>
+    }
+
+    <div class="document-bottom-actions quote-bottom-actions">
+        <button type="submit" class="document-save-btn">Guardar cambios</button>
+        <a class="document-more-btn" asp-action="Index">Volver</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        window.viveroCompraDocumentoForm?.();
+        window.viveroCompraCreditoForm?.();
+    </script>
+}

@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -902,10 +902,17 @@ public class ComprobanteService(
         ClienteEmail = comprobante.ClienteEmailMostrar,
         CotizacionId = comprobante.CotizacionId,
         NotaPedidoId = comprobante.NotaPedidoId,
+        DocumentoOrigen = comprobante.NotaPedido is null ? string.Empty : $"{comprobante.NotaPedido.Serie}-{comprobante.NotaPedido.Correlativo:000000}",
+        ComprobanteReferenciaId = comprobante.ComprobanteReferenciaId,
+        ComprobanteReferenciaNumero = comprobante.ComprobanteReferencia is null ? string.Empty : $"{comprobante.ComprobanteReferencia.Serie}-{comprobante.ComprobanteReferencia.Correlativo:000000}",
+        MotivoNotaCredito = comprobante.MotivoNotaCredito,
         Direccion = comprobante.Direccion,
         FechaEmision = comprobante.FechaEmision,
         FormaPago = comprobante.FormaPago,
         EstadoPago = comprobante.EstadoPago,
+        Estado = comprobante.Estado,
+        EstadoSunat = comprobante.EstadoSunat,
+        DocumentoImpreso = comprobante.DocumentoImpreso,
         Subtotal = comprobante.SubTotal,
         Igv = comprobante.Igv,
         Total = comprobante.Total,
@@ -923,6 +930,7 @@ public class ComprobanteService(
             .Select(x => new ComprobanteDetalleDto
             {
                 ProductoId = x.ProductoId,
+                Producto = x.Producto?.Nombre ?? string.Empty,
                 Cantidad = x.Cantidad,
                 PrecioUnitario = x.PrecioUnitario
             })

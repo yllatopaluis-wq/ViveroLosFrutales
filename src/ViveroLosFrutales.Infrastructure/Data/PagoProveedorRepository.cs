@@ -14,6 +14,8 @@ public class PagoProveedorRepository(ApplicationDbContext db) : IPagoProveedorRe
         var query = db.PagosProveedor.AsNoTracking()
             .Include(x => x.Proveedor)
             .Include(x => x.Compra)
+            .Include(x => x.OrdenCompra)
+            .Include(x => x.Aplicaciones)
             .Include(x => x.CuentaFinanciera)
             .Where(x => x.EmpresaId == empresaId);
 
@@ -30,9 +32,8 @@ public class PagoProveedorRepository(ApplicationDbContext db) : IPagoProveedorRe
             query = query.Where(x =>
                 x.Proveedor!.RazonSocial.Contains(term)
                 || x.Proveedor.NumeroDocumento.Contains(term)
-                || x.Compra!.Documento.Contains(term)
-                || x.Compra.Serie.Contains(term)
-                || x.Compra.Numero.Contains(term)
+                || (x.Compra != null && (x.Compra.Documento.Contains(term) || x.Compra.Serie.Contains(term) || x.Compra.Numero.Contains(term)))
+                || (x.OrdenCompra != null && (x.OrdenCompra.Serie.Contains(term) || x.OrdenCompra.Correlativo.ToString().Contains(term)))
                 || x.MedioPago.Contains(term)
                 || x.Observacion.Contains(term));
         }
@@ -42,34 +43,47 @@ public class PagoProveedorRepository(ApplicationDbContext db) : IPagoProveedorRe
             .ThenByDescending(x => x.PagoProveedorId)
             .Select(x => new PagoProveedorTesoreriaListDto(
                 x.PagoProveedorId,
-                x.CompraId,
+                x.CompraId ?? 0,
                 x.FechaPago,
                 x.Proveedor!.RazonSocial,
-                x.Compra!.Documento == string.Empty
-                    ? (x.Compra.Serie == string.Empty || x.Compra.Numero == string.Empty
-                        ? x.Compra.TipoDocumento == TipoDocumentoCompra.FACTURA ? "FACTURA"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.BOLETA ? "BOLETA"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.LIQUIDACION_COMPRA ? "LIQUIDACION COMPRA"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.RECIBO ? "RECIBO"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.NOTA_VENTA ? "NOTA VENTA"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.PENDIENTE_COMPROBANTE ? "PENDIENTE COMPROBANTE"
-                            : x.Compra.TipoDocumento == TipoDocumentoCompra.SIN_DOCUMENTO ? "SIN DOCUMENTO"
-                            : string.Empty
-                        : x.Compra.Serie + "-" + x.Compra.Numero)
-                    : x.Compra.Documento,
+                x.Compra != null
+                    ? (x.Compra.Documento == string.Empty
+                        ? (x.Compra.Serie == string.Empty || x.Compra.Numero == string.Empty
+                            ? x.Compra.TipoDocumento == TipoDocumentoCompra.FACTURA ? "FACTURA"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.BOLETA ? "BOLETA"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.LIQUIDACION_COMPRA ? "LIQUIDACION COMPRA"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.RECIBO ? "RECIBO"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.NOTA_VENTA ? "NOTA VENTA"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.PENDIENTE_COMPROBANTE ? "PENDIENTE COMPROBANTE"
+                                : x.Compra.TipoDocumento == TipoDocumentoCompra.SIN_DOCUMENTO ? "SIN DOCUMENTO"
+                                : string.Empty
+                            : x.Compra.Serie + "-" + x.Compra.Numero)
+                        : x.Compra.Documento)
+                    : x.OrdenCompra != null ? x.OrdenCompra.Serie + "-" + x.OrdenCompra.Correlativo.ToString("000000") : "Pago proveedor",
                 x.Monto,
                 x.MedioPago,
                 x.CuentaFinanciera == null ? "Caja principal" : x.CuentaFinanciera.Nombre,
                 x.EstadoPago,
                 x.Observacion,
-                x.EstadoPago == PagoProveedorEstado.ACTIVO && x.Compra!.EstadoDocumento == EstadoDocumentoCompra.ACTIVO))
+                x.EstadoPago == PagoProveedorEstado.ACTIVO && (x.Compra == null || x.Compra.EstadoDocumento == EstadoDocumentoCompra.ACTIVO)))
             .ToPagedAsync(request, cancellationToken);
     }
 
     public Task<PagoProveedor?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken) =>
         db.PagosProveedor
             .Include(x => x.Compra)
+            .Include(x => x.OrdenCompra)
+            .Include(x => x.Aplicaciones)
             .FirstOrDefaultAsync(x => x.EmpresaId == empresaId && x.PagoProveedorId == id, cancellationToken);
+
+    public async Task<IReadOnlyList<PagoProveedor>> ListarPorOrdenCompraAsync(int empresaId, int ordenCompraId, CancellationToken cancellationToken) =>
+        await db.PagosProveedor
+            .Include(x => x.CuentaFinanciera)
+            .Include(x => x.Aplicaciones)
+            .Where(x => x.EmpresaId == empresaId && x.OrdenCompraId == ordenCompraId)
+            .OrderBy(x => x.FechaPago)
+            .ThenBy(x => x.PagoProveedorId)
+            .ToListAsync(cancellationToken);
 
     public async Task GuardarAsync(PagoProveedor pago, CancellationToken cancellationToken)
     {
@@ -77,6 +91,3 @@ public class PagoProveedorRepository(ApplicationDbContext db) : IPagoProveedorRe
         await db.SaveChangesAsync(cancellationToken);
     }
 }
-
-
-

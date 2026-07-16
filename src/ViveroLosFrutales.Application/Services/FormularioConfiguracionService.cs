@@ -15,6 +15,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
     public const string TipoComprobante = "COMPROBANTE";
     public const string TipoNotaCredito = "NOTA_CREDITO";
     public const string TipoCompra = "COMPRA";
+    public const string TipoOrdenCompra = "ORDEN_COMPRA";
     public const string TipoGasto = "GASTO";
     public const string TipoIngreso = "INGRESO";
     public static readonly string[] AnchosPermitidos = ["1", "2", "3", "4", "5", "6", "8", "9", "12"];
@@ -68,6 +69,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
             TipoComprobante => CatalogoComprobante(tipoDocumento),
             TipoNotaCredito => CatalogoNotaCredito(tipoDocumento),
             TipoCompra => CatalogoCompra(tipoDocumento),
+            TipoOrdenCompra => CatalogoOrdenCompra(tipoDocumento),
             TipoGasto => CatalogoGasto(tipoDocumento),
             TipoIngreso => CatalogoIngreso(tipoDocumento),
             _ => CatalogoCotizacion(tipoDocumento)
@@ -85,6 +87,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
             "COMPROBANTES" or "COMPROBANTE" or "BOL" or "FAC" => TipoComprobante,
             "NOTACREDITO" or "NOTA_CREDITO" or "NOTAS_CREDITO" or "NCR" => TipoNotaCredito,
             "COMPRA" or "COMPRAS" => TipoCompra,
+            "ORDENCOMPRA" or "ORDEN_COMPRA" or "ORDENES_COMPRA" or "OC" => TipoOrdenCompra,
             "GASTO" or "GASTOS" => TipoGasto,
             "INGRESO" or "INGRESOS" => TipoIngreso,
             _ => value
@@ -97,6 +100,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
         TipoComprobante => "Comprobante",
         TipoNotaCredito => "Nota de credito",
         TipoCompra => "Compra",
+        TipoOrdenCompra => "Orden de compra",
         TipoGasto => "Gasto",
         TipoIngreso => "Ingreso",
         _ => "Cotizacion"
@@ -145,12 +149,26 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
 
     private static FormularioBloqueDto[] BloquesDefault(string tipoDocumento)
     {
+        if (tipoDocumento == TipoOrdenCompra)
+        {
+            return
+            [
+                new("GENERAL", "Informacion general", true, 10, false),
+                new("PROVEEDOR", "Proveedor", true, 20, false),
+                new("PRODUCTOS", "Detalle de productos", true, 30, false),
+                new("CONDICIONES", "Condiciones comerciales", true, 40, false),
+                new("OBSERVACIONES", "Observaciones", true, 50, false),
+                new("TOTALES", "Totales", true, 60, false),
+                new("ACCIONES", "Acciones", true, 70, false)
+            ];
+        }
+
         if (tipoDocumento == TipoGasto)
         {
             return
             [
                 new("GENERAL", "Informacion general", true, 10, false),
-                new("CLIENTE", "Cliente", true, 20, false),
+                new("PROVEEDOR", "Proveedor", true, 20, false),
                 new("OBSERVACIONES", "Observaciones", true, 35, false),
                 new("TOTALES", "Totales", true, 50, false),
                 new("ACCIONES", "Acciones", true, 60, false)
@@ -162,7 +180,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
             return
             [
                 new("GENERAL", "Informacion general", true, 10, false),
-                new("PROVEEDOR", "Proveedor", true, 20, false),
+                new("CLIENTE", "Cliente", true, 20, false),
                 new("OBSERVACIONES", "Observaciones", true, 35, false),
                 new("TOTALES", "Totales", true, 50, false),
                 new("ACCIONES", "Acciones", true, 60, false)
@@ -197,6 +215,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
         TipoComprobante => "Comprobante estandar",
         TipoNotaCredito => "Nota de credito estandar",
         TipoCompra => "Compra estandar",
+        TipoOrdenCompra => "Orden de compra estandar",
         TipoGasto => "Gasto estandar",
         TipoIngreso => "Ingreso estandar",
         _ => "Cotizacion estandar SaaS"
@@ -276,18 +295,41 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
     ];
     private static FormularioCampoCatalogoDto[] CatalogoCompra(string tipoDocumento) =>
     [
-        Campo(tipoDocumento, "GENERAL", "TipoDocumento", "Tipo de documento", 10, true, true, false, 3, false, true, true, false, "Select"),
-        Campo(tipoDocumento, "GENERAL", "Serie", "Serie", 20, true, false, false, 3, true, false, true, false, "Texto"),
-        Campo(tipoDocumento, "GENERAL", "Numero", "Numero", 30, true, false, false, 3, true, false, true, false, "Numero"),
-        Campo(tipoDocumento, "GENERAL", "Fecha", "Fecha", 40, true, true, false, 3, false, true, true, false, "Fecha"),
-        Campo(tipoDocumento, "GENERAL", "FormaPago", "Forma de pago", 50, true, true, false, 3, true, true, true, false, "Select"),
-        Campo(tipoDocumento, "GENERAL", "MedioPago", "Medio de pago", 60, true, true, false, 3, true, true, true, false, "Select"),
-        Campo(tipoDocumento, "GENERAL", "CuentaDestino", "Cuenta destino", 70, true, false, false, 3, true, false, true, false, "Select"),
+        Campo(tipoDocumento, "GENERAL", "Fecha", "Fecha", 10, true, true, false, 3, false, true, true, false, "Fecha"),
+        Campo(tipoDocumento, "GENERAL", "Moneda", "Moneda", 20, true, false, false, 3, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "GENERAL", "FormaPago", "Forma de pago", 30, true, true, false, 3, true, true, true, false, "Select"),
+        Campo(tipoDocumento, "GENERAL", "DiasCredito", "Dias de credito", 40, true, false, false, 3, true, false, true, false, "Numero"),
+        Campo(tipoDocumento, "GENERAL", "FechaVencimiento", "Fecha vencimiento", 50, true, false, false, 3, true, false, true, false, "Fecha"),
+        Campo(tipoDocumento, "GENERAL", "EstadoEntrega", "Entrega", 60, true, true, false, 3, true, true, true, false, "Select"),
+        Campo(tipoDocumento, "GENERAL", "TipoDocumento", "Tipo de documento", 70, true, true, false, 3, false, true, true, false, "Select"),
+        Campo(tipoDocumento, "GENERAL", "Serie", "Serie", 80, true, false, false, 3, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "GENERAL", "Numero", "Correlativo", 90, true, false, false, 3, true, false, true, false, "Numero"),
         .. CamposProveedor(tipoDocumento),
         .. CamposProductoCompra(tipoDocumento),
         Campo(tipoDocumento, "OBSERVACIONES", "Observacion", "Observaciones", 10, true, false, false, 12, true, false, true, false, "Textarea"),
-        .. CamposTotales(tipoDocumento),
+        Campo(tipoDocumento, "TOTALES", "Total", "Total compra", 10, true, false, true, 4, false, false, false, true, "Total"),
         Campo(tipoDocumento, "ACCIONES", "Guardar", "Guardar compra", 10, true, false, false, 4, false, false, true, false, "Accion"),
+        Campo(tipoDocumento, "ACCIONES", "Volver", "Volver", 20, true, false, false, 4, true, false, true, false, "Accion")
+    ];
+    private static FormularioCampoCatalogoDto[] CatalogoOrdenCompra(string tipoDocumento) =>
+    [
+        Campo(tipoDocumento, "GENERAL", "Serie", "Serie", 10, true, false, false, 2, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "GENERAL", "Numero", "Numero", 20, true, false, true, 2, true, false, false, true, "Numero"),
+        Campo(tipoDocumento, "GENERAL", "Fecha", "Fecha", 30, true, true, false, 2, false, true, true, false, "Fecha"),
+        Campo(tipoDocumento, "GENERAL", "FormaPago", "Forma de pago", 40, true, false, false, 2, true, true, true, false, "Select"),
+        Campo(tipoDocumento, "GENERAL", "CondicionPago", "Condicion de pago", 50, true, false, false, 2, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "GENERAL", "Moneda", "Moneda", 60, true, false, false, 2, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "GENERAL", "FechaEsperada", "Fecha esperada", 70, true, false, false, 2, true, false, true, false, "Fecha"),
+        Campo(tipoDocumento, "GENERAL", "LugarEntrega", "Lugar de entrega", 80, true, false, false, 4, true, false, true, false, "Texto"),
+        .. CamposProveedor(tipoDocumento),
+        .. CamposProductoCompra(tipoDocumento),
+        Campo(tipoDocumento, "CONDICIONES", "PlazoDias", "Plazo de entrega", 10, true, false, false, 3, true, false, true, false, "Numero"),
+        Campo(tipoDocumento, "CONDICIONES", "Garantia", "Garantia", 20, true, false, false, 3, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "CONDICIONES", "PorcentajeAdelanto", "% adelanto", 30, true, false, false, 3, true, false, true, false, "Numero"),
+        Campo(tipoDocumento, "CONDICIONES", "CondicionEntrega", "Condicion entrega", 40, true, false, false, 3, true, false, true, false, "Texto"),
+        Campo(tipoDocumento, "OBSERVACIONES", "Observacion", "Observaciones", 10, true, false, false, 12, true, false, true, false, "Textarea"),
+        .. CamposTotales(tipoDocumento),
+        Campo(tipoDocumento, "ACCIONES", "Guardar", "Guardar orden", 10, true, false, false, 4, false, false, true, false, "Accion"),
         Campo(tipoDocumento, "ACCIONES", "Volver", "Volver", 20, true, false, false, 4, true, false, true, false, "Accion")
     ];
     private static FormularioCampoCatalogoDto[] CatalogoGasto(string tipoDocumento) =>
@@ -299,7 +341,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
         Campo(tipoDocumento, "GENERAL", "Importe", "Importe", 50, true, true, false, 2, false, true, true, false, "Numero"),
         Campo(tipoDocumento, "GENERAL", "Descripcion", "Descripcion", 60, true, true, false, 2, true, true, true, false, "Texto"),
         Campo(tipoDocumento, "GENERAL", "DocumentoReferencia", "Documento referencia", 70, true, false, false, 2, true, false, true, false, "Texto"),
-        .. CamposCliente(tipoDocumento),
+        .. CamposProveedor(tipoDocumento),
         Campo(tipoDocumento, "OBSERVACIONES", "Observacion", "Observaciones", 10, true, false, false, 12, true, false, true, false, "Textarea"),
         Campo(tipoDocumento, "TOTALES", "Total", "Total", 10, true, false, true, 4, false, false, false, true, "Total"),
         Campo(tipoDocumento, "ACCIONES", "Guardar", "Guardar gasto", 10, true, false, false, 4, false, false, true, false, "Accion"),
@@ -315,7 +357,7 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
         Campo(tipoDocumento, "GENERAL", "Importe", "Importe", 50, true, true, false, 2, false, true, true, false, "Numero"),
         Campo(tipoDocumento, "GENERAL", "Descripcion", "Descripcion", 60, true, true, false, 2, true, true, true, false, "Texto"),
         Campo(tipoDocumento, "GENERAL", "DocumentoReferencia", "Documento referencia", 70, true, false, false, 2, true, false, true, false, "Texto"),
-        .. CamposProveedor(tipoDocumento),
+        .. CamposCliente(tipoDocumento),
         Campo(tipoDocumento, "OBSERVACIONES", "Observacion", "Observaciones", 10, true, false, false, 12, true, false, true, false, "Textarea"),
         Campo(tipoDocumento, "TOTALES", "Total", "Total", 10, true, false, true, 4, false, false, false, true, "Total"),
         Campo(tipoDocumento, "ACCIONES", "Guardar", "Guardar ingreso", 10, true, false, false, 4, false, false, true, false, "Accion"),
@@ -344,6 +386,8 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
             .Select(x => x.Campo == "PrecioUnitario"
                 ? Campo(tipoDocumento, x.Bloque, x.Campo, "Precio compra", x.OrdenDefault, x.VisibleDefault, x.ObligatorioDefault, x.SoloLecturaDefault, x.AnchoDefault, x.Ocultable, x.PuedeSerObligatorio, x.PuedeSerSoloLectura, x.EsCampoSistema, x.TipoVisual)
                 : x)
+            .Append(Campo(tipoDocumento, "PRODUCTOS", "CantidadRecibida", "Cant. recibida", 55, true, false, false, 1, true, false, true, false, "Columna"))
+            .OrderBy(x => x.OrdenDefault)
             .ToArray();
     private static FormularioCampoCatalogoDto[] CamposProducto(string tipoDocumento) =>
     [
@@ -414,6 +458,9 @@ public class FormularioConfiguracionService(IDocumentoConfiguracionRepository re
         return fallback;
     }
 }
+
+
+
 
 
 

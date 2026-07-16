@@ -6,7 +6,7 @@ using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.Services;
 
-public class IngresoService(IIngresoRepository repository, CuentaFinancieraService cuentaFinancieraService, IProveedorRepository proveedorRepository, IFormularioConfiguracionService formularioConfiguracionService, IEmpresaContext empresaContext)
+public class IngresoService(IIngresoRepository repository, CuentaFinancieraService cuentaFinancieraService, IClienteRepository clienteRepository, IFormularioConfiguracionService formularioConfiguracionService, IEmpresaContext empresaContext)
 {
     public Task<PagedResult<IngresoListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
         repository.BuscarAsync(empresaContext.EmpresaId, request, cancellationToken);
@@ -17,8 +17,14 @@ public class IngresoService(IIngresoRepository repository, CuentaFinancieraServi
     public Task<IReadOnlyList<CuentaFinancieraOptionDto>> ListarCuentasFinancierasAsync(CancellationToken cancellationToken) =>
         cuentaFinancieraService.ListarActivasAsync(cancellationToken);
 
-    public Task<IReadOnlyList<ProveedorListDto>> ListarProveedoresAsync(CancellationToken cancellationToken) =>
-        proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken);
+    public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> ListarClientesAsync(CancellationToken cancellationToken) =>
+        await BuscarClientesAsync(null, cancellationToken);
+
+    public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
+    {
+        var clientes = await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
+        return clientes.Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email)).ToArray();
+    }
 
     public Task<FormularioConfiguracionDto> ObtenerFormularioConfiguracionAsync(CancellationToken cancellationToken) =>
         formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoIngreso, empresaContext.EmpresaId, null, cancellationToken);
@@ -56,7 +62,7 @@ public class IngresoService(IIngresoRepository repository, CuentaFinancieraServi
             ingreso.DocumentoReferencia = dto.DocumentoReferencia?.Trim() ?? string.Empty;
             ingreso.Importe = decimal.Round(dto.Importe, 2);
             ingreso.MedioPago = dto.MedioPago.Trim().ToUpperInvariant();
-            ingreso.ProveedorId = dto.ProveedorId;
+            ingreso.ClienteId = dto.ClienteId;
             ingreso.CuentaFinancieraId = await cuentaFinancieraService.ResolverCuentaIdAsync(dto.CuentaFinancieraId, cancellationToken);
             ingreso.Observacion = dto.Observacion?.Trim() ?? string.Empty;
             ingreso.Estado = EstadoRegistro.Activo;
@@ -114,7 +120,7 @@ public class IngresoService(IIngresoRepository repository, CuentaFinancieraServi
         DocumentoReferencia = ingreso.DocumentoReferencia,
         Importe = ingreso.Importe,
         MedioPago = ingreso.MedioPago,
-        ProveedorId = ingreso.ProveedorId,
+        ClienteId = ingreso.ClienteId,
         CuentaFinancieraId = ingreso.CuentaFinancieraId,
         Observacion = ingreso.Observacion,
         Estado = ingreso.Estado
