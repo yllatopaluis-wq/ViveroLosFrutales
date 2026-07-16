@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Domain.Enums;
+using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Application.DTOs;
 
@@ -26,7 +26,7 @@ public class CompraEditDto
     public string Numero { get; set; } = string.Empty;
     public string Documento { get; set; } = string.Empty;
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
-    public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CREDITO;
+    public FormaPagoCompra FormaPago { get; set; } = FormaPagoCompra.CONTADO;
     public string MedioPago { get; set; } = "EFECTIVO";
     public int? CuentaFinancieraId { get; set; }
     public string Observacion { get; set; } = string.Empty;
@@ -47,6 +47,7 @@ public class CompraFormDataDto
     public IReadOnlyList<ProveedorListDto> Proveedores { get; set; } = Array.Empty<ProveedorListDto>();
     public IReadOnlyList<ProductoListDto> Productos { get; set; } = Array.Empty<ProductoListDto>();
     public IReadOnlyList<CuentaFinancieraOptionDto> CuentasFinancieras { get; set; } = Array.Empty<CuentaFinancieraOptionDto>();
+    public FormularioConfiguracionDto FormularioConfiguracion { get; set; } = ViveroLosFrutales.Application.Services.FormularioConfiguracionService.Defaults("COMPRA");
 }
 
 public record CompraDetalleDto(string Producto, string UnidadMedida, decimal Cantidad, decimal CostoUnitario, decimal Importe, decimal Igv, decimal TotalLinea);
@@ -114,8 +115,4 @@ public class RegistrarPagoProveedorDto
     public decimal MontoPago { get; set; }
     public string Observacion { get; set; } = string.Empty;
 }
-
-
-
-
 

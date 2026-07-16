@@ -131,16 +131,17 @@
     var canUsuarios = puedeVer("Usuarios");
     var canRoles = puedeVer("Roles");
     var canConfiguracion = puedeVer("Configuracion");
+    var canConfiguracionDocumentos = canConfiguracion || puedeVer("ConfiguracionDocumentos");
     var canNubefactLogs = puedeVer("NubefactLogs");
     var canErroresAplicacion = puedeVer("ErroresAplicacion");
-    var administracionVisible = canEmpresas || canUsuarios || canRoles || canConfiguracion || canNubefactLogs || canErroresAplicacion;
+    var administracionVisible = canEmpresas || canUsuarios || canRoles || canConfiguracion || canConfiguracionDocumentos || canNubefactLogs || canErroresAplicacion;
 
     var ventasOpen = ventasVisible && (controller is "Cotizaciones" or "Comprobantes" or "NotasPedido" or "NotasCredito");
     var maestrosOpen = maestrosVisible && (controller is "Categorias" or "Productos" or "Clientes" or "Proveedores");
     var operacionesOpen = operacionesVisible && (controller is "Compras" or "Gastos" or "Ingresos" or "Devoluciones");
     var tesoreriaOpen = tesoreriaVisible && (controller is "Caja" or "CajaBancos" or "CuentasFinancieras" or "CobrosClientes" or "PagosProveedores" or "Transferencias" or "EstadoCuentaClientes" || (controller == "Reportes" && action == "CuentasPorPagar"));
     var reportesOpen = reportesVisible && controller == "Reportes" && action != "CuentasPorPagar";
-    var administracionOpen = administracionVisible && (controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "NubefactLogs" or "ErroresAplicacion");
+    var administracionOpen = administracionVisible && (controller is "Empresas" or "Usuarios" or "Roles" or "Configuracion" or "ConfiguracionDocumentos" or "NubefactLogs" or "ErroresAplicacion");
     var mostrarAccionPrincipal = action is "Index";
 }
 <!DOCTYPE html>
@@ -299,6 +300,7 @@
                                 @if (canUsuarios) { <a asp-controller="Usuarios" asp-action="Index" class="sidebar-item @(controller == "Usuarios" ? "active" : null)"><span class="sidebar-item-label">Usuarios</span></a> }
                                 @if (canRoles) { <a asp-controller="Roles" asp-action="Index" class="sidebar-item @(controller == "Roles" ? "active" : null)"><span class="sidebar-item-label">Roles</span></a> }
                                 @if (canConfiguracion) { <a asp-controller="Configuracion" asp-action="Index" class="sidebar-item @(controller == "Configuracion" ? "active" : null)"><span class="sidebar-item-label">Configuraci&oacute;n</span></a> }
+                                @if (canConfiguracionDocumentos) { <a asp-controller="ConfiguracionDocumentos" asp-action="Index" class="sidebar-item @(controller == "ConfiguracionDocumentos" ? "active" : null)"><span class="sidebar-item-label">Configuraci&oacute;n de documentos</span></a> }
                                 @if (canNubefactLogs) { <a asp-controller="NubefactLogs" asp-action="Index" class="sidebar-item @(controller == "NubefactLogs" ? "active" : null)"><span class="sidebar-item-label">Log Nubefact</span></a> }
                                 @if (canErroresAplicacion) { <a asp-controller="ErroresAplicacion" asp-action="Index" class="sidebar-item @(controller == "ErroresAplicacion" ? "active" : null)"><span class="sidebar-item-label">Errores de aplicaci&oacute;n</span></a> }
                             </div>
@@ -438,6 +440,7 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+
 
 
 

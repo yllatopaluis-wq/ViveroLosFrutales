@@ -18,6 +18,7 @@ public class ComprobanteService(
     CobroClienteService cobroClienteService,
     DevolucionService devolucionService,
     CuentaFinancieraService cuentaFinancieraService,
+    IFormularioConfiguracionService formularioConfiguracionService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<ComprobanteListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -31,6 +32,9 @@ public class ComprobanteService(
 
     public Task<PagedResult<NotaCreditoOrigenDto>> BuscarOrigenesNotaCreditoAsync(NotaCreditoOrigenSearchRequest request, CancellationToken cancellationToken) =>
         comprobanteRepository.BuscarOrigenesNotaCreditoAsync(empresaContext.EmpresaId, request, cancellationToken);
+
+    public Task<FormularioConfiguracionDto> ObtenerFormularioNotaCreditoAsync(CancellationToken cancellationToken) =>
+        formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoNotaCredito, empresaContext.EmpresaId, null, cancellationToken);
 
     public async Task<ComprobanteResultadoDto> ImprimirCotizacionAsync(int cotizacionId, CancellationToken cancellationToken)
     {
@@ -102,7 +106,8 @@ public class ComprobanteService(
                 .OrderBy(x => x.Nombre)
                 .Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv))
                 .ToArray(),
-            await cuentaFinancieraService.ListarActivasAsync(cancellationToken));
+            await cuentaFinancieraService.ListarActivasAsync(cancellationToken),
+            await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoComprobante, empresaContext.EmpresaId, null, cancellationToken));
     }
 
     public async Task<ComprobanteFormDataDto> ObtenerFormularioLecturaAsync(ComprobanteEditDto dto, CancellationToken cancellationToken)
@@ -132,7 +137,8 @@ public class ComprobanteService(
             new ComprobanteNumeracionDto(dto.Serie, dto.Correlativo),
             clientes,
             productos,
-            await cuentaFinancieraService.ListarActivasAsync(cancellationToken));
+            await cuentaFinancieraService.ListarActivasAsync(cancellationToken),
+            await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoComprobante, empresaContext.EmpresaId, null, cancellationToken));
     }
 
     public async Task<IReadOnlyList<ComprobanteClienteOptionDto>> BuscarClientesAsync(string? search, CancellationToken cancellationToken)
@@ -634,6 +640,8 @@ public class ComprobanteService(
         var motivos = await motivoNotaCreditoRepository.ListarActivosAsync(cancellationToken);
         var serie = ObtenerSerieNotaCredito(empresa, comprobante.TipoComprobante);
         var totalCobrado = TotalPagadoComprobante(comprobante);
+        var totalNotasCredito = await comprobanteRepository.TotalNotasCreditoActivasAsync(empresaContext.EmpresaId, comprobante.ComprobanteId, cancellationToken);
+        var saldoDisponible = Math.Max(0, comprobante.Total - totalNotasCredito);
         return new NotaCreditoEditDto
         {
             ComprobanteReferenciaId = comprobante.ComprobanteId,
@@ -644,8 +652,11 @@ public class ComprobanteService(
             TipoComprobanteOrigen = comprobante.TipoComprobante,
             FechaOrigen = comprobante.FechaEmision,
             Cliente = comprobante.ClienteNombreMostrar,
+            DocumentoCliente = comprobante.ClienteNumeroDocumentoMostrar,
             Total = comprobante.Total,
             TotalCobradoOrigen = totalCobrado,
+            TotalNotasCreditoEmitidas = totalNotasCredito,
+            SaldoDisponible = saldoDisponible,
             NuevoTotalValido = 0,
             MontoDevolucionEstimado = totalCobrado > 0 ? totalCobrado : 0,
             MotivoNotaCreditoId = motivos.FirstOrDefault()?.MotivoNotaCreditoId ?? 0,
@@ -657,7 +668,8 @@ public class ComprobanteService(
                 Producto = x.Producto?.Nombre ?? string.Empty,
                 CantidadOriginal = x.Cantidad,
                 Cantidad = x.Cantidad,
-                PrecioUnitario = x.PrecioUnitario
+                PrecioUnitario = x.PrecioUnitario,
+                AfectoIgv = x.Producto?.AfectoIgv ?? true
             }).ToList()
         };
     }
@@ -675,6 +687,7 @@ public class ComprobanteService(
             FechaEmision = PeruDateTime.Today,
             MotivoNotaCreditoId = motivos.FirstOrDefault()?.MotivoNotaCreditoId ?? 0,
             Motivo = motivos.FirstOrDefault()?.Nombre ?? string.Empty,
+            SaldoDisponible = 0,
             Motivos = motivos
         };
     }
@@ -726,7 +739,7 @@ public class ComprobanteService(
             ComprobanteReferenciaId = original.ComprobanteId,
             ComprobanteReferencia = original,
             MotivoNotaCreditoId = motivo.MotivoNotaCreditoId,
-            MotivoNotaCredito = motivo.Nombre,
+            MotivoNotaCredito = string.IsNullOrWhiteSpace(dto.SustentoDescripcion) ? motivo.Nombre : $"{motivo.Nombre} - {dto.SustentoDescripcion.Trim()}",
             EstadoSunat = EstadoSunat.Pendiente,
             UsuarioRegistro = empresaContext.UsuarioNombre
         };
@@ -922,6 +935,10 @@ public class ComprobanteService(
         return decimal.Round(saldo < 0 ? 0 : saldo, 2);
     }
 }
+
+
+
+
 
 
 

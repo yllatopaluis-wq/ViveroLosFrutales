@@ -68,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IRolRepository, RolRepository>();
         services.AddScoped<IConfiguracionEmpresaRepository, ConfiguracionEmpresaRepository>();
+        services.AddScoped<IDocumentoConfiguracionRepository, DocumentoConfiguracionRepository>();
         services.Configure<PdfOptions>(configuration.GetSection("Pdf"));
         services.Configure<NubefactOptions>(configuration.GetSection("Nubefact"));
         services.AddScoped<IPdfService, PdfService>();
@@ -76,4 +77,5 @@ public static class DependencyInjection
         return services;
     }
 }
+
 

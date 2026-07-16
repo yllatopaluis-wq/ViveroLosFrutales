@@ -1,4 +1,4 @@
-using ViveroLosFrutales.Domain.Common;
+﻿using ViveroLosFrutales.Domain.Common;
 using ViveroLosFrutales.Domain.Enums;
 
 namespace ViveroLosFrutales.Domain.Entities;
@@ -19,6 +19,8 @@ public class NotaPedido : EmpresaEntity
     public string Serie { get; set; } = string.Empty;
     public int Correlativo { get; set; }
     public DateTime Fecha { get; set; } = PeruDateTime.Today;
+    public FormaPago FormaPago { get; set; } = FormaPago.Contado;
+    public string Observacion { get; set; } = string.Empty;
     public decimal Subtotal { get; set; }
     public decimal Igv { get; set; }
     public decimal Total { get; set; }

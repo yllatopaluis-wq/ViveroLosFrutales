@@ -61,6 +61,15 @@ public interface IMotivoNotaCreditoRepository
     Task<MotivoNotaCredito?> ObtenerAsync(int id, CancellationToken cancellationToken);
 }
 
+
+public interface IDocumentoConfiguracionRepository
+{
+    Task<FormularioConfiguracion?> ObtenerFormularioAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<CondicionComercialPlantilla?> ObtenerCondicionPlantillaAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<PlantillaDocumento?> ObtenerPlantillaDocumentoAsync(string tipoDocumento, int? empresaId, int? teamId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<CotizacionCondicionSnapshot>> ListarCondicionesSnapshotAsync(int cotizacionId, CancellationToken cancellationToken);
+    Task GuardarConfiguracionDocumentoAsync(int empresaId, string usuario, DocumentoConfiguracionEditDto dto, CancellationToken cancellationToken);
+}
 public interface ICotizacionRepository
 {
     Task<PagedResult<CotizacionListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
@@ -217,6 +226,9 @@ public interface IDevolucionRepository
     Task EjecutarEnTransaccionAsync(Func<Task> operacion, CancellationToken cancellationToken);
     Task GuardarAsync(Devolucion devolucion, CancellationToken cancellationToken);
 }
+
+
+
 
 
 

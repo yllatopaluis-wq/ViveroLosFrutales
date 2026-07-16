@@ -1,4 +1,4 @@
-﻿@model ProductoEditDto
+@model ProductoEditDto
 @{
     var readOnly = ViewData["ReadOnly"] as bool? == true;
     ViewData["Title"] = readOnly ? "Visualizar producto" : Model.ProductoId == 0 ? "Crear producto" : "Editar producto";
@@ -30,6 +30,7 @@
         <label id="stockProductoField">Stock<input asp-for="Stock" class="form-control form-control-sm" type="number" step="0.01" /></label>
         <input asp-for="PrecioVentaSinIgv" type="hidden" />
         <label>Precio venta<input asp-for="PrecioVentaConIgv" class="form-control form-control-sm" type="number" step="0.01" /><small>Precio de venta con IGV.</small></label>
+        <label>Precio compra<input asp-for="PrecioCompra" class="form-control form-control-sm" type="number" step="0.01" min="0" /><small>Opcional.</small></label>
         <label class="checkline"><input asp-for="AfectoIgv" /> Afecto IGV</label>
         <label class="checkline"><input asp-for="TieneDetraccion" /> Detraccion</label>
         <label>% Detraccion<input asp-for="PorcentajeDetraccion" class="form-control form-control-sm" type="number" step="0.01" /></label>
@@ -63,3 +64,4 @@
         })();
     </script>
 }
+

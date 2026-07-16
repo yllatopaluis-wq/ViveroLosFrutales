@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Services;
@@ -14,7 +14,8 @@ public class NotasCreditoController(ComprobanteService service) : Controller
     {
         var model = new NotaCreditoCreatePageDto
         {
-            NotaCredito = await service.PrepararNotaCreditoInicialAsync(cancellationToken)
+            NotaCredito = await service.PrepararNotaCreditoInicialAsync(cancellationToken),
+            FormularioConfiguracion = await service.ObtenerFormularioNotaCreditoAsync(cancellationToken)
         };
         if (comprobanteReferenciaId is int id)
         {
@@ -55,7 +56,8 @@ public class NotasCreditoController(ComprobanteService service) : Controller
             {
                 NotaCredito = dto.ComprobanteReferenciaId > 0
                     ? await service.PrepararNotaCreditoAsync(dto.ComprobanteReferenciaId, cancellationToken)
-                    : await service.PrepararNotaCreditoInicialAsync(cancellationToken)
+                    : await service.PrepararNotaCreditoInicialAsync(cancellationToken),
+                FormularioConfiguracion = await service.ObtenerFormularioNotaCreditoAsync(cancellationToken)
             });
         }
     }
@@ -104,3 +106,5 @@ public class NotasCreditoController(ComprobanteService service) : Controller
         return RedirectToAction(nameof(Index));
     }
 }
+
+

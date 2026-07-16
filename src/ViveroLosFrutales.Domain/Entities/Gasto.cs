@@ -9,15 +9,22 @@ public class Gasto : EmpresaEntity
     public int? CategoriaGastoId { get; set; }
     public string Categoria { get; set; } = string.Empty;
     public string Descripcion { get; set; } = string.Empty;
+    public string DocumentoReferencia { get; set; } = string.Empty;
     public decimal Importe { get; set; }
     public string MedioPago { get; set; } = string.Empty;
     public string Observacion { get; set; } = string.Empty;
+    public int? ClienteId { get; set; }
     public int? MovimientoCajaId { get; set; }
     public int? CuentaFinancieraId { get; set; }
     public string MotivoAnulacion { get; set; } = string.Empty;
     public DateTime? FechaAnulacion { get; set; }
     public Empresa? Empresa { get; set; }
+    public Cliente? Cliente { get; set; }
     public CategoriaGasto? CategoriaGasto { get; set; }
     public MovimientoCaja? MovimientoCaja { get; set; }
     public CuentaFinanciera? CuentaFinanciera { get; set; }
 }
+
+
+
+

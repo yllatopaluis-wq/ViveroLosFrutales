@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Entities;
@@ -13,6 +13,8 @@ public class CotizacionService(
     IEmpresaRepository empresaRepository,
     INotaPedidoRepository notaPedidoRepository,
     IPdfService pdfService,
+    IFormularioConfiguracionService formularioConfiguracionService,
+    ICondicionComercialService condicionComercialService,
     IEmpresaContext empresaContext)
 {
     public Task<PagedResult<CotizacionListDto>> BuscarAsync(SearchRequest request, CancellationToken cancellationToken) =>
@@ -26,10 +28,8 @@ public class CotizacionService(
         {
             Serie = empresa.SerieCotizacion,
             Correlativo = await cotizacionRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, empresa.SerieCotizacion, cancellationToken),
-            FechaEmision = PeruDateTime.Today,
-            CondicionesVenta = "Plazo de entrega: A los 10 dias de realizado el pago.\nLugar de entrega: En las instalaciones del vivero.\nForma de pago: Contado.\nGarantia: 1 meses\nMedios de Pago: En efectivo, deposito a cuenta corriente o pago con tarjeta de credito o debito (aceptamos todos los tipos de tarjetas debito y creditos).",
-            CaracteristicasTecnicas = "Semillas seleccionadas de campos certificados con control fitosanitarios.\nEdad: Plantas de 4 meses.\nTamano de 40 - 50 cm\nBolsas medidas de 7 x 14\nPeso aprox. por planta 4 kilos"
-        };
+            FechaEmision = PeruDateTime.Today
+};
         return await ObtenerFormularioAsync(dto, cancellationToken);
     }
 
@@ -45,13 +45,33 @@ public class CotizacionService(
             if (productos.Any(x => x.ProductoId == productoId)) continue;
             var producto = await productoRepository.ObtenerAsync(empresaContext.EmpresaId, productoId, cancellationToken);
             if (producto is null) continue;
-            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.UnidadMedida, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.Stock, producto.AfectoIgv, producto.Estado));
+            productos.Add(new ProductoListDto(producto.ProductoId, producto.Categoria, producto.Nombre, producto.UnidadMedida, producto.PrecioVentaSinIgv, ObtenerPrecioVentaConIgv(producto), producto.PrecioCompra, producto.Stock, producto.AfectoIgv, producto.Estado));
         }
 
         var clientes = (await clienteRepository.BuscarActivosAsync(empresaContext.EmpresaId, null, 50, cancellationToken)).ToList();
         if (clienteSeleccionado is not null && clientes.All(x => x.ClienteId != clienteSeleccionado.ClienteId))
         {
             clientes.Add(new ClienteListDto(clienteSeleccionado.ClienteId, clienteSeleccionado.NombreCompleto, clienteSeleccionado.TipoDocumento, clienteSeleccionado.NumeroDocumento, clienteSeleccionado.Direccion, clienteSeleccionado.Telefono, clienteSeleccionado.Email, clienteSeleccionado.Estado));
+        }
+
+        var formulario = await formularioConfiguracionService.ObtenerConfiguracionAsync("COTIZACION", empresaContext.EmpresaId, null, cancellationToken);
+        var condiciones = await condicionComercialService.ObtenerPlantillaAsync("COTIZACION", empresaContext.EmpresaId, null, cancellationToken);
+        if (string.IsNullOrWhiteSpace(dto.CondicionesVenta))
+        {
+            dto.CondicionesVenta = FormatearCondiciones(condiciones.Items
+                .Where(x => x.Visible)
+                .OrderBy(x => x.Orden)
+                .Select(x => new CotizacionCondicionSnapshotDto(x.Etiqueta, x.Texto.Replace("{ValidezDias}", "15"), x.Orden)));
+        }
+
+        if (dto.CotizacionId == 0 && string.IsNullOrWhiteSpace(dto.CaracteristicasTecnicas))
+        {
+            var observaciones = formulario.Campos.FirstOrDefault(x =>
+                string.Equals(x.Campo, "CaracteristicasTecnicas", StringComparison.OrdinalIgnoreCase));
+            if (observaciones?.Visible == true && !string.IsNullOrWhiteSpace(observaciones.ValorDefecto))
+            {
+                dto.CaracteristicasTecnicas = observaciones.ValorDefecto;
+            }
         }
 
         return new CotizacionFormDataDto(
@@ -61,7 +81,9 @@ public class CotizacionService(
                 .OrderBy(x => x.NombreCompleto)
                 .Select(x => new ComprobanteClienteOptionDto(x.ClienteId, x.NombreCompleto, x.NumeroDocumento, x.Direccion, x.Telefono, x.Email))
                 .ToArray(),
-            productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray());
+            productos.Select(x => new ComprobanteProductoOptionDto(x.ProductoId, x.Nombre, x.Categoria, x.UnidadMedida, x.PrecioVentaConIgv, x.Stock, x.AfectoIgv)).ToArray(),
+            formulario,
+            condiciones);
     }
 
     private static decimal ObtenerPrecioVentaConIgv(Producto producto)
@@ -153,6 +175,7 @@ public class CotizacionService(
             if (cotizacion.EstadoCotizacion != CotizacionEstado.ACTIVA)
                 throw new InvalidOperationException("No se puede editar una cotizacion convertida o cerrada.");
             cotizacion.Detalles.Clear();
+            cotizacion.CondicionesSnapshot.Clear();
             cotizacion.FechaModificacion = DateTime.UtcNow;
             cotizacion.UsuarioModificacion = empresaContext.UsuarioNombre;
         }
@@ -170,8 +193,7 @@ public class CotizacionService(
         cotizacion.EmpresaDireccion = empresa.Direccion;
         cotizacion.EmpresaTelefono = empresa.Telefono;
         cotizacion.EmpresaEmail = empresa.Email;
-        cotizacion.CondicionesVenta = dto.CondicionesVenta.Trim();
-        cotizacion.CaracteristicasTecnicas = dto.CaracteristicasTecnicas.Trim();
+        cotizacion.CaracteristicasTecnicas = dto.CaracteristicasTecnicas?.Trim() ?? string.Empty;
         cotizacion.EstadoCotizacion = CotizacionEstado.ACTIVA;
 
         foreach (var item in detalles)
@@ -193,6 +215,16 @@ public class CotizacionService(
         }
 
         cotizacion.RecalcularTotales();
+        var condicionesSnapshot = await condicionComercialService.GenerarSnapshotAsync(
+            cotizacion,
+            null,
+            CondicionComercialService.ContextoCotizacion(cotizacion),
+            cancellationToken);
+        foreach (var condicion in condicionesSnapshot)
+        {
+            cotizacion.CondicionesSnapshot.Add(condicion);
+        }
+        cotizacion.CondicionesVenta = FormatearCondiciones(condicionesSnapshot.Select(x => new CotizacionCondicionSnapshotDto(x.Etiqueta, x.Texto, x.Orden)));
         await cotizacionRepository.GuardarAsync(cotizacion, cancellationToken);
         return new CotizacionResultadoDto(cotizacion.CotizacionId, cotizacion.Serie, cotizacion.Correlativo, cotizacion.Total, cotizacion.PdfUrl, cotizacion.EstadoCotizacion);
     }
@@ -222,6 +254,8 @@ public class CotizacionService(
                 Serie = empresa.SerieNotaPedido,
                 Correlativo = await notaPedidoRepository.SiguienteCorrelativoAsync(empresaContext.EmpresaId, empresa.SerieNotaPedido, cancellationToken),
                 Fecha = PeruDateTime.Today,
+                FormaPago = cotizacion.FormaPago,
+                Observacion = cotizacion.CaracteristicasTecnicas,
                 UsuarioRegistro = empresaContext.UsuarioNombre
             };
             nota.AplicarSnapshotClienteDesde(cotizacion);
@@ -269,6 +303,11 @@ public class CotizacionService(
     private static bool EsCotizacionConvertida(CotizacionEstado estado) =>
         (int)estado is 3 or 4 or 5;
 
+    private static string FormatearCondiciones(IEnumerable<CotizacionCondicionSnapshotDto> condiciones) =>
+        string.Join(Environment.NewLine, condiciones
+            .OrderBy(x => x.Orden)
+            .Select(x => string.IsNullOrWhiteSpace(x.Etiqueta) ? x.Texto : $"{x.Etiqueta}: {x.Texto}"));
+
     private static CotizacionEditDto ToEditDto(Cotizacion c) => new()
     {
         CotizacionId = c.CotizacionId,
@@ -285,10 +324,11 @@ public class CotizacionService(
         FechaEmision = c.FechaEmision,
         Direccion = c.Direccion,
         FormaPago = c.FormaPago,
-        CondicionesVenta = c.CondicionesVenta,
+        CondicionesVenta = c.CondicionesSnapshot.Any()
+            ? FormatearCondiciones(c.CondicionesSnapshot.OrderBy(x => x.Orden).Select(x => new CotizacionCondicionSnapshotDto(x.Etiqueta, x.Texto, x.Orden)))
+            : c.CondicionesVenta,
         CaracteristicasTecnicas = c.CaracteristicasTecnicas,
         Detalles = c.Detalles.Select(x => new ComprobanteDetalleDto { ProductoId = x.ProductoId, Cantidad = x.Cantidad, PrecioUnitario = x.PrecioUnitario }).ToList()
     };
 }
-
 

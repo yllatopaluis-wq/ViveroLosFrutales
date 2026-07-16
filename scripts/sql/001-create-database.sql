@@ -372,6 +372,7 @@ CREATE TABLE [erp].[Producto] (
     [AfectoIgv] bit NOT NULL,
     [PrecioVentaSinIgv] decimal(18,2) NOT NULL,
     [PrecioVentaConIgv] decimal(18,2) NOT NULL,
+    [PrecioCompra] decimal(18,2) NOT NULL DEFAULT 0,
     [TieneDetraccion] bit NOT NULL,
     [PorcentajeDetraccion] decimal(5,2) NOT NULL,
     [FechaRegistro] datetime2 NOT NULL,
@@ -431,6 +432,8 @@ CREATE TABLE [erp].[NotaPedido] (
     [Serie] nvarchar(10) NOT NULL,
     [Correlativo] int NOT NULL,
     [Fecha] datetime2 NOT NULL,
+    [FormaPago] int NOT NULL,
+    [Observacion] nvarchar(1000) NOT NULL,
     [Subtotal] decimal(18,2) NOT NULL,
     [Igv] decimal(18,2) NOT NULL,
     [Total] decimal(18,2) NOT NULL,
@@ -470,6 +473,7 @@ CREATE TABLE [erp].[Gasto] (
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Gasto] PRIMARY KEY ([GastoId]),
     CONSTRAINT [FK_Gasto_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Gasto_Cliente_ClienteId] FOREIGN KEY ([ClienteId]) REFERENCES [erp].[Cliente] ([ClienteId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Gasto_CategoriaGasto_CategoriaGastoId] FOREIGN KEY ([CategoriaGastoId]) REFERENCES [erp].[CategoriaGasto] ([CategoriaGastoId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Gasto_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
     CONSTRAINT [FK_Gasto_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
@@ -495,6 +499,7 @@ CREATE TABLE [erp].[Ingreso] (
     [EmpresaId] int NOT NULL,
     CONSTRAINT [PK_Ingreso] PRIMARY KEY ([IngresoId]),
     CONSTRAINT [FK_Ingreso_CuentaFinanciera_CuentaFinancieraId] FOREIGN KEY ([CuentaFinancieraId]) REFERENCES [erp].[CuentaFinanciera] ([CuentaFinancieraId]) ON DELETE NO ACTION,
+    CONSTRAINT [FK_Ingreso_Proveedor_ProveedorId] FOREIGN KEY ([ProveedorId]) REFERENCES [erp].[Proveedor] ([ProveedorId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Ingreso_CategoriaIngreso_CategoriaIngresoId] FOREIGN KEY ([CategoriaIngresoId]) REFERENCES [erp].[CategoriaIngreso] ([CategoriaIngresoId]) ON DELETE NO ACTION,
     CONSTRAINT [FK_Ingreso_Empresa_EmpresaId] FOREIGN KEY ([EmpresaId]) REFERENCES [erp].[Empresa] ([EmpresaId]) ON DELETE CASCADE,
     CONSTRAINT [FK_Ingreso_MovimientoCaja_MovimientoCajaId] FOREIGN KEY ([MovimientoCajaId]) REFERENCES [erp].[MovimientoCaja] ([MovimientoCajaId]) ON DELETE NO ACTION
