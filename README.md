@@ -1,6 +1,6 @@
-# ViveroLosFrutales
+# SIGEVI
 
-Solución ASP.NET Core MVC .NET 8 para Vivero Los Frutales. Contiene una web pública corporativa y un ERP autenticado publicables de forma independiente.
+Solución ASP.NET Core MVC .NET 8 para SIGEVI. Contiene una web pública corporativa y un ERP autenticado publicables de forma independiente.
 
 ## Estructura
 
