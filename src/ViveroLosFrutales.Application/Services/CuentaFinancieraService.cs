@@ -1,4 +1,4 @@
-﻿using ViveroLosFrutales.Application.Common;
+using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
 using ViveroLosFrutales.Domain.Common;
@@ -71,8 +71,13 @@ public class CuentaFinancieraService(ICuentaFinancieraRepository repository, IEm
             return cuenta.CuentaFinancieraId;
         }
 
-        var principal = await repository.EnsureCuentaPrincipalAsync(empresaContext.EmpresaId, cancellationToken);
-        return principal.CuentaFinancieraId;
+        var cuentaDefault = (await repository.ListarActivasAsync(empresaContext.EmpresaId, cancellationToken))
+            .OrderByDescending(x => x.Tipo == TipoCuentaFinanciera.CAJA)
+            .ThenBy(x => x.Nombre)
+            .FirstOrDefault();
+
+        return cuentaDefault?.CuentaFinancieraId
+            ?? throw new InvalidOperationException("Seleccione una cuenta financiera activa.");
     }
 
     public Task<CajaBancosDto> ObtenerCajaBancosAsync(DateTime? fechaDesde, DateTime? fechaHasta, TipoCuentaFinanciera? tipo, string? search, CancellationToken cancellationToken) =>

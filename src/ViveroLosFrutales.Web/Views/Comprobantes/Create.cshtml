@@ -1,4 +1,4 @@
-﻿@model ComprobanteFormDataDto
+@model ComprobanteFormDataDto
 @using System.Text.Json
 @{
     var readOnly = ViewData["ReadOnly"] as bool? == true;
@@ -154,7 +154,7 @@
                         <label class="@ColClass("GENERAL", "MedioPago", "3")" id="medioPagoComprobanteWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "MedioPago")</span><select asp-for="Comprobante.MedioPago" name="MedioPago" class="form-select" id="medioPagoComprobante" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="YAPE">Yape</option><option value="TARJETA DEBITO">Tarjeta debito</option><option value="TARJETA CREDITO">Tarjeta credito</option></select></label>
                         break;
                     case "CuentaDestino":
-                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraComprobanteWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Comprobante.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraComprobante" disabled="@(field.SoloLectura)"><option value="">Caja principal</option>@foreach (var cuenta in cuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Comprobante.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraComprobanteWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Comprobante.CuentaFinancieraId" name="CuentaFinancieraId" class="form-select" id="cuentaFinancieraComprobante" disabled="@(field.SoloLectura)"><option value="" disabled>Seleccione cuenta</option>@foreach (var cuenta in cuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Comprobante.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
                         break;
                 }
             }

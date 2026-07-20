@@ -142,6 +142,12 @@ public class CompraRepository(ApplicationDbContext db) : ICompraRepository
             && x.Referencia == referencia
             && productoIds.Contains(x.ProductoId), cancellationToken);
     }
+    public Task EliminarDetallesAsync(Compra compra, CancellationToken cancellationToken)
+    {
+        db.CompraDetalles.RemoveRange(compra.Detalles);
+        compra.Detalles.Clear();
+        return Task.CompletedTask;
+    }
     public async Task GuardarAsync(Compra compra, CancellationToken cancellationToken)
     {
         if (compra.CompraId == 0) db.Compras.Add(compra);

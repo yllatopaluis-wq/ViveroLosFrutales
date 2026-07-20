@@ -70,7 +70,7 @@
                         if (SoloLectura("GENERAL", "MedioPago")) { <input asp-for="MedioPago" type="hidden" /> }
                         break;
                     case "CuentaOrigen":
-                        <label class="@ColClass("GENERAL", "CuentaOrigen", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaOrigen")</span><select asp-for="CuentaFinancieraId" class="form-select" id="cuentaFinancieraFinanza" disabled="@(SoloLectura("GENERAL", "CuentaOrigen"))"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        <label class="@ColClass("GENERAL", "CuentaOrigen", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaOrigen")</span><select asp-for="CuentaFinancieraId" class="form-select" id="cuentaFinancieraFinanza" disabled="@(SoloLectura("GENERAL", "CuentaOrigen"))"><option value="" disabled>Seleccione cuenta</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
                         if (SoloLectura("GENERAL", "CuentaOrigen")) { <input asp-for="CuentaFinancieraId" type="hidden" /> }
                         break;
                     case "Importe":
@@ -153,8 +153,20 @@
                 let activeIndex = -1;
                 let currentItems = [];
                 let pointerInResults = false;
+                let clienteSearchRequest = 0;
                 const normalizar = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
                 const escapeHtml = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+                const cargarClientes = async () => {
+                    const requestId = ++clienteSearchRequest;
+                    try {
+                        const url = `${clientesUrl}?search=${encodeURIComponent(search.value || '')}`;
+                        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                        if (!response.ok || requestId !== clienteSearchRequest) return;
+                        clientes = await response.json();
+                    } catch {
+                        // Conserva la lista local si falla la consulta remota.
+                    }
+                };
                 const filtrar = () => {
                     const term = normalizar(search.value);
                     return clientes.filter((cliente) => !term
@@ -162,7 +174,8 @@
                         || normalizar(cliente.nombre).includes(term)
                         || normalizar(cliente.documento).includes(term)
                         || normalizar(cliente.direccion).includes(term)
-).slice(0, 25);
+                        || normalizar(cliente.telefono).includes(term)
+                    ).slice(0, 25);
                 };
                 const cerrar = () => { results.hidden = true; activeIndex = -1; };
                 const posicionar = () => {
@@ -171,12 +184,13 @@
                     results.style.top = `${rect.bottom + 4}px`;
                     results.style.width = `${rect.width}px`;
                 };
-                const pintar = () => {
+                const pintar = async (consultarServidor = true) => {
+                    if (consultarServidor) await cargarClientes();
                     currentItems = filtrar();
                     activeIndex = currentItems.length ? 0 : -1;
                     posicionar();
                     results.innerHTML = currentItems.length
-                        ? currentItems.map((cliente, index) => `<button type="button" class="producto-search-option${index === 0 ? ' active' : ''}" data-id="${escapeHtml(cliente.id)}"><strong>${escapeHtml(cliente.nombre)}</strong><span>${escapeHtml(cliente.tipoDocumento || '-')}${escapeHtml(cliente.documento || '-')}</span><em>${escapeHtml(cliente.direccion || '-')}</em></button>`).join('')
+                        ? currentItems.map((cliente, index) => `<button type="button" class="producto-search-option${index === 0 ? ' active' : ''}" data-id="${escapeHtml(cliente.id)}"><strong>${escapeHtml(cliente.nombre)}</strong><span>${escapeHtml(cliente.tipoDocumento || '')} ${escapeHtml(cliente.documento || '-')}</span><em>${escapeHtml(cliente.direccion || '-')}</em></button>`).join('')
                         : '<div class="producto-search-empty">Sin coincidencias</div>';
                     results.hidden = false;
                 };
@@ -202,12 +216,12 @@
                     const exacto = clientes.find((cliente) => normalizar(cliente.texto) === normalizar(search.value));
                     if (exacto) seleccionar(exacto);
                 };
-                search.addEventListener('input', () => { clienteId.value = ''; pintar(); });
-                search.addEventListener('focus', pintar);
+                search.addEventListener('input', () => { clienteId.value = ''; void pintar(true); });
+                search.addEventListener('focus', () => { void pintar(true); });
                 search.addEventListener('blur', () => window.setTimeout(() => { if (!pointerInResults) { resolver(); cerrar(); } }, 150));
                 search.addEventListener('keydown', (event) => {
-                    if (event.key === 'ArrowDown') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex + 1); }
-                    if (event.key === 'ArrowUp') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex - 1); }
+                    if (event.key === 'ArrowDown') { event.preventDefault(); if (results.hidden) void pintar(true); else activar(activeIndex + 1); }
+                    if (event.key === 'ArrowUp') { event.preventDefault(); if (results.hidden) void pintar(true); else activar(activeIndex - 1); }
                     if (event.key === 'Enter') { event.preventDefault(); seleccionar(currentItems[activeIndex] || currentItems[0]); }
                     if (event.key === 'Escape') { event.preventDefault(); cerrar(); }
                 });
@@ -237,6 +251,3 @@
         })();
     </script>
 }
-
-
-

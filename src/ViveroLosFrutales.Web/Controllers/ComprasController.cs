@@ -20,7 +20,7 @@ public class ComprasController(CompraService service, PagoProveedorAplicacionSer
     {
         try
         {
-            return View(await service.ObtenerCamposEditablesAsync(id, cancellationToken));
+            return View("Create", await service.ObtenerParaEditarAsync(id, cancellationToken));
         }
         catch (Exception ex)
         {
@@ -31,31 +31,28 @@ public class ComprasController(CompraService service, PagoProveedorAplicacionSer
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(CompraCamposEditablesDto dto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Edit(CompraFormDataDto model, CancellationToken cancellationToken)
     {
         try
         {
-            await service.ActualizarCamposEditablesAsync(dto, cancellationToken);
+            await service.ActualizarAsync(model.Compra, cancellationToken);
             TempData["Success"] = "Compra actualizada correctamente.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Details), new { id = model.Compra.CompraId });
         }
         catch (Exception ex)
         {
             ModelState.AddModelError(string.Empty, ErrorMessageHelper.ToSpanish(ex));
             try
             {
-                var form = await service.ObtenerCamposEditablesAsync(dto.CompraId, cancellationToken);
-                form.TipoDocumento = dto.TipoDocumento;
-                form.Serie = dto.Serie;
-                form.Numero = dto.Numero;
-                form.FormaPago = dto.FormaPago;
-                form.DiasCredito = dto.DiasCredito;
-                form.EstadoEntrega = dto.EstadoEntrega;
-                return View(form);
+                var form = await service.ObtenerParaEditarAsync(model.Compra.CompraId, cancellationToken);
+                form.Compra = model.Compra;
+                return View("Create", form);
             }
             catch
             {
-                return View(dto);
+                var form = await service.NuevoAsync(cancellationToken);
+                form.Compra = model.Compra;
+                return View("Create", form);
             }
         }
     }

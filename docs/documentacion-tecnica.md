@@ -208,7 +208,10 @@ Alta de compra:
 4. El bloque `PRODUCTOS` usa campos configurables de grilla y comportamiento persistido en `FormularioBloqueProductoConfiguracion`.
 5. La grilla de compras persiste `CostoUnitario` y sugiere `Producto.PrecioCompra`.
 6. `CompraService.GuardarAsync` calcula subtotal, IGV y total.
-7. `CompraRepository.AumentarStockAsync` aumenta stock solo por `CompraDetalle.CantidadRecibida` y crea `MovimientoInventario` tipo `ENTRADA_COMPRA`.
+7. `CompraService.UsaEstadoEntregaParaInventarioAsync` consulta `FormularioConfiguracionService.TipoCompra` y valida si el campo `GENERAL:EstadoEntrega` esta visible para la empresa.
+8. Si `EstadoEntrega` esta visible, `CrearDetallesCompra` calcula `CompraDetalle.CantidadRecibida` desde el estado elegido: recibido completo, parcial o pendiente.
+9. Si `EstadoEntrega` esta oculto, el servicio usa internamente `EstadoEntregaCompra.RECIBIDO`, por lo que `CantidadRecibida` queda igual a `Cantidad` y la compra mueve todo el stock al guardarse.
+10. `CompraRepository.AumentarStockAsync` aumenta stock por `CompraDetalle.CantidadRecibida` y crea `MovimientoInventario` tipo `ENTRADA_COMPRA`.
 
 El formulario de alta de compra no registra medio de pago ni cuenta financiera. Esos datos pertenecen al pago de proveedor.
 
@@ -238,15 +241,17 @@ Tipos de documento de compra:
 - `CompraRepository.Proyectar` muestra etiqueta funcional cuando no existe serie/numero.
 - `PENDIENTE_COMPROBANTE` es tipo de documento y no debe confundirse con `EstadoPagoCompra.PENDIENTE`.
 
-Edicion restringida de compra:
+Edicion de compra:
 
-- `ComprasController.Edit` usa `CompraService.ObtenerCamposEditablesAsync` y `ActualizarCamposEditablesAsync`.
-- DTO: `CompraCamposEditablesDto`.
-- Vista: `Views/Compras/Edit.cshtml`.
-- Campos editables: `EstadoEntrega`, `TipoDocumento`, `Serie`, `Numero`, `FormaPago`, `DiasCredito`.
-- No modifica proveedor, detalle, costos, cantidades, totales, pagos ni stock.
-- Recalcula `FechaVencimiento` a partir de `Compra.Fecha` y `DiasCredito` cuando la forma de pago es credito.
+- `ComprasController.Edit` usa `CompraService.ObtenerParaEditarAsync` y renderiza `Views/Compras/Create.cshtml` con los datos cargados.
+- El POST de edicion recibe `CompraFormDataDto` y ejecuta `CompraService.ActualizarAsync`.
+- DTO principal: `CompraEditDto`; los detalles usan `CompraDetalleEditDto`.
 - Bloquea edicion si la compra esta anulada.
+- Si la compra tiene pagos activos, no permite cambiar el proveedor.
+- Si la compra tiene aplicaciones de pago activas, valida `nuevoTotal >= TotalAplicadoActivo`; si no se cumple, rechaza la operacion.
+- Al editar, recalcula subtotal, IGV, total, documento, vencimiento, estado de pago y estado de entrega.
+- La edicion de productos reemplaza los detalles: primero ejecuta `RevertirStockAsync`, luego `EliminarDetallesAsync`, agrega los nuevos detalles y finalmente ejecuta `AumentarStockAsync`.
+- La cantidad recibida de los nuevos detalles se calcula con la misma regla configurable de `EstadoEntrega`: si el campo esta visible usa el valor del formulario; si esta oculto asume recibido completo.
 
 Calculo de costos en compras:
 
@@ -259,9 +264,10 @@ Pagos de compras:
 - `EstadoPagoCompra`: `PENDIENTE`, `PARCIAL`, `PAGADO`.
 - `EstadoDocumentoCompra`: `ACTIVO`, `ANULADO`.
 - `PagoProveedor` representa la salida real de dinero y crea `MovimientoCaja` de tipo `EGRESO`.
-- `PagoProveedorAplicacion` relaciona pagos con compras y nunca crea caja.
+- `PagoProveedorAplicacion` relaciona pagos con compras y nunca crea caja ni inventario.
 - `TotalPagado` y `SaldoPendiente` de compra se recalculan con `SUM(PagoProveedorAplicacion.MontoAplicado)` de aplicaciones activas.
 - Un pago proveedor puede quedar disponible y reutilizarse si sus aplicaciones se anulan.
+- Registrar un pago o aplicar un pago adelantado no modifica `CompraDetalle.CantidadRecibida` ni crea `MovimientoInventario`; el inventario solo se mueve en registro, edicion y anulacion de compra.
 
 Anulacion de compra:
 

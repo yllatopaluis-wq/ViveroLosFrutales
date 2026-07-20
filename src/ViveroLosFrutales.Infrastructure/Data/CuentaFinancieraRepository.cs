@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ViveroLosFrutales.Application.Common;
 using ViveroLosFrutales.Application.DTOs;
 using ViveroLosFrutales.Application.Interfaces;
@@ -89,7 +89,7 @@ public class CuentaFinancieraRepository(ApplicationDbContext db) : ICuentaFinanc
     public async Task<CajaBancosDto> ObtenerCajaBancosAsync(int empresaId, DateTime? fechaDesde, DateTime? fechaHasta, TipoCuentaFinanciera? tipo, string? search, CancellationToken cancellationToken)
     {
         var cuentaPrincipal = await EnsureCuentaPrincipalAsync(empresaId, cancellationToken);
-        var cuentasQuery = db.CuentasFinancieras.AsNoTracking().Where(x => x.EmpresaId == empresaId);
+        var cuentasQuery = db.CuentasFinancieras.AsNoTracking().Where(x => x.EmpresaId == empresaId && x.Activo);
         if (tipo is not null) cuentasQuery = cuentasQuery.Where(x => x.Tipo == tipo);
         if (!string.IsNullOrWhiteSpace(search))
         {

@@ -183,7 +183,13 @@ La grilla de productos puede configurarse desde `Administracion > Configuracion 
 
 Al seleccionar un producto, la compra toma como referencia el `Precio compra` registrado en el maestro de productos. Este precio no es obligatorio en el registro del producto; si no se informa, inicia en cero.
 
-Al guardar una compra, el stock aumenta solo por la cantidad recibida y se registra movimiento de inventario por la recepcion. Si la entrega queda pendiente, no aumenta stock hasta que exista cantidad recibida en el registro.
+Regla de inventario en compras:
+
+- Si el campo `Entrega` / `EstadoEntrega` esta visible en el formulario de compra, el stock se mueve segun ese campo. `Recibido completo` aumenta todo el stock, `Parcial` aumenta solo la cantidad recibida y `Pendiente` no aumenta stock.
+- Si el campo `Entrega` / `EstadoEntrega` esta oculto para la empresa, el sistema considera la compra como recibida completa para inventario y aumenta todo el stock al registrar la compra.
+- Los pagos, pagos adelantados y aplicaciones de pago no generan movimientos de inventario; solo actualizan saldos por pagar.
+- Al editar una compra se revierte el stock registrado anteriormente y se vuelve a generar segun los nuevos datos de la compra y la configuracion vigente del campo `EstadoEntrega`.
+- Al anular una compra se revierte el stock asociado a la cantidad recibida registrada en sus detalles.
 
 Tipos de documento admitidos:
 
@@ -204,9 +210,12 @@ Reglas del documento:
 Edicion de compras:
 
 - Desde la lista de compras existe la accion `Editar` para compras activas.
-- La edicion solo permite modificar entrega, tipo de documento, serie, correlativo, forma de pago y dias de credito.
-- No permite modificar proveedor, productos, cantidades compradas, precios, totales, pagos ni movimientos de inventario.
-- Al cambiar dias de credito, el sistema recalcula la fecha de vencimiento usando la fecha original de la compra.
+- La edicion muestra el mismo formulario de registro de compra, cargado con los datos actuales.
+- Si no existen pagos asociados, permite modificar proveedor, documento, fechas, forma de pago, productos, cantidades, costos, entrega y observaciones.
+- Si existen pagos asociados, no permite cambiar el proveedor.
+- Si existen pagos asociados, permite editar solo cuando el nuevo total sea mayor o igual al total aplicado. Si el nuevo total queda por debajo de los pagos aplicados, el sistema rechaza la operacion.
+- Al editar, el sistema recalcula subtotal, IGV, total, saldo pendiente y estados de pago/entrega.
+- La edicion tambien recalcula inventario: revierte el movimiento anterior de la compra y registra el nuevo movimiento segun la regla configurable de `EstadoEntrega`.
 
 Reglas de pago y anulacion:
 
@@ -214,7 +223,7 @@ Reglas de pago y anulacion:
 - El estado del documento de compra es `ACTIVO` o `ANULADO`.
 - La forma de pago `Contado` o `Credito` no genera caja por si sola. El egreso real se registra desde el formulario de pago de proveedor.
 - Cada pago a proveedor genera un unico movimiento de caja de tipo egreso.
-- Aplicar un pago proveedor a una compra no genera movimiento de caja adicional.
+- Aplicar un pago proveedor a una compra no genera movimiento de caja adicional ni movimiento de inventario.
 - Al anular una compra se valida el documento, se revierte el stock con movimiento de inventario de reversa, se anulan las aplicaciones de pago activas, se genera una solicitud de devolucion de proveedor por el monto aplicado y finalmente se marca la compra como anulada.
 - La solicitud de devolucion no mueve caja. El ingreso de dinero se registra despues, cuando el usuario confirma la devolucion real del proveedor.
 - Los documentos anulados no bloquean volver a registrar el mismo documento para el mismo proveedor.

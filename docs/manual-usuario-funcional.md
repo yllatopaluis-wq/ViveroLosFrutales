@@ -274,9 +274,12 @@ Flujo recomendado:
 
 Al guardar una compra:
 
-- Aumenta el stock de los productos.
+- Aumenta el stock de los productos segun la configuracion del campo entrega.
+- Si el campo entrega esta visible, el stock depende de la cantidad recibida indicada.
+- Si el campo entrega esta oculto, el sistema considera la compra recibida completa y aumenta todo el stock al guardar.
 - Se registra movimiento de inventario.
 - Si queda pendiente de pago, aparece en cuentas por pagar.
+- Los pagos de proveedor no mueven inventario; solo actualizan el saldo por pagar.
 
 
 Tipos de documento de compra disponibles:

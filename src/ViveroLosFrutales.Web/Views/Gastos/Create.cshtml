@@ -72,7 +72,7 @@
                         if (SoloLectura("GENERAL", "MedioPago")) { <input asp-for="MedioPago" type="hidden" /> }
                         break;
                     case "CuentaOrigen":
-                        <label class="@ColClass("GENERAL", "CuentaOrigen", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaOrigen")</span><select asp-for="CuentaFinancieraId" class="form-select" id="cuentaFinancieraFinanza" disabled="@(SoloLectura("GENERAL", "CuentaOrigen"))"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        <label class="@ColClass("GENERAL", "CuentaOrigen", "2")"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaOrigen")</span><select asp-for="CuentaFinancieraId" class="form-select" id="cuentaFinancieraFinanza" disabled="@(SoloLectura("GENERAL", "CuentaOrigen"))"><option value="" disabled>Seleccione cuenta</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
                         if (SoloLectura("GENERAL", "CuentaOrigen")) { <input asp-for="CuentaFinancieraId" type="hidden" /> }
                         break;
                     case "Importe":
@@ -156,12 +156,18 @@
                 let activeIndex = -1;
                 let currentItems = [];
                 let pointerInResults = false;
+                let proveedorSearchRequest = 0;
                 const normalizar = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
                 const escapeHtml = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
                 const buscarProveedoresRemoto = async () => {
-                    const response = await fetch(`${proveedoresUrl}?search=${encodeURIComponent(search.value || "")}`, { headers: { "Accept": "application/json" } });
-                    if (!response.ok) return proveedores;
-                    proveedores = await response.json();
+                    const requestId = ++proveedorSearchRequest;
+                    try {
+                        const response = await fetch(`${proveedoresUrl}?search=${encodeURIComponent(search.value || "")}`, { headers: { "Accept": "application/json" } });
+                        if (!response.ok || requestId !== proveedorSearchRequest) return proveedores;
+                        proveedores = await response.json();
+                    } catch {
+                        // Conserva la lista local si falla la consulta remota.
+                    }
                     return proveedores;
                 };
                 const filtrar = () => proveedores.slice(0, 25);
@@ -205,12 +211,12 @@
                     const exacto = proveedores.find((proveedor) => normalizar(proveedor.texto) === normalizar(search.value));
                     if (exacto) seleccionar(exacto);
                 };
-                search.addEventListener('input', () => { proveedorId.value = ''; pintar(); });
-                search.addEventListener('focus', pintar);
+                search.addEventListener('input', () => { proveedorId.value = ''; void pintar(); });
+                search.addEventListener('focus', () => { void pintar(); });
                 search.addEventListener('blur', () => window.setTimeout(() => { if (!pointerInResults) { resolver(); cerrar(); } }, 150));
                 search.addEventListener('keydown', (event) => {
-                    if (event.key === 'ArrowDown') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex + 1); }
-                    if (event.key === 'ArrowUp') { event.preventDefault(); if (results.hidden) pintar(); else activar(activeIndex - 1); }
+                    if (event.key === 'ArrowDown') { event.preventDefault(); if (results.hidden) void pintar(); else activar(activeIndex + 1); }
+                    if (event.key === 'ArrowUp') { event.preventDefault(); if (results.hidden) void pintar(); else activar(activeIndex - 1); }
                     if (event.key === 'Enter') { event.preventDefault(); seleccionar(currentItems[activeIndex] || currentItems[0]); }
                     if (event.key === 'Escape') { event.preventDefault(); cerrar(); }
                 });
@@ -240,8 +246,3 @@
         })();
     </script>
 }
-
-
-
-
-

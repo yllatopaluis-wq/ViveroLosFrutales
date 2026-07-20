@@ -39,6 +39,24 @@ public class CompraService(
         FormularioConfiguracion = await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoCompra, empresaContext.EmpresaId, null, cancellationToken)
     };
 
+
+    public async Task<CompraFormDataDto> ObtenerParaEditarAsync(int id, CancellationToken cancellationToken)
+    {
+        var compra = await ObtenerEntidadAsync(id, cancellationToken);
+        if (compra.EstadoDocumento == EstadoDocumentoCompra.ANULADO || compra.Estado == EstadoRegistro.Anulado)
+        {
+            throw new InvalidOperationException("No se puede editar una compra anulada.");
+        }
+
+        return new CompraFormDataDto
+        {
+            Proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
+            Productos = await productoRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken),
+            CuentasFinancieras = await cuentaFinancieraService.ListarActivasAsync(cancellationToken),
+            FormularioConfiguracion = await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoCompra, empresaContext.EmpresaId, null, cancellationToken),
+            Compra = ToEditDto(compra)
+        };
+    }
     public async Task<CompraCamposEditablesDto> ObtenerCamposEditablesAsync(int id, CancellationToken cancellationToken)
     {
         var compra = await ObtenerEntidadAsync(id, cancellationToken);
@@ -150,6 +168,8 @@ public class CompraService(
 
         var productos = await productoRepository.BuscarPorIdsAsync(empresaContext.EmpresaId, detalles.Select(x => x.ProductoId).Distinct().ToArray(), cancellationToken);
         var productosPorId = productos.ToDictionary(x => x.ProductoId);
+        var usaEstadoEntregaParaInventario = await UsaEstadoEntregaParaInventarioAsync(cancellationToken);
+        var estadoEntregaInventario = usaEstadoEntregaParaInventario ? dto.EstadoEntrega : EstadoEntregaCompra.RECIBIDO;
 
         var compra = new Compra
         {
@@ -170,34 +190,9 @@ public class CompraService(
         };
         compra.Documento = Documento(compra);
 
-        foreach (var item in detalles)
+        foreach (var detalle in CrearDetallesCompra(detalles, estadoEntregaInventario, productosPorId))
         {
-            if (!productosPorId.TryGetValue(item.ProductoId, out var producto)) throw new InvalidOperationException("Seleccione un producto valido.");
-            if (item.Cantidad <= 0) throw new InvalidOperationException("La cantidad debe ser mayor a cero.");
-            if (item.CostoUnitario < 0) throw new InvalidOperationException("El costo unitario no puede ser negativo.");
-            var cantidadRecibida = dto.EstadoEntrega switch
-            {
-                EstadoEntregaCompra.RECIBIDO => item.Cantidad,
-                EstadoEntregaCompra.PENDIENTE => 0,
-                _ => item.CantidadRecibida
-            };
-            if (cantidadRecibida < 0) throw new InvalidOperationException("La cantidad recibida no puede ser negativa.");
-            if (cantidadRecibida > item.Cantidad) throw new InvalidOperationException("La cantidad recibida no puede superar la cantidad comprada.");
-
-            var totalLinea = decimal.Round(item.Cantidad * item.CostoUnitario, 2);
-            var importe = producto.AfectoIgv ? decimal.Round(totalLinea / 1.18m, 2) : totalLinea;
-            var igv = producto.AfectoIgv ? decimal.Round(totalLinea - importe, 2) : 0;
-            compra.Detalles.Add(new CompraDetalle
-            {
-                ProductoId = item.ProductoId,
-                UnidadMedida = item.UnidadMedida?.Trim() ?? string.Empty,
-                Cantidad = item.Cantidad,
-                CantidadRecibida = cantidadRecibida,
-                CostoUnitario = item.CostoUnitario,
-                Importe = importe,
-                Igv = igv,
-                TotalLinea = totalLinea
-            });
+            compra.Detalles.Add(detalle);
         }
 
         compra.SubTotal = compra.Detalles.Sum(x => x.Importe);
@@ -251,6 +246,121 @@ public class CompraService(
         }, cancellationToken);
     }
 
+
+    public async Task ActualizarAsync(CompraEditDto dto, CancellationToken cancellationToken)
+    {
+        if (dto.CompraId <= 0) throw new InvalidOperationException("Compra no encontrada.");
+        dto.Serie = dto.Serie?.Trim() ?? string.Empty;
+        dto.Numero = dto.Numero?.Trim() ?? string.Empty;
+        dto.Documento = dto.Documento?.Trim() ?? string.Empty;
+        dto.Moneda = string.IsNullOrWhiteSpace(dto.Moneda) ? "Soles" : dto.Moneda.Trim();
+        dto.TipoCambio = dto.TipoCambio <= 0 ? 1 : dto.TipoCambio;
+        dto.Observacion = dto.Observacion?.Trim() ?? string.Empty;
+        dto.Detalles ??= new List<CompraDetalleEditDto>();
+        AplicarReglaFormaPago(dto);
+
+        var detalles = dto.Detalles.Where(x => x.ProductoId > 0 || x.Cantidad > 0 || x.CostoUnitario > 0 || x.CantidadRecibida > 0).ToList();
+        if (dto.ProveedorId <= 0) throw new InvalidOperationException("Seleccione un proveedor.");
+        if (detalles.Count == 0) throw new InvalidOperationException("Ingrese al menos un producto.");
+        if (DocumentoRequiereSerieNumero(dto.TipoDocumento))
+        {
+            if (string.IsNullOrWhiteSpace(dto.Serie) || string.IsNullOrWhiteSpace(dto.Numero))
+            {
+                throw new InvalidOperationException("Serie y numero son obligatorios para el tipo de documento seleccionado.");
+            }
+        }
+        else
+        {
+            dto.Serie = string.Empty;
+            dto.Numero = string.Empty;
+        }
+
+        var proveedor = await proveedorRepository.ObtenerAsync(empresaContext.EmpresaId, dto.ProveedorId, cancellationToken)
+            ?? throw new InvalidOperationException("Proveedor no encontrado.");
+        if (proveedor.Estado != EstadoRegistro.Activo) throw new InvalidOperationException("Seleccione un proveedor activo.");
+
+        if (await repository.ExisteDocumentoAsync(empresaContext.EmpresaId, dto.ProveedorId, dto.TipoDocumento, dto.Serie, dto.Numero, dto.CompraId, cancellationToken))
+        {
+            throw new InvalidOperationException("Ya existe una compra registrada con el mismo documento para este proveedor.");
+        }
+
+        var productos = await productoRepository.BuscarPorIdsAsync(empresaContext.EmpresaId, detalles.Select(x => x.ProductoId).Distinct().ToArray(), cancellationToken);
+        var productosPorId = productos.ToDictionary(x => x.ProductoId);
+        var usaEstadoEntregaParaInventario = await UsaEstadoEntregaParaInventarioAsync(cancellationToken);
+        var estadoEntregaInventario = usaEstadoEntregaParaInventario ? dto.EstadoEntrega : EstadoEntregaCompra.RECIBIDO;
+        var nuevosDetalles = CrearDetallesCompra(detalles, estadoEntregaInventario, productosPorId);
+        var nuevoSubTotal = nuevosDetalles.Sum(x => x.Importe);
+        var nuevoIgv = nuevosDetalles.Sum(x => x.Igv);
+        var nuevoTotal = nuevosDetalles.Sum(x => x.TotalLinea);
+        if (nuevoTotal <= 0) throw new InvalidOperationException("El total debe ser mayor a cero.");
+
+        await repository.EjecutarEnTransaccionAsync(async () =>
+        {
+            var compra = await ObtenerEntidadAsync(dto.CompraId, cancellationToken);
+            if (compra.EstadoDocumento == EstadoDocumentoCompra.ANULADO || compra.Estado == EstadoRegistro.Anulado)
+            {
+                throw new InvalidOperationException("No se puede editar una compra anulada.");
+            }
+
+            var tienePagosActivos = compra.Pagos.Any(x => x.EstadoPago == PagoProveedorEstado.ACTIVO);
+            if (tienePagosActivos && dto.ProveedorId != compra.ProveedorId)
+            {
+                throw new InvalidOperationException("No es posible cambiar el proveedor de una compra con pagos asociados. Primero debe anular los pagos y luego modificar el proveedor.");
+            }
+
+            var totalAplicado = TotalAplicadoActivo(compra);
+            if (nuevoTotal < totalAplicado)
+            {
+                throw new InvalidOperationException($"No es posible reducir el total de la compra a un importe menor que los pagos ya aplicados (S/ {totalAplicado:N2}). Primero debe anular o ajustar las aplicaciones de pago y luego modificar la compra.");
+            }
+
+            OrdenCompra? orden = null;
+            compra.ProveedorId = dto.ProveedorId;
+            compra.OrdenCompraId = dto.OrdenCompraId;
+            compra.TipoDocumento = dto.TipoDocumento;
+            compra.Serie = dto.Serie.ToUpperInvariant();
+            compra.Numero = dto.Numero;
+            compra.Fecha = dto.Fecha.Date;
+            compra.FechaVencimiento = dto.FechaVencimiento!.Value.Date;
+            compra.Moneda = dto.Moneda;
+            compra.TipoCambio = dto.TipoCambio;
+            compra.DiasCredito = dto.DiasCredito;
+            compra.FormaPago = dto.FormaPago;
+            compra.Observacion = dto.Observacion;
+            compra.EstadoEntrega = dto.EstadoEntrega;
+            compra.Documento = Documento(compra);
+
+            if (compra.OrdenCompraId.HasValue)
+            {
+                orden = await ordenCompraRepository.ObtenerAsync(empresaContext.EmpresaId, compra.OrdenCompraId.Value, cancellationToken)
+                    ?? throw new InvalidOperationException("Orden de compra no encontrada.");
+            }
+
+            compra.SubTotal = nuevoSubTotal;
+            compra.Igv = nuevoIgv;
+            compra.Total = nuevoTotal;
+            if (orden is not null) ValidarCompraContraOrden(compra, orden);
+
+            await repository.RevertirStockAsync(compra, cancellationToken);
+            await repository.EliminarDetallesAsync(compra, cancellationToken);
+            foreach (var detalle in nuevosDetalles)
+            {
+                compra.Detalles.Add(detalle);
+            }
+
+            RecalcularEstadoEntregaCompra(compra);
+            RecalcularEstadoPagoCompra(compra);
+            await repository.GuardarAsync(compra, cancellationToken);
+            await repository.AumentarStockAsync(compra, cancellationToken);
+            await repository.GuardarAsync(compra, cancellationToken);
+
+            if (orden is not null)
+            {
+                OrdenCompraService.RecalcularEstados(orden);
+                await ordenCompraRepository.GuardarAsync(orden, cancellationToken);
+            }
+        }, cancellationToken);
+    }
     public async Task<RegistrarPagoProveedorDto> ObtenerFormularioPagoAsync(int compraId, CancellationToken cancellationToken)
     {
         var compra = await ObtenerEntidadAsync(compraId, cancellationToken);
@@ -482,6 +592,80 @@ public class CompraService(
         pago.Aplicaciones.Add(aplicacion);
         await pagoProveedorAplicacionRepository.GuardarAsync(aplicacion, cancellationToken);
     }
+
+    private async Task<bool> UsaEstadoEntregaParaInventarioAsync(CancellationToken cancellationToken)
+    {
+        var configuracion = await formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoCompra, empresaContext.EmpresaId, null, cancellationToken);
+        return configuracion.Campos.Any(x =>
+            string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.Campo, "EstadoEntrega", StringComparison.OrdinalIgnoreCase)
+            && x.Visible);
+    }
+    private static List<CompraDetalle> CrearDetallesCompra(IReadOnlyCollection<CompraDetalleEditDto> detalles, EstadoEntregaCompra estadoEntrega, IReadOnlyDictionary<int, ProductoListDto> productosPorId)
+    {
+        var resultado = new List<CompraDetalle>();
+        foreach (var item in detalles)
+        {
+            if (!productosPorId.TryGetValue(item.ProductoId, out var producto)) throw new InvalidOperationException("Seleccione un producto valido.");
+            if (item.Cantidad <= 0) throw new InvalidOperationException("La cantidad debe ser mayor a cero.");
+            if (item.CostoUnitario < 0) throw new InvalidOperationException("El costo unitario no puede ser negativo.");
+            var cantidadRecibida = estadoEntrega switch
+            {
+                EstadoEntregaCompra.RECIBIDO => item.Cantidad,
+                EstadoEntregaCompra.PENDIENTE => 0,
+                _ => item.CantidadRecibida
+            };
+            if (cantidadRecibida < 0) throw new InvalidOperationException("La cantidad recibida no puede ser negativa.");
+            if (cantidadRecibida > item.Cantidad) throw new InvalidOperationException("La cantidad recibida no puede superar la cantidad comprada.");
+
+            var totalLinea = decimal.Round(item.Cantidad * item.CostoUnitario, 2);
+            var importe = producto.AfectoIgv ? decimal.Round(totalLinea / 1.18m, 2) : totalLinea;
+            var igv = producto.AfectoIgv ? decimal.Round(totalLinea - importe, 2) : 0;
+            resultado.Add(new CompraDetalle
+            {
+                ProductoId = item.ProductoId,
+                UnidadMedida = string.IsNullOrWhiteSpace(item.UnidadMedida) ? producto.UnidadMedida : item.UnidadMedida.Trim(),
+                Cantidad = item.Cantidad,
+                CantidadRecibida = cantidadRecibida,
+                CostoUnitario = item.CostoUnitario,
+                Importe = importe,
+                Igv = igv,
+                TotalLinea = totalLinea
+            });
+        }
+
+        return resultado;
+    }
+
+    private static decimal TotalAplicadoActivo(Compra compra) =>
+        decimal.Round(compra.PagoAplicaciones.Where(x => x.Estado == EstadoPagoProveedorAplicacion.ACTIVO).Sum(x => x.MontoAplicado), 2);
+
+    private static CompraEditDto ToEditDto(Compra compra) => new()
+    {
+        CompraId = compra.CompraId,
+        ProveedorId = compra.ProveedorId,
+        OrdenCompraId = compra.OrdenCompraId,
+        TipoDocumento = compra.TipoDocumento,
+        Serie = compra.Serie,
+        Numero = compra.Numero,
+        Documento = compra.Documento,
+        Fecha = compra.Fecha,
+        FechaVencimiento = compra.FechaVencimiento,
+        Moneda = compra.Moneda,
+        TipoCambio = compra.TipoCambio,
+        DiasCredito = compra.DiasCredito,
+        FormaPago = compra.FormaPago,
+        EstadoEntrega = compra.EstadoEntrega,
+        Observacion = compra.Observacion,
+        Detalles = compra.Detalles.Select(x => new CompraDetalleEditDto
+        {
+            ProductoId = x.ProductoId,
+            UnidadMedida = x.UnidadMedida,
+            Cantidad = x.Cantidad,
+            CantidadRecibida = x.CantidadRecibida,
+            CostoUnitario = x.CostoUnitario
+        }).DefaultIfEmpty(new CompraDetalleEditDto()).ToList()
+    };
     private async Task<Compra> ObtenerEntidadAsync(int id, CancellationToken cancellationToken) =>
         await repository.ObtenerAsync(empresaContext.EmpresaId, id, cancellationToken)
             ?? throw new InvalidOperationException("Compra no encontrada.");

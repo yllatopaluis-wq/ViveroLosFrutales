@@ -52,7 +52,7 @@
             <label>
                 <span>Cuenta financiera</span>
                 <select asp-for="CuentaFinancieraId" class="form-select">
-                    <option value="">Caja principal</option>
+                    <option value="" disabled>Seleccione cuenta</option>
                     @foreach (var cuenta in cuentas)
                     {
                         <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option>

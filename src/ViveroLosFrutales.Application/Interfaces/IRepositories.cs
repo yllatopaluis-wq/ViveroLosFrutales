@@ -92,6 +92,7 @@ public interface IProveedorRepository
     Task<PagedResult<ProveedorListDto>> BuscarAsync(int empresaId, SearchRequest request, CancellationToken cancellationToken);
     Task<Proveedor?> ObtenerAsync(int empresaId, int id, CancellationToken cancellationToken);
     Task<IReadOnlyList<ProveedorListDto>> ListarActivosAsync(int empresaId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ProveedorListDto>> BuscarActivosAsync(int empresaId, string? search, int take, CancellationToken cancellationToken);
     Task GuardarAsync(Proveedor proveedor, CancellationToken cancellationToken);
 }
 
@@ -123,6 +124,7 @@ public interface ICompraRepository
     Task AumentarStockAsync(Compra compra, CancellationToken cancellationToken);
     Task RevertirStockAsync(Compra compra, CancellationToken cancellationToken);
     Task<bool> TieneMovimientosInventarioActivosAsync(Compra compra, CancellationToken cancellationToken);
+    Task EliminarDetallesAsync(Compra compra, CancellationToken cancellationToken);
     Task GuardarAsync(Compra compra, CancellationToken cancellationToken);
 }
 

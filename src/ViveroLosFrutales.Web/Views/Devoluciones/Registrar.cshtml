@@ -1,4 +1,4 @@
-﻿@model RegistrarDevolucionDto
+@model RegistrarDevolucionDto
 @{
     var cuentas = Model.CuentasFinancieras ?? Array.Empty<CuentaFinancieraOptionDto>();
     ViewData["Title"] = "Registrar Devolución";
@@ -33,7 +33,7 @@
             </select>
         </label>
         <label>Fecha<input asp-for="Fecha" type="date" class="form-control form-control-sm" /></label>
-        <label>Cuenta origen<select asp-for="CuentaFinancieraId" class="form-select form-select-sm"><option value="">Caja principal</option>@foreach (var cuenta in cuentas) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+        <label>Cuenta origen<select asp-for="CuentaFinancieraId" class="form-select form-select-sm"><option value="" disabled>Seleccione cuenta</option>@foreach (var cuenta in cuentas) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
     </div>
     <label>Observación<textarea asp-for="Observacion" class="form-control form-control-sm"></textarea></label>
     <p class="text-muted">@mensajeCaja</p>

@@ -15,7 +15,7 @@ public class ProveedorRepository(ApplicationDbContext db) : IProveedorRepository
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var term = request.Search.Trim();
-            query = query.Where(x => x.RazonSocial.Contains(term) || x.NumeroDocumento.Contains(term) || x.NombreComercial.Contains(term));
+            query = query.Where(x => x.RazonSocial.Contains(term) || x.NumeroDocumento.Contains(term) || (x.NombreComercial != null && x.NombreComercial.Contains(term)));
         }
 
         return query.OrderBy(x => x.RazonSocial)
@@ -33,10 +33,41 @@ public class ProveedorRepository(ApplicationDbContext db) : IProveedorRepository
             .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Direccion, x.Telefono, x.Estado))
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<ProveedorListDto>> BuscarActivosAsync(int empresaId, string? search, int take, CancellationToken cancellationToken)
+    {
+        var query = db.Proveedores.AsNoTracking()
+            .Where(x => x.EmpresaId == empresaId && x.Estado == EstadoRegistro.Activo);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            foreach (var term in SearchTerms(search))
+            {
+                query = query.Where(x =>
+                    x.RazonSocial.Contains(term) ||
+                    x.NumeroDocumento.Contains(term) ||
+                    (x.NombreComercial != null && x.NombreComercial.Contains(term)) ||
+                    (x.Telefono != null && x.Telefono.Contains(term)));
+            }
+        }
+
+        return await query
+            .OrderBy(x => x.RazonSocial)
+            .ThenBy(x => x.ProveedorId)
+            .Take(Math.Clamp(take, 1, 50))
+            .Select(x => new ProveedorListDto(x.ProveedorId, x.TipoDocumento, x.NumeroDocumento, x.RazonSocial, x.NombreComercial, x.Direccion, x.Telefono, x.Estado))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task GuardarAsync(Proveedor proveedor, CancellationToken cancellationToken)
     {
         if (proveedor.ProveedorId == 0) db.Proveedores.Add(proveedor);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    private static string[] SearchTerms(string search) =>
+        search.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
 }
 

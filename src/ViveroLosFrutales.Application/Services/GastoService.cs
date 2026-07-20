@@ -20,19 +20,8 @@ public class GastoService(IGastoRepository repository, CuentaFinancieraService c
     public async Task<IReadOnlyList<ProveedorListDto>> ListarProveedoresAsync(CancellationToken cancellationToken) =>
         await BuscarProveedoresAsync(null, cancellationToken);
 
-    public async Task<IReadOnlyList<ProveedorListDto>> BuscarProveedoresAsync(string? search, CancellationToken cancellationToken)
-    {
-        var proveedores = await proveedorRepository.ListarActivosAsync(empresaContext.EmpresaId, cancellationToken);
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-            proveedores = proveedores.Where(x => x.RazonSocial.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || x.NumeroDocumento.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || x.NombreComercial.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || x.Telefono.Contains(term, StringComparison.OrdinalIgnoreCase)).Take(20).ToArray();
-        }
-        return proveedores.Take(20).ToArray();
-    }
+    public async Task<IReadOnlyList<ProveedorListDto>> BuscarProveedoresAsync(string? search, CancellationToken cancellationToken) =>
+        await proveedorRepository.BuscarActivosAsync(empresaContext.EmpresaId, search, 20, cancellationToken);
 
     public Task<FormularioConfiguracionDto> ObtenerFormularioConfiguracionAsync(CancellationToken cancellationToken) =>
         formularioConfiguracionService.ObtenerConfiguracionAsync(FormularioConfiguracionService.TipoGasto, empresaContext.EmpresaId, null, cancellationToken);

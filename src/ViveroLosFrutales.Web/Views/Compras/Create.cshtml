@@ -1,7 +1,9 @@
 @model CompraFormDataDto
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Registrar compra";
+    var isEditing = Model.Compra.CompraId > 0;
+    var formAction = isEditing ? "Edit" : "Create";
+    ViewData["Title"] = isEditing ? "Editar compra" : "Registrar compra";
     var proveedorSeleccionado = Model.Proveedores.FirstOrDefault(x => x.ProveedorId == Model.Compra.ProveedorId);
     var proveedorTexto = proveedorSeleccionado is null ? string.Empty : $"{proveedorSeleccionado.RazonSocial} - {proveedorSeleccionado.NumeroDocumento}";
     var proveedoresJson = JsonSerializer.Serialize(Model.Proveedores.Select(x => new
@@ -65,8 +67,7 @@
     var generalFields = Model.FormularioConfiguracion.Campos
         .Where(x => string.Equals(x.Bloque, "GENERAL", StringComparison.OrdinalIgnoreCase)
             && x.Visible
-            && !camposPagoExcluidosCompra.Contains(x.Campo)
-            && !string.Equals(x.Campo, "EstadoEntrega", StringComparison.OrdinalIgnoreCase))
+            && !camposPagoExcluidosCompra.Contains(x.Campo))
         .OrderBy(x => ordenGeneralCompra.TryGetValue(x.Campo, out var orden) ? orden : x.Orden)
         .ToList();
     var productBehavior = Model.FormularioConfiguracion.ProductoComportamiento;
@@ -107,10 +108,10 @@
     var totalCalculado = subtotalExonerado + subtotalGravado + igvCalculado;
 }
 
-<form asp-controller="Compras" asp-action="Create" method="post" class="document-form comprobante-form quote-form compra-form">
+<form asp-controller="Compras" asp-action="@formAction" method="post" class="document-form comprobante-form quote-form compra-form">
     @Html.AntiForgeryToken()
+    <input asp-for="Compra.CompraId" type="hidden" />
     <input asp-for="Compra.OrdenCompraId" type="hidden" />
-    <input asp-for="Compra.EstadoEntrega" name="Compra.EstadoEntrega" type="hidden" />
     <div asp-validation-summary="All" class="text-danger"></div>
 
     <section class="quote-panel quote-header-panel @(BloqueVisible("GENERAL") ? "" : "d-none")">
@@ -163,7 +164,7 @@
                         <label class="@ColClass("GENERAL", "MedioPago", "3")" id="medioPagoCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "MedioPago")</span><select asp-for="Compra.MedioPago" name="Compra.MedioPago" class="form-select" id="medioPagoCompra" disabled="@(field.SoloLectura)" required="@(field.Obligatorio)"><option value="EFECTIVO">Efectivo</option><option value="TRANSFERENCIA">Transferencia</option><option value="YAPE">Yape</option><option value="TARJETA DEBITO">Tarjeta debito</option><option value="TARJETA CREDITO">Tarjeta credito</option></select></label>
                         break;
                     case "CuentaDestino":
-                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Compra.CuentaFinancieraId" name="Compra.CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra" disabled="@(field.SoloLectura)"><option value="">Caja principal</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
+                        <label class="@ColClass("GENERAL", "CuentaDestino", "3")" id="cuentaFinancieraCompraWrap"><span>@field.Etiqueta@RequiredMark("GENERAL", "CuentaDestino")</span><select asp-for="Compra.CuentaFinancieraId" name="Compra.CuentaFinancieraId" class="form-select" id="cuentaFinancieraCompra" disabled="@(field.SoloLectura)"><option value="" disabled>Seleccione cuenta</option>@foreach (var cuenta in Model.CuentasFinancieras) { <option value="@cuenta.CuentaFinancieraId" data-tipo="@cuenta.Tipo" selected="@(Model.Compra.CuentaFinancieraId == cuenta.CuentaFinancieraId)">@cuenta.Nombre</option> }</select></label>
                         break;
                 }
             }
@@ -171,6 +172,7 @@
         @if (!CampoVisible("GENERAL", "TipoDocumento")) { <input asp-for="Compra.TipoDocumento" name="Compra.TipoDocumento" type="hidden" /> }
         @if (!CampoVisible("GENERAL", "Serie")) { <input asp-for="Compra.Serie" name="Compra.Serie" type="hidden" id="serieCompra" /> }
         @if (!CampoVisible("GENERAL", "Numero")) { <input asp-for="Compra.Numero" name="Compra.Numero" type="hidden" id="numeroCompra" /> }
+        @if (!CampoVisible("GENERAL", "EstadoEntrega")) { <input asp-for="Compra.EstadoEntrega" name="Compra.EstadoEntrega" type="hidden" /> }
     </section>
 
     <section class="quote-panel @(BloqueVisible("PROVEEDOR") ? "" : "d-none")">
@@ -292,7 +294,7 @@
     </div>
 
     <div class="document-bottom-actions quote-bottom-actions @(BloqueVisible("ACCIONES") ? "" : "d-none")">
-        @if (CampoVisible("ACCIONES", "Guardar")) { <button type="submit" class="document-save-btn">@Etiqueta("ACCIONES", "Guardar", "Guardar compra")</button> }
+        @if (CampoVisible("ACCIONES", "Guardar")) { <button type="submit" class="document-save-btn">@(isEditing ? "Guardar cambios" : Etiqueta("ACCIONES", "Guardar", "Guardar compra"))</button> }
         @if (CampoVisible("ACCIONES", "Volver")) { <a class="document-more-btn" asp-action="Index">@Etiqueta("ACCIONES", "Volver", "Volver")</a> }
     </div>
 </form>
